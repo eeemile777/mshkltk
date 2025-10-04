@@ -9,6 +9,7 @@ Follow these instructions to get the project running on your local machine for d
 ### Prerequisites
 
 -   Node.js (v18.x or later recommended)
+-   npm (or a compatible package manager)
 -   A modern web browser (e.g., Chrome, Firefox)
 
 ### Installation
@@ -19,40 +20,32 @@ Follow these instructions to get the project running on your local machine for d
     cd mshkltk-app
     ```
 
-2.  This project uses ES modules and imports dependencies via an `importmap` in `index.html`. There is **no `npm install` step** required for packages like React, as they are loaded directly from a CDN (esm.sh).
-
-### Running Locally
-
-Since this is a static project without a build step, you can serve it using any simple local web server. A common tool is `http-server`.
-
-1.  If you don't have `http-server`, install it globally:
+2.  Install the project dependencies using npm:
     ```bash
-    npm install -g http-server
+    npm install
     ```
-
-2.  Start the server from the project's root directory:
-    ```bash
-    http-server .
-    ```
-
-3.  Open your browser and navigate to the local address provided by the server (usually `http://127.0.0.1:8080`).
 
 ### Environment Variables
 
-The application requires a Google Gemini API key. For local development, this is mocked directly in `index.html`:
+The application requires a Google Gemini API key to power its AI features.
 
-```html
-<script>
-  // This safely mocks the environment variable for local development
-  window.process = {
-    env: {
-      API_KEY: 'YOUR_DEVELOPMENT_API_KEY' // Replace with a valid key for testing
-    }
-  };
-</script>
-```
+1.  In the root of the project, create a file named `.env`.
+2.  Add your API key to this file in the following format:
+    ```env
+    VITE_GEMINI_API_KEY=YOUR_API_KEY_HERE
+    ```
+    This file is listed in `.gitignore` to ensure your key is not committed to the repository.
 
-In a production environment, this script block should be removed, and the `API_KEY` should be provided through the deployment environment's standard mechanism for handling environment variables. The application code reads it from `process.env.API_KEY`.
+### Running Locally
+
+This project uses Vite for development. To start the local development server:
+
+1.  Run the following command from the project's root directory:
+    ```bash
+    npm run dev
+    ```
+
+2.  Open your browser and navigate to the local address provided by Vite (usually `http://localhost:3000`).
 
 ### Project Structure Overview
 

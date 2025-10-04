@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppContext } from '../../contexts/AppContext';
-import { ReportCategory, Report, ReportSeverity, Preview, ReportData, AiVerificationStatus } from '../../types';
-import { PATHS, CATEGORIES } from '../../constants';
+import { AppContext } from '../contexts/AppContext';
+import { ReportCategory, Report, ReportSeverity, Preview, ReportData, AiVerificationStatus } from '../types';
+import { PATHS, CATEGORIES } from '../constants';
 import L from 'leaflet';
-import { getReportImageUrl } from '../../data/mockImages';
-import Spinner from '../../components/Spinner';
+import { getReportImageUrl } from '../data/mockImages';
+import Spinner from '../components/Spinner';
 
-import WizardStepper from '../../components/WizardStepper';
+import WizardStepper from '../components/WizardStepper';
 import Step1Type from './report/Step1_Type';
 import Step2Photo from './report/Step2_Photo';
 import Step3Location from './report/Step3_Location';
@@ -64,7 +64,7 @@ const ReportFormPage: React.FC = () => {
     };
 
     const runAiMediaAnalysis = React.useCallback(async () => {
-        if (isAiLoading || !wizardData || wizardData.previews.length === 0 || !process.env.API_KEY) {
+        if (isAiLoading || !wizardData || wizardData.previews.length === 0 || !process.env.GEMINI_API_KEY) {
             setAiVerification({ status: 'idle', message: '' });
             return;
         }
@@ -73,7 +73,7 @@ const ReportFormPage: React.FC = () => {
         setAiVerification({ status: 'pending', message: t.aiAnalyzing });
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
             const mediaParts = await Promise.all(wizardData.previews.map(p => fileToGenerativePart(p.file)));
             const langName = language === 'ar' ? 'Arabic' : 'English';
             
@@ -189,13 +189,13 @@ Your JSON output must strictly adhere to the schema. Your primary job is the pol
 
     // --- Voice Recording ---
     const runAiTranscription = React.useCallback(async (audioBase64: string, mimeType: string) => {
-        if (!process.env.API_KEY) {
+        if (!process.env.GEMINI_API_KEY) {
             setIsTranscribing(false);
             return;
         }
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
             const langName = language === 'ar' ? 'Arabic' : 'English';
             const prompt = `You are a helpful assistant. A citizen is reporting a civic issue via audio. Your task is to process their recording.
 1.  First, transcribe the audio. The user might speak in ${langName} or a mix of languages.

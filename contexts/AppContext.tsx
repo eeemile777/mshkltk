@@ -89,9 +89,9 @@ const getInitialState = <T extends string>(key: string, allValues: T[]): Set<T> 
 };
 
 const translateText = async (text: string, targetLanguage: 'English' | 'Arabic'): Promise<string> => {
-    if (!text.trim() || !process.env.API_KEY) return text; // Return original if empty or no key
+    if (!text.trim() || !process.env.GEMINI_API_KEY) return text; // Return original if empty or no key
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         const prompt = `Translate the following text to ${targetLanguage}. Respond with ONLY the translated text, no extra formatting or explanations. Text to translate: "${text}"`;
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',

@@ -447,7 +447,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
     return (
         <div className="relative h-full w-full">
-            <div ref={mapContainer} className="h-full w-full" />
+            <div id="map" ref={mapContainer} className="h-full w-full" />
             {!isDraggablePinVisible && <MapControls />}
         </div>
     );

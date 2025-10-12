@@ -34,7 +34,7 @@ This document provides a comprehensive overview of the file and folder structure
 *   `OnboardingTour.tsx`: The interactive tutorial component that guides new users through the app's features.
 *   `AchievementToast.tsx`: A pop-up toast notification that appears when a user earns a new badge.
 *   `CategorySelectionModal.tsx`: A modal for selecting a report category and sub-category.
-*   `Lightbox.tsx`: A full-screen image viewer component.
+*   `Lightbox.tsx`: A full-screen image and video viewer component.
 *   `SearchSuggestions.tsx`: The dropdown that appears with suggestions when a user types in the main search bar.
 *   `ShareModal.tsx`: A modal for social sharing that dynamically generates a shareable image card of a report.
 *   `SkeletonLoader.tsx`: A collection of placeholder components used to indicate loading states across the app.
@@ -89,7 +89,12 @@ This document provides a comprehensive overview of the file and folder structure
 *   `AboutPage.tsx`: Static page with information about the app.
 *   `DemoPage.tsx`: A sandboxed page to demonstrate the Gemini AI analysis flow.
 *   `auth/`: Sub-directory for authentication-related pages (`LoginPage`, `SignupPage`, etc.).
-*   `report/`: Sub-directory for the multi-step report submission wizard steps (`Step1_Type`, `Step2_Photo`, etc.).
+*   `report/`: Sub-directory for the multi-step report submission wizard steps.
+    *   `Step1_Type.tsx`: User chooses to report with or without media.
+    *   `Step2_Photo.tsx`: User captures or uploads photos/videos.
+    *   `Step3_Disambiguation.tsx`: A new conditional step where the user confirms the issues found by the AI.
+    *   `Step3_Location.tsx`: User pinpoints the location of the issue(s).
+    *   `Step4_Details.tsx`: User reviews and edits the AI-generated details and submits the report(s).
 *   `portal/`: Sub-directory for Municipality Portal pages (`PortalDashboardPage`, `PortalReportsListPage`, etc.).
 *   `superadmin/`: Sub-directory for Super Admin Portal pages (`SuperAdminDashboardPage`, `SuperAdminUsersPage`, etc.).
 

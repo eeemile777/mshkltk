@@ -37,18 +37,25 @@ const StatusPill: React.FC<{ status: Report['status'] }> = ({ status }) => {
   );
 };
 
-const ImageGrid: React.FC<{ report: Report; onImageClick: (index: number) => void }> = ({ report, onImageClick }) => {
+const MediaGrid: React.FC<{ report: Report; onMediaClick: (index: number) => void }> = ({ report, onMediaClick }) => {
     const { t } = React.useContext(AppContext);
     const urls = report.photo_urls;
     if (!urls || urls.length === 0) return null;
 
-    const renderImage = (index: number, className: string = '') => {
-        const isProofPhoto = report.status === ReportStatus.Resolved && urls.length > 1 && index === urls.length - 1;
+    const renderMedia = (index: number, className: string = '') => {
+        const url = urls[index];
+        const isVideo = url.startsWith('data:video/');
+        const isProofMedia = report.status === ReportStatus.Resolved && urls.length > 1 && index === urls.length - 1;
+
         return (
-            <div key={index} className={`relative overflow-hidden rounded-lg group cursor-pointer ${className}`} onClick={() => onImageClick(index)}>
-                <img src={urls[index]} alt={`Report photo ${index + 1}`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+            <div key={index} className={`relative overflow-hidden rounded-lg group cursor-pointer ${className}`} onClick={() => onMediaClick(index)}>
+                {isVideo ? (
+                    <video src={url} className="w-full h-full object-cover" muted loop playsInline autoPlay />
+                ) : (
+                    <img src={url} alt={`Report media ${index + 1}`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                )}
                 <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                {isProofPhoto && (
+                {isProofMedia && (
                     <div className="absolute bottom-2 left-2 bg-teal text-white px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1.5 z-10 shadow-lg">
                         <FaCircleCheck />
                         <span>{t.resolutionProof}</span>
@@ -64,41 +71,45 @@ const ImageGrid: React.FC<{ report: Report; onImageClick: (index: number) => voi
         case 1:
             return (
                 <div className="h-96 rounded-xl overflow-hidden shadow-lg">
-                    {renderImage(0)}
+                    {renderMedia(0)}
                 </div>
             );
         case 2:
             return (
                 <div className={`${layoutClasses} grid-cols-2`}>
-                    {renderImage(0)}
-                    {renderImage(1)}
+                    {renderMedia(0)}
+                    {renderMedia(1)}
                 </div>
             );
         case 3:
             return (
                 <div className={`${layoutClasses} grid-cols-2 grid-rows-2`}>
-                    {renderImage(0, 'row-span-2')}
-                    {renderImage(1)}
-                    {renderImage(2)}
+                    {renderMedia(0, 'row-span-2')}
+                    {renderMedia(1)}
+                    {renderMedia(2)}
                 </div>
             );
         case 4:
             return (
                 <div className={`${layoutClasses} grid-cols-2 grid-rows-2`}>
-                    {renderImage(0)}
-                    {renderImage(1)}
-                    {renderImage(2)}
-                    {renderImage(3)}
+                    {renderMedia(0)}
+                    {renderMedia(1)}
+                    {renderMedia(2)}
+                    {renderMedia(3)}
                 </div>
             );
-        default: // 5+ images
+        default: // 5+ media
             return (
                 <div className={`${layoutClasses} grid-cols-2 grid-rows-2`}>
-                    {renderImage(0)}
-                    {renderImage(1)}
-                    {renderImage(2)}
-                    <div className="relative overflow-hidden rounded-lg group cursor-pointer" onClick={() => onImageClick(3)}>
-                        <img src={urls[3]} alt={`Report photo 4`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                    {renderMedia(0)}
+                    {renderMedia(1)}
+                    {renderMedia(2)}
+                    <div className="relative overflow-hidden rounded-lg group cursor-pointer" onClick={() => onMediaClick(3)}>
+                         {urls[3].startsWith('data:video/') ? (
+                             <video src={urls[3]} className="w-full h-full object-cover" muted loop playsInline autoPlay />
+                        ) : (
+                             <img src={urls[3]} alt={`Report media 4`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                        )}
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                             <span className="text-white text-4xl font-bold">+{urls.length - 3}</span>
                         </div>
@@ -410,7 +421,6 @@ const ReportDetailsPage: React.FC = () => {
   const backButtonDirection = language === 'ar' ? <FaArrowRight /> : <FaArrowLeft />;
   
   const isSubscribed = currentUser?.subscribedReportIds?.includes(report.id);
-  const isCreator = currentUser?.id === report.created_by;
   
   const categoryName = categoryData ? (language === 'ar' ? categoryData.name_ar : categoryData.name_en) : '';
   const subCategoryData = categoryData && report.sub_category ? categoryData.subCategories[report.sub_category] : null;
@@ -433,7 +443,7 @@ const ReportDetailsPage: React.FC = () => {
           </div>
       )}
       {isShareModalOpen && report && <ShareModal report={report} onClose={() => setIsShareModalOpen(false)} />}
-      {lightboxState.isOpen && <Lightbox images={report.photo_urls} startIndex={lightboxState.startIndex} onClose={closeLightbox} />}
+      {lightboxState.isOpen && <Lightbox mediaUrls={report.photo_urls} startIndex={lightboxState.startIndex} onClose={closeLightbox} />}
       {toastMessage && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-navy dark:bg-sand text-sand dark:text-navy px-4 py-2 rounded-full shadow-lg animate-fade-in z-50">
           {toastMessage}
@@ -441,7 +451,7 @@ const ReportDetailsPage: React.FC = () => {
       )}
 
       <div className="bg-card dark:bg-surface-dark p-4 sm:p-6 rounded-2xl shadow-md">
-        <ImageGrid report={report} onImageClick={openLightbox} />
+        <MediaGrid report={report} onMediaClick={openLightbox} />
         
         <div className="mt-6">
           <div className="flex justify-between items-start gap-4 mb-4">

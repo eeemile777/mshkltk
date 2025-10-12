@@ -28,27 +28,35 @@ const StatusPill: React.FC<{ status: Report['status'] }> = ({ status }) => {
   return <span className={`px-4 py-1.5 text-sm font-bold rounded-full ${colorClasses}`}>{t[status]}</span>;
 };
 
-const ImageGrid: React.FC<{ report: Report; onImageClick: (index: number) => void }> = ({ report, onImageClick }) => {
+const MediaGrid: React.FC<{ report: Report; onMediaClick: (index: number) => void }> = ({ report, onMediaClick }) => {
     const { t } = React.useContext(AppContext);
     const urls = report.photo_urls;
     if (!urls || urls.length === 0) return null;
-    const renderImage = (index: number, className: string = '') => {
-        const isProofPhoto = report.status === ReportStatus.Resolved && urls.length > 1 && index === urls.length - 1;
+
+    const renderMedia = (index: number, className: string = '') => {
+        const url = urls[index];
+        const isVideo = url.startsWith('data:video/');
+        const isProofMedia = report.status === ReportStatus.Resolved && urls.length > 1 && index === urls.length - 1;
+
         return (
-            <div key={index} className={`relative overflow-hidden rounded-lg group cursor-pointer ${className}`} onClick={() => onImageClick(index)}>
-                <img src={urls[index]} alt={`Report photo ${index + 1}`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+            <div key={index} className={`relative overflow-hidden rounded-lg group cursor-pointer ${className}`} onClick={() => onMediaClick(index)}>
+                {isVideo ? (
+                    <video src={url} className="w-full h-full object-cover" muted loop playsInline autoPlay />
+                ) : (
+                    <img src={url} alt={`Report media ${index + 1}`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                )}
                 <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                {isProofPhoto && <div className="absolute bottom-2 left-2 bg-teal text-white px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1.5 z-10 shadow-lg"><FaCircleCheck /><span>{t.resolved}</span></div>}
+                {isProofMedia && <div className="absolute bottom-2 left-2 bg-teal text-white px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1.5 z-10 shadow-lg"><FaCircleCheck /><span>{t.resolved}</span></div>}
             </div>
         );
     }
     const layoutClasses = "grid gap-2 h-96";
     switch (urls.length) {
-        case 1: return <div className="h-96 rounded-xl overflow-hidden shadow-lg">{renderImage(0)}</div>;
-        case 2: return <div className={`${layoutClasses} grid-cols-2`}>{urls.map((_, i) => renderImage(i))}</div>;
-        case 3: return <div className={`${layoutClasses} grid-cols-2 grid-rows-2`}>{renderImage(0, 'row-span-2')}{renderImage(1)}{renderImage(2)}</div>;
-        case 4: return <div className={`${layoutClasses} grid-cols-2 grid-rows-2`}>{urls.map((_, i) => renderImage(i))}</div>;
-        default: return <div className={`${layoutClasses} grid-cols-2 grid-rows-2`}>{renderImage(0)}{renderImage(1)}{renderImage(2)}<div className="relative overflow-hidden rounded-lg group cursor-pointer" onClick={() => onImageClick(3)}><img src={urls[3]} alt={`Report photo 4`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" /><div className="absolute inset-0 bg-black/60 flex items-center justify-center"><span className="text-white text-4xl font-bold">+{urls.length - 3}</span></div></div></div>;
+        case 1: return <div className="h-96 rounded-xl overflow-hidden shadow-lg">{renderMedia(0)}</div>;
+        case 2: return <div className={`${layoutClasses} grid-cols-2`}>{urls.map((_, i) => renderMedia(i))}</div>;
+        case 3: return <div className={`${layoutClasses} grid-cols-2 grid-rows-2`}>{renderMedia(0, 'row-span-2')}{renderMedia(1)}{renderMedia(2)}</div>;
+        case 4: return <div className={`${layoutClasses} grid-cols-2 grid-rows-2`}>{urls.map((_, i) => renderMedia(i))}</div>;
+        default: return <div className={`${layoutClasses} grid-cols-2 grid-rows-2`}>{renderMedia(0)}{renderMedia(1)}{renderMedia(2)}<div className="relative overflow-hidden rounded-lg group cursor-pointer" onClick={() => onMediaClick(3)}>{urls[3].startsWith('data:video/') ? (<video src={urls[3]} className="w-full h-full object-cover" muted loop playsInline autoPlay />) : (<img src={urls[3]} alt={`Report media 4`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />)}<div className="absolute inset-0 bg-black/60 flex items-center justify-center"><span className="text-white text-4xl font-bold">+{urls.length - 3}</span></div></div></div>;
     }
 };
 
@@ -243,10 +251,10 @@ const SuperAdminReportDetailsPage: React.FC = () => {
                     )}
                 </div>
             </div>
-            {lightboxState.isOpen && <Lightbox images={report.photo_urls} startIndex={lightboxState.startIndex} onClose={() => setLightboxState({isOpen: false, startIndex: 0})} />}
+            {lightboxState.isOpen && <Lightbox mediaUrls={report.photo_urls} startIndex={lightboxState.startIndex} onClose={() => setLightboxState({isOpen: false, startIndex: 0})} />}
 
             <div className="bg-card dark:bg-surface-dark p-4 sm:p-6 rounded-2xl shadow-md">
-                <ImageGrid report={report} onImageClick={(idx) => setLightboxState({isOpen: true, startIndex: idx})} />
+                <MediaGrid report={report} onMediaClick={(idx) => setLightboxState({isOpen: true, startIndex: idx})} />
                 <div className="mt-6">
                     <div className="flex justify-between items-start gap-4 mb-4">
                         {isEditing ? (

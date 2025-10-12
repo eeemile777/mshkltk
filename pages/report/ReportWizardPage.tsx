@@ -382,18 +382,22 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                 case 2:
                     return <Step2Photo reportData={wizardData} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} isAiLoading={isAiLoading} aiVerification={aiVerification} />;
                 case 3:
-                    return <Step3Location reportData={wizardData} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} />;
+// FIX: Add missing 'setWizardStep' prop to Step3Location component.
+                    return <Step3Location reportData={wizardData} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} setWizardStep={setWizardStep} />;
                 case 4:
-                    return <Step4Details reportData={wizardData} updateReportData={updateWizardData} onSubmit={handleSubmit} prevStep={prevStep} isSubmitting={isSubmitting} isAiLoading={isAiLoading} isRecording={isRecording} isTranscribing={isTranscribing} startRecording={startRecording} stopRecording={stopRecording} />;
+// FIX: Add missing 'setWizardStep' prop to Step4Details component.
+                    return <Step4Details reportData={wizardData} updateReportData={updateWizardData} onSubmit={handleSubmit} prevStep={prevStep} isSubmitting={isSubmitting} isAiLoading={isAiLoading} isRecording={isRecording} isTranscribing={isTranscribing} startRecording={startRecording} stopRecording={stopRecording} setWizardStep={setWizardStep} />;
                 default:
                     return null;
             }
         } else { // Reporting WITHOUT media
              switch (wizardStep) {
                 case 2:
-                    return <Step3Location reportData={wizardData} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} />;
+// FIX: Add missing 'setWizardStep' prop to Step3Location component.
+                    return <Step3Location reportData={wizardData} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} setWizardStep={setWizardStep} />;
                 case 3:
-                    return <Step4Details reportData={wizardData} updateReportData={updateWizardData} onSubmit={handleSubmit} prevStep={prevStep} isSubmitting={isSubmitting} isAiLoading={false} isRecording={isRecording} isTranscribing={isTranscribing} startRecording={startRecording} stopRecording={stopRecording} />;
+// FIX: Add missing 'setWizardStep' prop to Step4Details component.
+                    return <Step4Details reportData={wizardData} updateReportData={updateWizardData} onSubmit={handleSubmit} prevStep={prevStep} isSubmitting={isSubmitting} isAiLoading={false} isRecording={isRecording} isTranscribing={isTranscribing} startRecording={startRecording} stopRecording={stopRecording} setWizardStep={setWizardStep} />;
                 default:
                     return null;
             }

@@ -31,6 +31,8 @@ const TrendingReportCard: React.FC<{ report: Report, rank: number }> = ({ report
     
     const title = language === 'ar' ? report.title_ar : report.title_en;
     const note = language === 'ar' ? report.note_ar : report.note_en;
+    const url = report.photo_urls[0];
+    const isVideo = url.startsWith('data:video/');
 
     return (
         <Link 
@@ -41,7 +43,11 @@ const TrendingReportCard: React.FC<{ report: Report, rank: number }> = ({ report
                 <span className="text-3xl font-bold">{rank}</span>
             </div>
 
-            <img src={report.photo_urls[0]} alt={note} className="w-24 h-24 object-cover rounded-xl"/>
+            {isVideo ? (
+                <video src={url} className="w-24 h-24 object-cover rounded-xl" muted loop playsInline autoPlay />
+            ) : (
+                <img src={url} alt={note} className="w-24 h-24 object-cover rounded-xl"/>
+            )}
 
             <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">

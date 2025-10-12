@@ -7,6 +7,7 @@ import { PATHS } from '../../constants';
 import { FaLocationDot, FaRegAddressCard, FaSpinner, FaArrowLeft, FaArrowRight, FaCity, FaGlobe, FaMagnifyingGlass } from 'react-icons/fa6';
 import { GoogleGenAI, Type } from '@google/genai';
 import InteractiveMap from '../../components/InteractiveMap';
+import AiRejectionNotice from './AiRejectionNotice';
 
 interface NominatimResult {
     place_id: number;
@@ -63,15 +64,18 @@ const Step3Location: React.FC<{
   updateReportData: (updates: Partial<ReportData>) => void;
   nextStep: () => void;
   prevStep: () => void;
+  setWizardStep: (step: number | ((prevStep: number) => number)) => void;
 }> = ({
   reportData,
   updateReportData,
   nextStep,
   prevStep,
+  setWizardStep,
 }) => {
   const { t, language, reports, flyToLocation } = React.useContext(AppContext);
   
   const searchContainerRef = React.useRef<HTMLDivElement>(null);
+  const userHasManuallySetLocation = React.useRef(false);
 
   const [geoState, setGeoState] = React.useState<{ loading: boolean; error: string | null }>({
     loading: !reportData.location,
@@ -94,6 +98,9 @@ const Step3Location: React.FC<{
 
   const handleUseCurrentLocation = React.useCallback(async (isInitialFetch: boolean = false) => {
     setGeoState({ loading: true, error: null });
+    if (!isInitialFetch) {
+        userHasManuallySetLocation.current = false;
+    }
     if (!navigator.geolocation) {
       const fallbackLocation: L.LatLngTuple = [33.8938, 35.5018];
       if (isInitialFetch) updateReportData({ location: fallbackLocation });
@@ -103,6 +110,10 @@ const Step3Location: React.FC<{
     }
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (userHasManuallySetLocation.current) {
+            setGeoState({ loading: false, error: null });
+            return;
+        }
         const newLocation: [number, number] = [position.coords.latitude, position.coords.longitude];
         updateReportData({ location: newLocation, address: '', municipality: '' });
         flyToLocation(newLocation, 15);
@@ -213,6 +224,7 @@ const Step3Location: React.FC<{
 
 
   const handleSuggestionClick = (suggestion: NominatimResult) => {
+    userHasManuallySetLocation.current = true;
     const newLocation: L.LatLngTuple = [parseFloat(suggestion.lat), parseFloat(suggestion.lon)];
     updateReportData({ location: newLocation, address: suggestion.display_name, municipality: '' });
     setShowSuggestions(false);
@@ -244,8 +256,11 @@ const Step3Location: React.FC<{
     );
   }
 
+  const backStepTarget = reportData.detectedIssues.length > 1 ? 3 : 2;
+
   return (
     <div className="flex flex-col h-full w-full">
+      <AiRejectionNotice reportData={reportData} onGoBack={() => setWizardStep(2)} />
       <div className="text-center flex-shrink-0">
         <h1 className="text-3xl font-bold text-navy dark:text-text-primary-dark mb-2">{t.dragPin}</h1>
         <p className="text-lg text-text-secondary dark:text-text-secondary-dark mb-4">{t.privacyNotice}</p>
@@ -256,6 +271,9 @@ const Step3Location: React.FC<{
             reports={reports}
             isDraggablePinVisible={true}
             draggablePinPosition={reportData.location}
+            onDraggablePinDragStart={() => {
+                userHasManuallySetLocation.current = true;
+            }}
             onDraggablePinMove={(position) => {
                 updateReportData({ location: position, municipality: '' });
             }}
@@ -330,7 +348,7 @@ const Step3Location: React.FC<{
       </div>
       
       <div className="flex-shrink-0 py-4 w-full flex items-center justify-between">
-          <button type="button" onClick={prevStep} className="flex items-center gap-2 px-6 py-3 text-lg font-bold text-text-secondary dark:text-text-secondary-dark bg-muted dark:bg-surface-dark rounded-full hover:bg-opacity-90">
+          <button type="button" onClick={() => setWizardStep(backStepTarget)} className="flex items-center gap-2 px-6 py-3 text-lg font-bold text-text-secondary dark:text-text-secondary-dark bg-muted dark:bg-surface-dark rounded-full hover:bg-opacity-90">
             <BackIcon /> {t.backStep}
           </button>
           <button type="button" onClick={nextStep} disabled={isNextDisabled} className="flex items-center gap-2 px-6 py-3 text-lg font-bold text-white bg-teal rounded-full hover:bg-opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed">

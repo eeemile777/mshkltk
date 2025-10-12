@@ -24,6 +24,7 @@ interface InteractiveMapProps {
     isDraggablePinVisible?: boolean;
     draggablePinPosition?: L.LatLngTuple | null;
     onDraggablePinMove?: (position: L.LatLngTuple) => void;
+    onDraggablePinDragStart?: () => void; // New prop for drag start event
     hideUserLocationMarker?: boolean;
     hideControls?: boolean;
     // Props for restricting map view
@@ -66,9 +67,15 @@ const SeverityIndicator: React.FC<{ severity: ReportSeverity; className?: string
 // --- Popup Component ---
 const MapPopup: React.FC<{ report: Report; t: any; onNavigate: () => void; language: string; }> = ({ report, t, onNavigate, language }) => {
     const title = language === 'ar' ? report.title_ar : report.title_en;
+    const url = report.photo_urls[0];
+    const isVideo = url.startsWith('data:video/');
     return (
         <div className="w-64 max-w-[90vw] overflow-hidden rounded-xl bg-card dark:bg-surface-dark shadow-lg">
-            <img src={report.photo_urls[0]} alt={title} className="w-full h-28 object-cover" />
+            {isVideo ? (
+                <video src={url} className="w-full h-28 object-cover" muted loop playsInline autoPlay />
+            ) : (
+                <img src={url} alt={title} className="w-full h-28 object-cover" />
+            )}
             <div className="p-3">
                 <h3 className="font-bold text-base text-navy dark:text-text-primary-dark line-clamp-2 mb-1">{title}</h3>
                 <div className="flex justify-between items-center text-xs text-text-secondary dark:text-text-secondary-dark mb-2">
@@ -100,6 +107,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     isDraggablePinVisible,
     draggablePinPosition,
     onDraggablePinMove,
+    onDraggablePinDragStart,
     hideUserLocationMarker,
     hideControls,
     bounds,
@@ -123,6 +131,14 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     const draggableMarkerRef = React.useRef<L.Marker | null>(null);
     const userLocationMarkerRef = React.useRef<L.Marker | null>(null);
     const initialLocationSetRef = React.useRef(false);
+    const isPinDraggingRef = React.useRef(false);
+
+    // FIX: Create a ref to track the latest `isDraggablePinVisible` state. This prevents
+    // the 'moveend' event listener from causing re-renders that interfere with pin dragging.
+    const isDraggablePinVisibleRef = React.useRef(isDraggablePinVisible);
+    React.useEffect(() => {
+        isDraggablePinVisibleRef.current = isDraggablePinVisible;
+    }, [isDraggablePinVisible]);
 
 
     const filteredReports = React.useMemo(() => {
@@ -252,6 +268,11 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         }).addTo(map);
 
         map.on('moveend', () => {
+            // FIX: Check the ref here. If the draggable pin is visible, we are in a report creation
+            // flow and should not update the global map view state. This prevents re-renders
+            // that interfere with the user's interaction (like dragging the pin).
+            if (isDraggablePinVisibleRef.current) return;
+
             if (!mapRef.current) return;
             const center = mapRef.current.getCenter();
             setMapView([center.lat, center.lng], mapRef.current.getZoom());
@@ -454,7 +475,13 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 zIndexOffset: 2000,
             }).addTo(map);
 
+            marker.on('dragstart', () => {
+                isPinDraggingRef.current = true;
+                onDraggablePinDragStart?.();
+            });
+
             marker.on('dragend', () => {
+                isPinDraggingRef.current = false;
                 const { lat, lng } = marker.getLatLng();
                 onDraggablePinMove?.([lat, lng]);
             });
@@ -462,9 +489,13 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             draggableMarkerRef.current = marker;
 
         } else if (draggableMarkerRef.current && draggablePinPosition) {
-            draggableMarkerRef.current.setLatLng(draggablePinPosition);
+            // CRITICAL FIX: The `isDragging()` method does not exist on L.Marker.
+            // We now use our `isPinDraggingRef` which is correctly updated by drag events.
+            if (!isPinDraggingRef.current) {
+                draggableMarkerRef.current.setLatLng(draggablePinPosition);
+            }
         }
-    }, [isDraggablePinVisible, draggablePinPosition, onDraggablePinMove]);
+    }, [isDraggablePinVisible, draggablePinPosition, onDraggablePinMove, onDraggablePinDragStart]);
 
 
     return (

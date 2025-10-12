@@ -210,7 +210,7 @@ const PortalReportsListPage: React.FC = () => {
     
     return (
         <div>
-            {lightboxState.isOpen && <Lightbox images={lightboxState.images} startIndex={lightboxState.startIndex} onClose={closeLightbox} />}
+            {lightboxState.isOpen && <Lightbox mediaUrls={lightboxState.images} startIndex={lightboxState.startIndex} onClose={closeLightbox} />}
             {resolvingReport && (
                 <ResolutionProofModal
                     report={resolvingReport}
@@ -270,6 +270,8 @@ const PortalReportsListPage: React.FC = () => {
                                : null;
                            const title = language === 'ar' ? report.title_ar : report.title_en;
                            const note = language === 'ar' ? report.note_ar : report.note_en;
+                           const firstMediaUrl = report.photo_urls[0];
+                           const isVideo = firstMediaUrl && firstMediaUrl.startsWith('data:video/');
                            return (
                                <tr 
                                  key={report.id} 
@@ -278,7 +280,11 @@ const PortalReportsListPage: React.FC = () => {
                                   <td className="p-4 text-text-secondary dark:text-text-secondary-dark align-top">{new Date(report.created_at).toLocaleDateString(language === 'ar' ? 'ar-LB' : 'en-US')}</td>
                                   <td className="p-4">
                                     <button onClick={(e) => openLightbox(e, report.photo_urls)}>
-                                      <img src={report.photo_urls[0]} alt={title} className="w-16 h-16 object-cover rounded-lg"/>
+                                        {isVideo ? (
+                                            <video src={firstMediaUrl} className="w-16 h-16 object-cover rounded-lg" muted loop playsInline autoPlay />
+                                        ) : (
+                                            <img src={firstMediaUrl} alt={title} className="w-16 h-16 object-cover rounded-lg"/>
+                                        )}
                                     </button>
                                   </td>
                                   <td className="p-4 align-top">

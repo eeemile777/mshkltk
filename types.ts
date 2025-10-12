@@ -182,6 +182,14 @@ export interface Preview {
 // FIX: Moved from ReportWizardPage.tsx to break circular dependency
 export type AiVerificationStatus = 'pending' | 'pass' | 'fail' | 'images_removed' | 'idle';
 
+export interface AIssue {
+    title: string;
+    description: string;
+    category: ReportCategory | null;
+    sub_category: string | null;
+    severity: ReportSeverity | null;
+}
+
 export interface ReportData {
     // FIX: Changed category type to be more specific, fixing multiple type errors.
     category: ReportCategory | null;
@@ -194,6 +202,9 @@ export interface ReportData {
     municipality: string;
     withMedia: boolean | null;
     severity: ReportSeverity | null;
+    // New fields for multi-report flow
+    detectedIssues: AIssue[];
+    multiReportSelection: Record<number, boolean>;
 }
 
 // --- Dynamic Configuration Types ---

@@ -673,7 +673,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const clearStatuses = React.useCallback(() => setActiveStatuses(new Set()), []);
   
   const startWizard = React.useCallback(() => {
-    setWizardData({ category: null, sub_category: null, previews: [], location: null, address: '', title: '', description: '', municipality: '', withMedia: null, severity: null });
+    // FIX: Initialize missing `detectedIssues` and `multiReportSelection` properties to match the `ReportData` type.
+    setWizardData({ category: null, sub_category: null, previews: [], location: null, address: '', title: '', description: '', municipality: '', withMedia: null, severity: null, detectedIssues: [], multiReportSelection: {} });
     setWizardStep(1); setIsWizardActive(true);
   }, []);
   const resetWizard = React.useCallback(() => { setWizardData(null); setWizardStep(1); setIsWizardActive(false); }, []);

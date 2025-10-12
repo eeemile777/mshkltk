@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { AppContext } from '../../contexts/AppContext';
 import { ReportData, AiVerificationStatus, Preview } from '../../types';
@@ -323,7 +322,15 @@ const Step2Photo: React.FC<Step2PhotoProps> = ({ reportData, updateReportData, n
         type: file.type.startsWith('video') ? 'video' as const : 'image' as const,
         status: 'pending' as const,
       }));
-    updateReportData({ previews: [...reportData.previews, ...newPreviews] });
+
+    // Reset all existing previews to 'pending' to force re-evaluation of the whole set
+    const existingPreviewsReset = reportData.previews.map(p => ({
+        ...p,
+        status: 'pending' as const,
+        rejectionReason: undefined,
+    }));
+
+    updateReportData({ previews: [...existingPreviewsReset, ...newPreviews] });
   }, [reportData.previews, updateReportData]);
   
   const handleRemovePreview = (index: number) => {
@@ -332,43 +339,42 @@ const Step2Photo: React.FC<Step2PhotoProps> = ({ reportData, updateReportData, n
       URL.revokeObjectURL(previewToRemove.url);
     }
     const newPreviews = reportData.previews.filter((_, i) => i !== index);
-    updateReportData({ previews: newPreviews });
+    
+    // Reset all remaining previews to 'pending' to force re-evaluation
+    const resetPreviews = newPreviews.map(p => ({
+        ...p,
+        status: 'pending' as const,
+        rejectionReason: undefined,
+    }));
+
+    updateReportData({ previews: resetPreviews });
   };
 
   const takePhoto = React.useCallback(() => {
     if (!videoRef.current || !isVideoReady) {
         console.error("Take photo failed: Video element or stream not ready.");
+        alert(t.failedToCapture);
         return;
     }
 
     requestAnimationFrame(() => {
         const video = videoRef.current;
         // The main check is now inside the animation frame for maximum safety
-        if (!video || video.readyState < 2 /* HAVE_CURRENT_DATA */) {
-            console.error("Take photo failed inside rAF: Video not ready.");
-            alert(t.failedToCapture);
-            return;
-        }
-
-        // Capture dimensions in variables to prevent race conditions
-        const width = video.videoWidth;
-        const height = video.videoHeight;
-
-        if (width <= 0 || height <= 0) {
-            console.error("Take photo failed inside rAF: Video dimensions are zero.");
+        if (!video || video.readyState < 2 /* HAVE_CURRENT_DATA */ || video.videoWidth <= 0 || video.videoHeight <= 0) {
+            console.error("Take photo failed inside rAF: Video not ready or dimensions are zero.");
             alert(t.failedToCapture);
             return;
         }
         
         try {
             const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             if (!ctx) {
                 throw new Error("Could not get canvas context.");
             }
-            ctx.drawImage(video, 0, 0, width, height);
+            ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
             canvas.toBlob(blob => {
               if (blob) {
                 const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
@@ -389,19 +395,36 @@ const Step2Photo: React.FC<Step2PhotoProps> = ({ reportData, updateReportData, n
     if (!streamRef.current || isRecording) return;
     setIsRecording(true);
     recordedChunksRef.current = [];
-    const mimeTypes = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    // Prioritize MP4 if available, as it's more standard than WEBM for Gemini.
+    const mimeTypes = [
+        'video/mp4;codecs=avc1',
+        'video/mp4',
+        'video/webm;codecs=vp9,opus', 
+        'video/webm;codecs=vp8,opus', 
+        'video/webm'
+    ];
     const supportedMimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
+    
+    if (!supportedMimeType) {
+        console.error("No supported video MIME type found for MediaRecorder.");
+        alert("Video recording is not supported on this browser.");
+        setIsRecording(false);
+        return;
+    }
+    
     mediaRecorderRef.current = new MediaRecorder(streamRef.current, { mimeType: supportedMimeType });
     mediaRecorderRef.current.ondataavailable = event => {
       if (event.data.size > 0) recordedChunksRef.current.push(event.data);
     };
     mediaRecorderRef.current.onstop = () => {
-      const blob = new Blob(recordedChunksRef.current, { type: supportedMimeType || 'video/webm' });
+      const blob = new Blob(recordedChunksRef.current, { type: supportedMimeType });
       if (blob.size === 0) {
         console.warn("Recording resulted in an empty video file. Discarding.");
         return;
       }
-      const file = new File([blob], `video-${Date.now()}.webm`, { type: blob.type });
+      // Make file extension dynamic based on the actual MIME type used.
+      const fileExtension = (supportedMimeType.split(';')[0].split('/')[1]) || 'webm';
+      const file = new File([blob], `video-${Date.now()}.${fileExtension}`, { type: blob.type });
       handleFiles([file]);
     };
     mediaRecorderRef.current.start();
@@ -480,6 +503,13 @@ const Step2Photo: React.FC<Step2PhotoProps> = ({ reportData, updateReportData, n
               </div>
             )}
           </>
+        )}
+
+        {isAiLoading && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-sky/80 dark:bg-cyan-dark/80 text-white px-4 py-2 rounded-full shadow-lg animate-fade-in flex items-center gap-2 text-sm">
+                <FaSpinner className="animate-spin" />
+                <span>{t.aiAnalyzingCanProceed}</span>
+            </div>
         )}
 
         <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none"></div>

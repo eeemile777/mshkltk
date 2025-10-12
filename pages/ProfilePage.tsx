@@ -30,12 +30,18 @@ const ReportListItem: React.FC<{ report: Report }> = ({ report }) => {
     const title = language === 'ar' ? report.title_ar : report.title_en;
     const categoryData = categories[report.category];
     const categoryName = categoryData ? (language === 'ar' ? categoryData.name_ar : categoryData.name_en) : report.category;
+    const url = report.photo_urls[0];
+    const isVideo = url.startsWith('data:video/');
 
     return (
         <Link to={PATHS.REPORT_DETAILS.replace(':id', report.id)} className="block bg-muted dark:bg-bg-dark p-3 rounded-xl hover:shadow-lg transition-shadow">
             <div className="flex items-center gap-4">
                 <div className="relative w-16 h-16 flex-shrink-0">
-                    <img src={report.photo_urls[0]} alt="" className="w-full h-full rounded-lg object-cover"/>
+                    {isVideo ? (
+                        <video src={url} className="w-full h-full rounded-lg object-cover" muted loop playsInline autoPlay />
+                    ) : (
+                        <img src={url} alt="" className="w-full h-full rounded-lg object-cover"/>
+                    )}
                     {report.isPending && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg" title={t.pending_sync}>
                             <FaClockRotateLeft className="text-white h-6 w-6" />

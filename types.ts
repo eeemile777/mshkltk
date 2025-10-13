@@ -55,7 +55,6 @@ export enum LeaderboardFilter {
 }
 
 export enum Credibility {
-    Pending = 'Pending',
     Pass = 'Pass',
     NeedsReview = 'Needs Review',
 }
@@ -76,6 +75,7 @@ export interface Report {
   note_ar: string;
   status: ReportStatus;
   severity: ReportSeverity;
+  ai_credibility: Credibility;
   confirmations_count: number;
   created_at: string;
   created_by: string; // userId

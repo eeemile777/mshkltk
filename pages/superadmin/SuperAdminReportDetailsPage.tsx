@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import { SuperAdminContext } from '../../contexts/SuperAdminContext';
 import { AppContext } from '../../contexts/AppContext';
-import { Report, Theme, ReportStatus, Comment, ReportHistory, User, ReportSeverity, ReportCategory } from '../../types';
+import { Report, Theme, ReportStatus, Comment, ReportHistory, User, ReportSeverity, ReportCategory, Credibility } from '../../types';
 import { STATUS_COLORS, TILE_URLS, ICON_MAP, CATEGORIES } from '../../constants';
 import { FaArrowLeft, FaArrowRight, FaCircleCheck, FaRegCommentDots, FaClockRotateLeft, FaMapLocationDot, FaCity, FaGlobe, FaLandmark, FaTrash, FaPenToSquare, FaFloppyDisk, FaXmark, FaFlag, FaSpinner } from 'react-icons/fa6';
 import { ReportDetailsSkeleton } from '../../components/SkeletonLoader';
@@ -219,6 +219,11 @@ const SuperAdminReportDetailsPage: React.FC = () => {
 
     const title = language === 'ar' ? currentReportData.title_ar : currentReportData.title_en;
     const note = language === 'ar' ? currentReportData.note_ar : currentReportData.note_en;
+    
+    const credibility = currentReportData.ai_credibility;
+    const credibilityColor = credibility === Credibility.Pass 
+        ? 'bg-teal/20 text-teal-dark' 
+        : 'bg-mango/20 text-mango-dark';
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -274,23 +279,23 @@ const SuperAdminReportDetailsPage: React.FC = () => {
                                 <div><span>{categoryName}</span>{subCategoryName && <span className="text-sm font-normal text-text-secondary dark:text-text-secondary-dark block">{subCategoryName}</span>}</div>
                             </div>
                         )}
-                        {isEditing ? (
-                            <div className="flex-shrink-0">
-                                <label htmlFor="status-select" className="block text-center text-xs text-text-secondary dark:text-text-secondary-dark">Status</label>
-                                <select
-                                    id="status-select"
-                                    value={editedReport?.status}
-                                    onChange={e => handleFieldChange('status', e.target.value as ReportStatus)}
-                                    className="appearance-none px-4 py-1.5 text-sm font-bold rounded-full bg-muted dark:bg-surface-dark border-border-light dark:border-border-dark border focus:ring-2 focus:ring-coral-dark"
-                                >
-                                    {Object.values(ReportStatus).map(s => (
-                                        <option key={s} value={s}>{t[s]}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        ) : (
-                            <StatusPill status={currentReportData.status} />
-                        )}
+                        <div className="flex flex-col gap-2 items-center">
+                            {isEditing ? (
+                                <>
+                                    <select id="status-select" value={editedReport?.status} onChange={e => handleFieldChange('status', e.target.value as ReportStatus)} className="appearance-none px-4 py-1.5 text-sm font-bold rounded-full bg-muted dark:bg-surface-dark border-border-light dark:border-border-dark border focus:ring-2 focus:ring-coral-dark">
+                                        {Object.values(ReportStatus).map(s => (<option key={s} value={s}>{t[s]}</option>))}
+                                    </select>
+                                    <select id="credibility-select" value={editedReport?.ai_credibility} onChange={e => handleFieldChange('ai_credibility', e.target.value as Credibility)} className="appearance-none px-4 py-1.5 text-xs font-bold rounded-full bg-muted dark:bg-surface-dark border-border-light dark:border-border-dark border focus:ring-2 focus:ring-coral-dark">
+                                        {Object.values(Credibility).map(c => (<option key={c} value={c}>{c}</option>))}
+                                    </select>
+                                </>
+                            ) : (
+                                <>
+                                    <StatusPill status={currentReportData.status} />
+                                    <span className={`px-2 py-1 text-xs font-bold rounded-full ${credibilityColor}`}>{credibility}</span>
+                                </>
+                            )}
+                        </div>
                     </div>
                     
                     {isEditing ? (

@@ -105,11 +105,18 @@ const ResolutionProofModal: React.FC<ResolutionProofModalProps> = ({ report, onC
                     throw new Error("Could not get canvas context.");
                 }
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                setPhoto(canvas.toDataURL('image/jpeg'));
+                const photoDataUrl = canvas.toDataURL('image/jpeg');
+
+                // Now that we have the data, we can clean up the stream and switch the view.
+                cleanupStream();
+                setView('select');
+
+                // Finally, update the state with the captured image data.
+                setPhoto(photoDataUrl);
             } catch (error) {
                 console.error("Error capturing proof photo from video stream:", error);
                 alert(t.failedToCapture);
-            } finally {
+                // Also clean up on error
                 cleanupStream();
                 setView('select');
             }

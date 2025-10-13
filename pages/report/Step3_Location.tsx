@@ -58,6 +58,7 @@ const NearbyReportCard: React.FC<{ report: Report & { distance: number } }> = ({
     );
 };
 
+type MunicipalityStatus = 'idle' | 'loading' | 'success' | 'failed';
 
 const Step3Location: React.FC<{
   reportData: ReportData;
@@ -89,7 +90,7 @@ const Step3Location: React.FC<{
   const [showSuggestions, setShowSuggestions] = React.useState(false);
   
   const [isReverseGeocoding, setIsReverseGeocoding] = React.useState(false);
-  const [isDetectingMunicipality, setIsDetectingMunicipality] = React.useState(false);
+  const [municipalityStatus, setMunicipalityStatus] = React.useState<MunicipalityStatus>('idle');
   
   const [nearbyReports, setNearbyReports] = React.useState<(Report & { distance: number })[]>([]);
 
@@ -182,25 +183,39 @@ const Step3Location: React.FC<{
   // AI Municipality Detection
   React.useEffect(() => {
     const address = reportData.address;
-    if (!address || address === t.addressNotFound || address === t.fetchError || !process.env.API_KEY || isReverseGeocoding) return;
+
+    if (!address || address === t.addressNotFound || address === t.fetchError || isReverseGeocoding) {
+      setMunicipalityStatus('idle');
+      updateReportData({ municipality: '' });
+      return;
+    }
+    if (!process.env.API_KEY) {
+      setMunicipalityStatus('failed');
+      return;
+    }
+
     const detectMunicipality = async () => {
-      setIsDetectingMunicipality(true);
+      setMunicipalityStatus('loading');
+      updateReportData({ municipality: '' });
       try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const prompt = `You are a Lebanese geography expert. Given the address: "${address}", identify the official municipality. Respond with ONLY the municipality name in lowercase English. Your response must be a single, valid JSON object with one key: "municipality".`;
         const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { municipality: { type: Type.STRING } }, required: ["municipality"] } } });
         const result = JSON.parse(response.text);
-        if (result.municipality) updateReportData({ municipality: result.municipality });
+        if (result.municipality) {
+            updateReportData({ municipality: result.municipality });
+            setMunicipalityStatus('success');
+        } else {
+            throw new Error("AI returned empty municipality");
+        }
       } catch (error) {
         console.error("Municipality detection error:", error);
-        updateReportData({ municipality: 'unknown' });
-      } finally {
-        setIsDetectingMunicipality(false);
+        setMunicipalityStatus('failed');
       }
     };
-    const debounceTimer = setTimeout(detectMunicipality, 300);
+    const debounceTimer = setTimeout(detectMunicipality, 1500);
     return () => clearTimeout(debounceTimer);
-  }, [reportData.address, t.addressNotFound, t.fetchError, isReverseGeocoding, updateReportData]);
+  }, [reportData.address, isReverseGeocoding, t.addressNotFound, t.fetchError, updateReportData]);
   
   // Find nearby reports when pin moves
   React.useEffect(() => {
@@ -243,7 +258,7 @@ const Step3Location: React.FC<{
 
   const BackIcon = language === 'ar' ? FaArrowRight : FaArrowLeft;
   const NextIcon = language === 'ar' ? FaArrowLeft : FaArrowRight;
-  const isNextDisabled = isReverseGeocoding || isDetectingMunicipality || !reportData.address || reportData.address === t.addressNotFound || !reportData.municipality || reportData.municipality === 'unknown' || geoState.loading;
+  const isNextDisabled = isReverseGeocoding || municipalityStatus === 'loading' || !reportData.address || reportData.address === t.addressNotFound || !reportData.municipality || geoState.loading;
 
   if (geoState.loading || !reportData.location) {
     return (
@@ -319,21 +334,27 @@ const Step3Location: React.FC<{
             <FaCity className="h-6 w-6 text-teal dark:text-teal-dark mt-1 flex-shrink-0" />
             <div>
                 <label className="font-bold text-navy dark:text-text-primary-dark">{t.municipality}</label>
-                {isDetectingMunicipality ? (
+                {municipalityStatus === 'loading' && (
                     <p className="text-sm text-text-secondary dark:text-text-secondary-dark flex items-center gap-2"><FaSpinner className="animate-spin" /> {t.aiAnalyzing}</p>
-                ) : (
-                    <p className="text-sm text-text-secondary dark:text-text-secondary-dark capitalize">{reportData.municipality || 'Not detected'}</p>
                 )}
-            </div>
-        </div>
-
-        <div className="p-4 bg-muted dark:bg-surface-dark rounded-xl flex items-start gap-4 text-start">
-            <FaGlobe className="h-6 w-6 text-teal dark:text-teal-dark mt-1 flex-shrink-0" />
-            <div>
-                <label className="font-bold text-navy dark:text-text-primary-dark">{t.coordinates}</label>
-                {reportData.location ? (
-                    <p className="text-sm text-text-secondary dark:text-text-secondary-dark font-mono">Lat: {reportData.location[0].toFixed(6)}, Lng: {reportData.location[1].toFixed(6)}</p>
-                ) : ( <p className="text-sm text-text-secondary dark:text-text-secondary-dark">Waiting for location...</p> )}
+                {municipalityStatus === 'success' && (
+                    <p className="text-sm text-text-secondary dark:text-text-secondary-dark capitalize">{reportData.municipality}</p>
+                )}
+                {municipalityStatus === 'failed' && (
+                    <div>
+                        <p className="text-xs text-coral dark:text-coral-dark mb-1">{t.aiMunicipalityFailed}</p>
+                        <input
+                            type="text"
+                            value={reportData.municipality || ''}
+                            onChange={e => updateReportData({ municipality: e.target.value.toLowerCase().replace(/\s/g, '') })}
+                            placeholder="e.g., beirut"
+                            className="w-full bg-card dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-md p-1 text-sm"
+                        />
+                    </div>
+                )}
+                {municipalityStatus === 'idle' && (
+                    <p className="text-sm text-text-secondary dark:text-text-secondary-dark">Waiting for address...</p>
+                )}
             </div>
         </div>
         

@@ -38,7 +38,7 @@ const ReportListItem: React.FC<{ report: Report }> = ({ report }) => {
             <div className="flex items-center gap-4">
                 <div className="relative w-16 h-16 flex-shrink-0">
                     {isVideo ? (
-                        <video src={url} className="w-full h-full rounded-lg object-cover" playsInline />
+                        <video src={url} className="w-full h-full rounded-lg object-cover" muted loop playsInline autoPlay />
                     ) : (
                         <img src={url} alt="" className="w-full h-full rounded-lg object-cover"/>
                     )}

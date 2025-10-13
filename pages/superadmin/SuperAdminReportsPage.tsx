@@ -2,12 +2,12 @@ import * as React from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { SuperAdminContext } from '../../contexts/SuperAdminContext';
 import { AppContext } from '../../contexts/AppContext';
-import { Report, ReportCategory, ReportStatus, ReportSeverity } from '../../types';
+import { Report, ReportCategory, ReportStatus, ReportSeverity, Credibility } from '../../types';
 import Spinner from '../../components/Spinner';
 import { FaTrash, FaMagnifyingGlass, FaSort, FaSortUp, FaSortDown, FaXmark, FaSpinner } from 'react-icons/fa6';
 import PortalReportFilters from '../../components/portal/PortalReportFilters';
 
-type SortKey = keyof Pick<Report, 'municipality' | 'status' | 'created_at'> | 'title';
+type SortKey = keyof Pick<Report, 'municipality' | 'status' | 'created_at' | 'ai_credibility'> | 'title';
 interface SortConfig {
   key: SortKey;
   direction: 'ascending' | 'descending';
@@ -169,12 +169,17 @@ const SuperAdminReportsPage: React.FC = () => {
                             <SortableHeader sortKey="title">Report Title</SortableHeader>
                             <SortableHeader sortKey="municipality">Municipality</SortableHeader>
                             <SortableHeader sortKey="status">Status</SortableHeader>
+                            <SortableHeader sortKey="ai_credibility">AI Status</SortableHeader>
                             <th className="p-4 font-bold text-text-secondary dark:text-text-secondary-dark">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {sortedAndFilteredReports.map((report) => {
                            const title = language === 'ar' ? report.title_ar : report.title_en;
+                           const credibility = report.ai_credibility;
+                           const credibilityColor = credibility === Credibility.Pass 
+                               ? 'bg-teal/20 text-teal-dark' 
+                               : 'bg-mango/20 text-mango-dark';
                            return (
                                <tr 
                                  key={report.id} 
@@ -188,6 +193,11 @@ const SuperAdminReportsPage: React.FC = () => {
                                   </td>
                                   <td className="p-4 text-text-secondary dark:text-text-secondary-dark capitalize">{report.municipality}</td>
                                   <td className="p-4 text-text-secondary dark:text-text-secondary-dark">{t[report.status]}</td>
+                                  <td className="p-4">
+                                    <span className={`px-2 py-1 text-xs font-bold rounded-full ${credibilityColor}`}>
+                                        {credibility}
+                                    </span>
+                                  </td>
                                   <td className="p-4">
                                       {deletingReportId === report.id ? (
                                         <div className="flex justify-center items-center">

@@ -116,6 +116,9 @@ export const translations: Record<Language, any> = {
     reportId: 'معرف البلاغ',
     you: 'أنت',
     reportedBy: 'تم الإبلاغ بواسطة',
+    severity_high: 'عالية',
+    severity_medium: 'متوسطة',
+    severity_low: 'منخفضة',
     // Nav
     or: 'أو',
     signInOrCreateAccount: 'تسجيل الدخول أو إنشاء حساب',
@@ -411,6 +414,7 @@ export const translations: Record<Language, any> = {
     unregisteredMunicipalities: "بلديات غير مسجلة",
     allMunicipalitiesHaveAccounts: "جميع البلديات الموجودة في البلاغات لديها حسابات.",
     failedToCreateAccount: "فشل إنشاء حساب لـ {municipalityId}. قد يكون موجودًا بالفعل.",
+    aiMunicipalityFailed: "فشل الكشف بالذكاء الاصطناعي. يرجى إدخال اسم البلدية باللغة الإنجليزية.",
   },
   en: {
     // General
@@ -431,6 +435,9 @@ export const translations: Record<Language, any> = {
     reportId: 'Report ID',
     you: 'You',
     reportedBy: 'Reported by',
+    severity_high: 'High',
+    severity_medium: 'Medium',
+    severity_low: 'Low',
     // Nav
     or: 'or',
     signInOrCreateAccount: 'Sign In or Create Account',
@@ -726,6 +733,7 @@ export const translations: Record<Language, any> = {
     unregisteredMunicipalities: "Unregistered Municipalities",
     allMunicipalitiesHaveAccounts: "All municipalities found in reports have accounts.",
     failedToCreateAccount: "Failed to create account for {municipalityId}. It might already exist.",
+    aiMunicipalityFailed: "AI detection failed. Please enter the municipality in English.",
   },
 };
 

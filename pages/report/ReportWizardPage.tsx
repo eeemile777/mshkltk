@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../../contexts/AppContext';
 // FIX: Removed local type definitions and imported them from the central types file to break a circular dependency.
-import { ReportCategory, Report, ReportSeverity, Preview, ReportData, AiVerificationStatus } from '../../types';
+import { ReportCategory, Report, ReportSeverity, Preview, ReportData, AiVerificationStatus, Credibility } from '../../types';
 import { PATHS } from '../../constants';
 import L from 'leaflet';
 import { getReportImageUrl } from '../../data/mockImages';
@@ -330,6 +330,20 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                 photoUrls = [getReportImageUrl(wizardData.category!, categories)];
             }
 
+            // FIX: Added logic to determine the 'ai_credibility' field based on AI verification status.
+            let credibility: Credibility;
+            if (wizardData.withMedia) {
+                if (aiVerification.status === 'pass') {
+                    credibility = Credibility.Pass;
+                } else {
+                    // This covers 'fail', 'images_removed', 'idle'
+                    credibility = Credibility.NeedsReview;
+                }
+            } else {
+                // No media to verify, so it passes credibility check by default.
+                credibility = Credibility.Pass;
+            }
+
             const submissionData = {
                 created_by: currentUser.id,
                 category: wizardData.category,
@@ -342,6 +356,7 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                 area: wizardData.address || "Unknown Location",
                 municipality: wizardData.municipality || 'unknown',
                 photo_urls: photoUrls,
+                ai_credibility: credibility,
             };
 
             const newReport = await submitReport(submissionData);

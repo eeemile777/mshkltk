@@ -97,18 +97,11 @@ const generateShareImage = async (
     const img = new Image();
     img.crossOrigin = 'Anonymous';
 
-    img.onload = async () => {
-      try {
-        await img.decode();
-      } catch (error) {
-        reject(new Error(`Image decoding failed: ${error}`));
-        return;
-      }
-      
+    img.onload = () => {
       requestAnimationFrame(async () => {
         try {
           if (img.naturalHeight === 0 || img.naturalWidth === 0) {
-            throw new Error('Image decoded but has zero dimensions.');
+            throw new Error('Image loaded but has zero dimensions.');
           }
 
           // 1) Background cover

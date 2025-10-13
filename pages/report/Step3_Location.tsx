@@ -198,7 +198,7 @@ const Step3Location: React.FC<{
         setIsDetectingMunicipality(false);
       }
     };
-    const debounceTimer = setTimeout(detectMunicipality, 1500);
+    const debounceTimer = setTimeout(detectMunicipality, 300);
     return () => clearTimeout(debounceTimer);
   }, [reportData.address, t.addressNotFound, t.fetchError, isReverseGeocoding, updateReportData]);
   

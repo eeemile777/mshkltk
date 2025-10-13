@@ -72,7 +72,7 @@ const MapPopup: React.FC<{ report: Report; t: any; onNavigate: () => void; langu
     return (
         <div className="w-64 max-w-[90vw] overflow-hidden rounded-xl bg-card dark:bg-surface-dark shadow-lg">
             {isVideo ? (
-                <video src={url} className="w-full h-28 object-cover" muted loop playsInline autoPlay />
+                <video src={url} className="w-full h-28 object-cover" playsInline />
             ) : (
                 <img src={url} alt={title} className="w-full h-28 object-cover" />
             )}

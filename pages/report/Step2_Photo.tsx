@@ -96,76 +96,71 @@ const getCorrectedImageFile = async (file: File): Promise<File> => {
     return file;
   }
   
-  // The entire logic is wrapped in a Promise that resolves from within the img.onload handler.
-  // This is the most robust way to ensure all image data is ready before canvas operations.
   return new Promise((resolve) => {
     const dataUrl = URL.createObjectURL(file);
     const img = new Image();
 
-    img.onload = async () => {
-      URL.revokeObjectURL(dataUrl); // Clean up the object URL as soon as it's loaded.
-      try {
-        // img.decode() is a good practice to ensure the image is fully decompressed.
-        await img.decode();
-      } catch (error) {
-        console.error("Image decoding failed during orientation correction, returning original file.", error);
-        resolve(file); // Return original file on decode error
-        return;
-      }
-      
-      // A critical guard clause to prevent drawing an image with no dimensions.
-      if (img.naturalWidth === 0 || img.naturalHeight === 0) {
-        console.error("Cannot correct orientation for image with zero dimensions, returning original file.");
-        resolve(file);
-        return;
-      }
-      
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          throw new Error("Canvas context not available");
-        }
-
-        let width = img.naturalWidth;
-        let height = img.naturalHeight;
-
-        // Swap dimensions for 90/270 degree rotations
-        if (orientation >= 5 && orientation <= 8) {
-          canvas.width = height;
-          canvas.height = width;
-        } else {
-          canvas.width = width;
-          canvas.height = height;
-        }
-        
-        // Apply transformations based on orientation
-        switch (orientation) {
-          case 2: ctx.transform(-1, 0, 0, 1, width, 0); break;
-          case 3: ctx.transform(-1, 0, 0, -1, width, height); break;
-          case 4: ctx.transform(1, 0, 0, -1, 0, height); break;
-          case 5: ctx.transform(0, 1, 1, 0, 0, 0); break;
-          case 6: ctx.transform(0, 1, -1, 0, height, 0); break;
-          case 7: ctx.transform(0, -1, -1, 0, height, width); break;
-          case 8: ctx.transform(0, -1, 1, 0, 0, width); break;
-          default: break;
-        }
-        
-        ctx.drawImage(img, 0, 0);
-
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const originalName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-            const newFileName = `${originalName}.jpg`;
-            resolve(new File([blob], newFileName, { type: 'image/jpeg', lastModified: Date.now() }));
-          } else {
-            throw new Error("Canvas toBlob failed");
-          }
-        }, 'image/jpeg', 0.9);
-      } catch (error) {
-          console.error("Error during image orientation correction, returning original file:", error);
+    img.onload = () => {
+      // Use requestAnimationFrame to ensure the browser has computed dimensions before drawing
+      requestAnimationFrame(() => {
+        if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+          console.error("Cannot correct orientation for image with zero dimensions, returning original file.");
+          URL.revokeObjectURL(dataUrl);
           resolve(file);
-      }
+          return;
+        }
+        
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            throw new Error("Canvas context not available");
+          }
+
+          let width = img.naturalWidth;
+          let height = img.naturalHeight;
+
+          // Swap dimensions for 90/270 degree rotations
+          if (orientation >= 5 && orientation <= 8) {
+            canvas.width = height;
+            canvas.height = width;
+          } else {
+            canvas.width = width;
+            canvas.height = height;
+          }
+          
+          // Apply transformations based on orientation
+          switch (orientation) {
+            case 2: ctx.transform(-1, 0, 0, 1, width, 0); break;
+            case 3: ctx.transform(-1, 0, 0, -1, width, height); break;
+            case 4: ctx.transform(1, 0, 0, -1, 0, height); break;
+            case 5: ctx.transform(0, 1, 1, 0, 0, 0); break;
+            case 6: ctx.transform(0, 1, -1, 0, height, 0); break;
+            case 7: ctx.transform(0, -1, -1, 0, height, width); break;
+            case 8: ctx.transform(0, -1, 1, 0, 0, width); break;
+            default: break;
+          }
+          
+          ctx.drawImage(img, 0, 0);
+
+          canvas.toBlob((blob) => {
+            URL.revokeObjectURL(dataUrl); // Revoke URL here, after blob is created.
+            if (blob) {
+              const originalName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+              const newFileName = `${originalName}.jpg`;
+              resolve(new File([blob], newFileName, { type: 'image/jpeg', lastModified: Date.now() }));
+            } else {
+              // This path is unlikely, but handle it.
+              console.error("Canvas toBlob failed, returning original file.");
+              resolve(file);
+            }
+          }, 'image/jpeg', 0.9);
+        } catch (error) {
+            console.error("Error during image orientation correction, returning original file:", error);
+            URL.revokeObjectURL(dataUrl);
+            resolve(file);
+        }
+      });
     };
 
     img.onerror = () => {
@@ -527,7 +522,7 @@ const Step2Photo: React.FC<Step2PhotoProps> = ({ reportData, updateReportData, n
                 {reportData.previews.map((preview, index) => (
                   <div key={preview.url} className="relative w-16 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 border-white/50">
                     {preview.type === 'video' ? (
-                      <video src={preview.url} className="w-full h-full object-cover" muted loop playsInline />
+                      <video src={preview.url} className="w-full h-full object-cover" />
                     ) : (
                       <img src={preview.url} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
                     )}

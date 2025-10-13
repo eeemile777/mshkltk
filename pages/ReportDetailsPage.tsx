@@ -50,7 +50,7 @@ const MediaGrid: React.FC<{ report: Report; onMediaClick: (index: number) => voi
         return (
             <div key={index} className={`relative overflow-hidden rounded-lg group cursor-pointer ${className}`} onClick={() => onMediaClick(index)}>
                 {isVideo ? (
-                    <video src={url} className="w-full h-full object-cover" muted loop playsInline autoPlay />
+                    <video src={url} className="w-full h-full object-cover" playsInline />
                 ) : (
                     <img src={url} alt={`Report media ${index + 1}`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                 )}
@@ -106,7 +106,7 @@ const MediaGrid: React.FC<{ report: Report; onMediaClick: (index: number) => voi
                     {renderMedia(2)}
                     <div className="relative overflow-hidden rounded-lg group cursor-pointer" onClick={() => onMediaClick(3)}>
                          {urls[3].startsWith('data:video/') ? (
-                             <video src={urls[3]} className="w-full h-full object-cover" muted loop playsInline autoPlay />
+                             <video src={urls[3]} className="w-full h-full object-cover" playsInline />
                         ) : (
                              <img src={urls[3]} alt={`Report media 4`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                         )}

@@ -281,7 +281,7 @@ const PortalReportsListPage: React.FC = () => {
                                   <td className="p-4">
                                     <button onClick={(e) => openLightbox(e, report.photo_urls)}>
                                         {isVideo ? (
-                                            <video src={firstMediaUrl} className="w-16 h-16 object-cover rounded-lg" muted loop playsInline autoPlay />
+                                            <video src={firstMediaUrl} className="w-16 h-16 object-cover rounded-lg" playsInline />
                                         ) : (
                                             <img src={firstMediaUrl} alt={title} className="w-16 h-16 object-cover rounded-lg"/>
                                         )}

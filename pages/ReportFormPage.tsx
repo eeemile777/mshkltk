@@ -49,6 +49,14 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
     const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
     const audioChunksRef = React.useRef<Blob[]>([]);
 
+    // --- New Audio Visualizer State & Refs ---
+    const audioContextRef = React.useRef<AudioContext | null>(null);
+    const analyserRef = React.useRef<AnalyserNode | null>(null);
+    const sourceRef = React.useRef<MediaStreamAudioSourceNode | null>(null);
+    const animationFrameRef = React.useRef<number | null>(null);
+    const [visualizerData, setVisualizerData] = React.useState<Uint8Array | null>(null);
+    // --- End New Audio Visualizer State ---
+
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     const nextStep = () => setWizardStep(s => s + 1);
@@ -201,7 +209,7 @@ Follow these steps with ZERO DEVIATION:
     }, [wizardData?.previews, runAiMediaAnalysis]);
 
 
-    // --- Voice Recording ---
+    // --- Voice Recording & Visualization ---
     const runAiTranscription = React.useCallback(async (audioBase64: string, mimeType: string) => {
         if (!process.env.API_KEY) {
             setIsTranscribing(false);
@@ -256,6 +264,28 @@ Your response MUST be a single, valid JSON object with "title" and "description"
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
+            // --- Setup Audio Visualizer ---
+            const audioContext = new (window.AudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+            audioContextRef.current = audioContext;
+            sourceRef.current = source;
+            analyserRef.current = analyser;
+
+            const draw = () => {
+                if (analyserRef.current) {
+                    const bufferLength = analyserRef.current.frequencyBinCount;
+                    const dataArray = new Uint8Array(bufferLength);
+                    analyserRef.current.getByteFrequencyData(dataArray);
+                    setVisualizerData(dataArray);
+                    animationFrameRef.current = requestAnimationFrame(draw);
+                }
+            };
+            draw();
+            // --- End Visualizer Setup ---
+
             const mimeTypes = ['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/webm','audio/ogg'];
             const supportedMimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
 
@@ -303,6 +333,20 @@ Your response MUST be a single, valid JSON object with "title" and "description"
     const stopRecording = () => {
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
+
+            // --- Cleanup Audio Visualizer ---
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+                animationFrameRef.current = null;
+            }
+            setVisualizerData(null);
+            audioContextRef.current?.close().catch(e => console.error("Error closing AudioContext", e));
+            sourceRef.current?.disconnect();
+            audioContextRef.current = null;
+            sourceRef.current = null;
+            analyserRef.current = null;
+            // --- End Visualizer Cleanup ---
+
             setIsRecording(false);
             setIsTranscribing(true);
         }
@@ -413,7 +457,6 @@ Your response MUST be a single, valid JSON object with "title" and "description"
 
         const commonProps = {
             reportData: wizardData,
-            // FIX: Pass updateWizardData from context as the updateReportData prop.
             updateReportData: updateWizardData,
             prevStep,
             setWizardStep,
@@ -430,6 +473,7 @@ Your response MUST be a single, valid JSON object with "title" and "description"
             isTranscribing={isTranscribing}
             startRecording={startRecording}
             stopRecording={stopRecording}
+            visualizerData={visualizerData}
         />;
     };
     

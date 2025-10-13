@@ -18,7 +18,40 @@ interface Step4DetailsProps {
     isTranscribing: boolean;
     startRecording: () => void;
     stopRecording: () => void;
+    visualizerData: Uint8Array | null;
 }
+
+const AudioVisualizer: React.FC<{ data: Uint8Array }> = ({ data }) => {
+    const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
+    React.useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || !data) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const width = canvas.width;
+        const height = canvas.height;
+        ctx.clearRect(0, 0, width, height);
+        
+        const barWidth = 3;
+        const spacing = 2;
+        const numBars = Math.floor(width / (barWidth + spacing));
+        const step = Math.floor(data.length / numBars);
+        
+        ctx.fillStyle = '#00BFA6'; // Teal color for waves
+
+        for (let i = 0; i < numBars; i++) {
+            const dataIndex = i * step;
+            const barHeight = Math.max(2, (data[dataIndex] / 255) * height * 0.8);
+            const x = i * (barWidth + spacing);
+            ctx.fillRect(x, (height - barHeight) / 2, barWidth, barHeight);
+        }
+    }, [data]);
+
+    return <canvas ref={canvasRef} width="300" height="60" className="w-full h-16"/>;
+};
+
 
 const IssueEditorCard: React.FC<{
     issue: AIssue;
@@ -74,7 +107,7 @@ const IssueEditorCard: React.FC<{
 };
 
 
-const Step4Details: React.FC<Step4DetailsProps> = ({ reportData, updateReportData, onSubmit, prevStep, setWizardStep, isSubmitting, isAiLoading, isRecording, isTranscribing, startRecording, stopRecording }) => {
+const Step4Details: React.FC<Step4DetailsProps> = ({ reportData, updateReportData, onSubmit, prevStep, setWizardStep, isSubmitting, isAiLoading, isRecording, isTranscribing, startRecording, stopRecording, visualizerData }) => {
     const { t, language, theme, categories } = React.useContext(AppContext);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = React.useState(false);
     const [isLightboxOpen, setIsLightboxOpen] = React.useState(false);
@@ -114,11 +147,11 @@ const Step4Details: React.FC<Step4DetailsProps> = ({ reportData, updateReportDat
         const subCatKey = issue?.sub_category || reportData.sub_category;
 
         if (!cat || !subCatKey || !categories[cat]) {
-            return { Icon: FaCircleInfo, parentName: t.selectCategory, subName: "Tap to choose", color: theme === Theme.DARK ? '#B0B8C1' : '#4B5B67' };
+            return { Icon: FaCircleInfo, parentName: t.selectCategory, subName: t.tapToChoose, color: theme === Theme.DARK ? '#B0B8C1' : '#4B5B67' };
         }
         const parentCat = categories[cat];
         const subCat = parentCat.subCategories[subCatKey];
-        if (!subCat) return { Icon: parentCat.icon, parentName: language === 'ar' ? parentCat.name_ar : parentCat.name_en, subName: "Select sub-category", color: theme === 'dark' ? parentCat.color.dark : parentCat.color.light };
+        if (!subCat) return { Icon: parentCat.icon, parentName: language === 'ar' ? parentCat.name_ar : parentCat.name_en, subName: t.select, color: theme === 'dark' ? parentCat.color.dark : parentCat.color.light };
 
         return { Icon: parentCat.icon, parentName: language === 'ar' ? parentCat.name_ar : parentCat.name_en, subName: language === 'ar' ? subCat.name_ar : subCat.name_en, color: theme === 'dark' ? parentCat.color.dark : parentCat.color.light };
     };
@@ -128,7 +161,7 @@ const Step4Details: React.FC<Step4DetailsProps> = ({ reportData, updateReportDat
         const wrapperRef = React.useRef<HTMLDivElement>(null);
         const severity = issue?.severity || reportData.severity;
         const severities = [{ level: ReportSeverity.High, text: '!!!', label: 'High' }, { level: ReportSeverity.Medium, text: '!!', label: 'Medium' }, { level: ReportSeverity.Low, text: '!', label: 'Low' }];
-        const currentSeverity = severities.find(s => s.level === severity) || { level: null, text: '?', label: 'Select' };
+        const currentSeverity = severities.find(s => s.level === severity) || { level: null, text: '?', label: t.select };
 
         React.useEffect(() => {
             const handleClickOutside = (event: MouseEvent) => { if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) setIsOpen(false); };
@@ -145,13 +178,12 @@ const Step4Details: React.FC<Step4DetailsProps> = ({ reportData, updateReportDat
             setIsOpen(false);
         };
         
-        return <div ref={wrapperRef} className="relative h-full"><button type="button" onClick={() => setIsOpen(p => !p)} className="w-full h-full bg-muted dark:bg-surface-dark p-4 rounded-2xl flex flex-col items-center justify-center text-center hover:bg-gray-200 dark:hover:bg-border-dark transition-colors"><span className={`font-black text-coral dark:text-coral-dark ${currentSeverity.level ? 'text-3xl' : 'text-2xl'}`}>{currentSeverity.text}</span><label className="block text-sm font-bold text-navy dark:text-text-primary-dark mt-1">{currentSeverity.level ? t.severity : 'Select'}</label></button>{isOpen && <div className="absolute top-full mt-2 bg-card dark:bg-surface-dark shadow-xl rounded-2xl p-2 z-10 w-48 border border-border-light dark:border-border-dark">{severities.map(({ level, text, label }) => <button key={level} type="button" onClick={() => handleSelect(level)} className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${severity === level ? 'bg-coral/10' : 'hover:bg-muted'}`}><span className={`text-2xl font-bold ${severity === level ? 'text-coral' : 'text-secondary'}`}>{text}</span><span className={`text-sm font-semibold ${severity === level ? 'text-coral' : 'text-secondary'}`}>{label}</span></button>)}</div>}</div>;
+        return <div ref={wrapperRef} className="relative h-full"><button type="button" onClick={() => setIsOpen(p => !p)} className="w-full h-full bg-muted dark:bg-surface-dark p-4 rounded-2xl flex flex-col items-center justify-center text-center hover:bg-gray-200 dark:hover:bg-border-dark transition-colors"><span className={`font-black text-coral dark:text-coral-dark ${currentSeverity.level ? 'text-3xl' : 'text-2xl'}`}>{currentSeverity.text}</span><label className="block text-sm font-bold text-navy dark:text-text-primary-dark mt-1">{currentSeverity.level ? t.severity : t.select}</label></button>{isOpen && <div className="absolute top-full mt-2 bg-card dark:bg-surface-dark shadow-xl rounded-2xl p-2 z-10 w-48 border border-border-light dark:border-border-dark">{severities.map(({ level, text, label }) => <button key={level} type="button" onClick={() => handleSelect(level)} className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${severity === level ? 'bg-coral/10' : 'hover:bg-muted'}`}><span className={`text-2xl font-bold ${severity === level ? 'text-coral' : 'text-secondary'}`}>{text}</span><span className={`text-sm font-semibold ${severity === level ? 'text-coral' : 'text-secondary'}`}>{label}</span></button>)}</div>}</div>;
     };
     
     const validPreviews = reportData.previews.filter(p => p.status === 'valid');
     const hasMedia = validPreviews.length > 0;
     
-    // FIX: Destructure display info from getCategoryDisplay to use in JSX, fixing syntax errors.
     const { Icon: CategoryIcon, parentName, subName, color: categoryColor } = getCategoryDisplay();
 
     return (
@@ -181,10 +213,32 @@ const Step4Details: React.FC<Step4DetailsProps> = ({ reportData, updateReportDat
                         </div>
                         <div className={`p-4 rounded-2xl space-y-4 ${isAiLoading ? 'bg-sky/5' : 'bg-muted dark:bg-surface-dark'}`}>
                             <p className="text-xs font-bold text-sky dark:text-cyan-dark flex items-center gap-2">{isAiLoading ? <FaSpinner className="animate-spin"/> : (hasMedia ? <FaWandMagicSparkles /> : <FaPen />)} {isAiLoading ? t.aiAnalyzing : (hasMedia ? t.aiGeneratedContent : t.describeIssueManually)}</p>
-                            <div><label htmlFor="title" className="block text-lg font-bold text-navy dark:text-text-primary-dark mb-2">{t.title}</label><input id="title" value={reportData.title} onChange={e => updateReportData({ title: e.target.value })} required placeholder={isAiLoading ? t.aiTitlePlaceholder : t.titlePlaceholder} className="mt-1 block w-full p-3 shadow-sm sm:text-sm border-border-light dark:border-border-dark bg-card dark:bg-surface-dark rounded-xl focus:ring-2 focus:ring-teal dark:focus:ring-teal-dark disabled:opacity-70" disabled={isTranscribing || isAiLoading}/></div>
-                            <div><label htmlFor="description" className="block text-lg font-bold text-navy dark:text-text-primary-dark mb-2">{t.description}</label><textarea id="description" value={reportData.description} onChange={e => updateReportData({ description: e.target.value })} rows={4} maxLength={500} required placeholder={isAiLoading ? t.aiDescriptionPlaceholder : t.describeProblem} className="mt-1 block w-full p-3 shadow-sm sm:text-sm border-border-light dark:border-border-dark bg-card dark:bg-surface-dark rounded-xl focus:ring-2 focus:ring-teal dark:focus:ring-teal-dark disabled:opacity-70" disabled={isTranscribing || isAiLoading}></textarea></div>
+                            <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <button 
+                                        type="button" 
+                                        onClick={isRecording ? stopRecording : startRecording} 
+                                        disabled={isTranscribing} 
+                                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-surface-dark ${isRecording ? 'bg-red-500 text-white animate-pulse focus:ring-red-400' : 'bg-red-100 dark:bg-red-900/50 text-red-500 focus:ring-red-400'}`}
+                                        aria-label={isRecording ? t.stop : (isTranscribing ? t.transcribing : t.record)}
+                                    >
+                                        {isTranscribing ? <FaSpinner className="animate-spin" /> : (isRecording ? <FaStop size={16} /> : <FaMicrophone size={16} />)}
+                                    </button>
+                                    <label htmlFor="title" className="block text-lg font-bold text-navy dark:text-text-primary-dark">{t.title}</label>
+                                </div>
+                                <input id="title" value={reportData.title} onChange={e => updateReportData({ title: e.target.value })} required placeholder={isAiLoading ? t.aiTitlePlaceholder : t.titlePlaceholder} className="mt-1 block w-full p-3 shadow-sm sm:text-sm border-border-light dark:border-border-dark bg-card dark:bg-surface-dark rounded-xl focus:ring-2 focus:ring-teal dark:focus:ring-teal-dark disabled:opacity-70" disabled={isTranscribing || isAiLoading}/>
+                            </div>
+                            <div>
+                                <label htmlFor="description" className="block text-lg font-bold text-navy dark:text-text-primary-dark mb-2">{t.description}</label>
+                                {isRecording && visualizerData ? (
+                                    <div className="mt-1 flex items-center justify-center w-full p-3 h-[118px] shadow-sm sm:text-sm border-border-light dark:border-border-dark bg-card dark:bg-surface-dark rounded-xl">
+                                        <AudioVisualizer data={visualizerData} />
+                                    </div>
+                                ) : (
+                                    <textarea id="description" value={reportData.description} onChange={e => updateReportData({ description: e.target.value })} rows={4} maxLength={500} required placeholder={isAiLoading ? t.aiDescriptionPlaceholder : (isTranscribing ? t.aiTranscriptionPlaceholder : t.describeProblem)} className="mt-1 block w-full p-3 shadow-sm sm:text-sm border-border-light dark:border-border-dark bg-card dark:bg-surface-dark rounded-xl focus:ring-2 focus:ring-teal dark:focus:ring-teal-dark disabled:opacity-70" disabled={isTranscribing || isAiLoading}></textarea>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex justify-center pt-4 pb-4"><button type="button" onClick={isRecording ? stopRecording : startRecording} disabled={isTranscribing} className={`relative w-20 h-20 rounded-full flex flex-col items-center justify-center transition-all duration-300 focus:outline-none focus:ring-4 ${isRecording ? 'bg-coral/20 focus:ring-coral/50' : 'bg-card shadow-lg focus:ring-teal/50'} ${isTranscribing ? 'bg-muted cursor-not-allowed' : 'hover:scale-105'}`} aria-label={isRecording ? t.stop : (isTranscribing ? t.transcribing : t.record)}>{isTranscribing ? <FaSpinner className="animate-spin w-8 h-8 text-teal" /> : isRecording ? <div className="w-8 h-8 bg-coral rounded-md animate-pulse"></div> : <FaMicrophone className="w-8 h-8 text-coral" />}<span className="absolute -bottom-5 text-xs font-semibold text-text-secondary dark:text-text-secondary-dark">{isTranscribing ? t.transcribing : (isRecording ? t.stop : t.record)}</span></button></div>
                     </>
                 )}
             </div></div>

@@ -1,5 +1,5 @@
 {
-  "name": "mshkltk v2.1",
+  "name": "mshkltk v2",
   "description": "A bilingual civic-tech web application for citizens to report local issues. It features an interactive map, report submission with AI credibility checks, gamified leaderboards, and user profiles. The app is designed to be mobile-first and supports both Arabic (RTL) and English.",
   "requestFramePermissions": [
     "camera",

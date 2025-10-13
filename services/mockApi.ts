@@ -1,4 +1,4 @@
-import { Report, User, Notification, ReportStatus, Comment, ReportHistory, NotificationType, ReportCategory, AuditLog, DynamicCategory, DynamicBadge, GamificationSettings, Credibility } from '../types';
+import { Report, User, Notification, ReportStatus, Comment, ReportHistory, NotificationType, ReportCategory, AuditLog, DynamicCategory, DynamicBadge, GamificationSettings } from '../types';
 import { generateSalt, hashPassword } from './crypto';
 // FIX: Import DB_NAME and DB_VERSION to resolve "Cannot find name" errors.
 import { dbService, STORES, DB_NAME, DB_VERSION, getDb } from './db';

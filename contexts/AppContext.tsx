@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Language, Theme, Report, User, Notification, Badge, ReportCategory, ReportStatus, Comment, ReportHistory, PendingReportData, TimeFilter, NotificationType, Preview, ReportData, DynamicCategory, DynamicBadge, GamificationSettings, Credibility } from '../types';
+import { Language, Theme, Report, User, Notification, Badge, ReportCategory, ReportStatus, Comment, ReportHistory, PendingReportData, TimeFilter, NotificationType, Preview, ReportData, DynamicCategory, DynamicBadge, GamificationSettings } from '../types';
 import { translations, BADGES, PATHS, ICON_MAP } from '../constants';
 import * as api from '../services/mockApi';
 import L from 'leaflet';
@@ -128,7 +128,7 @@ interface AppContextType {
   updateUserAvatar: (avatarUrl: string) => Promise<void>;
   setTempUserOverride: (impersonatedUser: User | null, impersonatorUser?: User | null, redirectPath?: string) => Promise<void>;
 
-  submitReport: (reportData: Pick<Report, 'created_by' | 'category' | 'sub_category' | 'severity' | 'lat' | 'lng' | 'area' | 'municipality' | 'photo_urls' | 'ai_credibility'> & { title: string; note: string }) => Promise<Report | undefined>;
+  submitReport: (reportData: Pick<Report, 'created_by' | 'category' | 'sub_category' | 'severity' | 'lat' | 'lng' | 'area' | 'municipality' | 'photo_urls'> & { title: string; note: string }) => Promise<Report | undefined>;
   confirmReport: (reportId: string) => Promise<void>;
   updateReportInState: (updatedReport: Report) => void;
   markNotificationsAsRead: () => void;

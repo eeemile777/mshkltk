@@ -44,7 +44,7 @@ const TrendingReportCard: React.FC<{ report: Report, rank: number }> = ({ report
             </div>
 
             {isVideo ? (
-                <video src={url} className="w-24 h-24 object-cover rounded-xl" muted loop playsInline autoPlay />
+                <video src={url} className="w-24 h-24 object-cover rounded-xl" playsInline />
             ) : (
                 <img src={url} alt={note} className="w-24 h-24 object-cover rounded-xl"/>
             )}

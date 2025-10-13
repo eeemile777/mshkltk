@@ -1,6 +1,6 @@
 // FIX: Replaced placeholder content with mock data.
 // FIX: Import ReportCategory type.
-import { Report, ReportStatus, Notification, NotificationType, Comment, ReportHistory, ReportSeverity, ReportCategory, Credibility } from '../types';
+import { Report, ReportStatus, Notification, NotificationType, Comment, ReportHistory, ReportSeverity, ReportCategory } from '../types';
 import { getReportImageUrl } from './mockImages';
 import { CATEGORIES } from '../constants';
 
@@ -28,7 +28,6 @@ const initialReports: Report[] = [
     note_ar: 'تشكلت حفرة كبيرة وخطيرة جدًا على الطريق الرئيسي بالقرب من مول ABC. تحتاج إلى إصلاح عاجل.',
     status: ReportStatus.New,
     severity: ReportSeverity.High,
-    ai_credibility: Credibility.Pass,
     confirmations_count: 5,
     created_at: d_sep(28),
     created_by: 'user-1',
@@ -49,7 +48,6 @@ const initialReports: Report[] = [
     note_ar: 'حاوية القمامة على زاوية شارع الحمرا تفيض منذ ثلاثة أيام. الرائحة كريهة جدا وتجذب الحشرات.',
     status: ReportStatus.InProgress,
     severity: ReportSeverity.Medium,
-    ai_credibility: Credibility.Pass,
     confirmations_count: 12,
     created_at: d_sep(25),
     created_by: 'user-2',
@@ -70,7 +68,6 @@ const initialReports: Report[] = [
     note_ar: 'ضوء الشارع الرئيسي على الكورنيش معطل منذ أكثر من أسبوع، مما يجعل المكان مظلماً وغير آمن في الليل.',
     status: ReportStatus.Resolved,
     severity: ReportSeverity.Low,
-    ai_credibility: Credibility.Pass,
     confirmations_count: 8,
     created_at: d_sep(1),
     created_by: 'user-3',
@@ -86,7 +83,7 @@ const initialReports: Report[] = [
     category: 'electricity_energy', sub_category: 'unsafe_generators',
     note_en: 'Tangled and exposed generator wires are hanging dangerously low over the sidewalk on Gouraud Street.',
     note_ar: 'أسلاك مولدات متشابكة ومكشوفة تتدلى بشكل خطير على ارتفاع منخفض فوق الرصيف في شارع غورو.',
-    status: ReportStatus.New, severity: ReportSeverity.High, ai_credibility: Credibility.Pass, confirmations_count: 11, created_at: d_sep(29), created_by: 'user-6'
+    status: ReportStatus.New, severity: ReportSeverity.High, confirmations_count: 11, created_at: d_sep(29), created_by: 'user-6'
   },
   {
     id: 'report-203',
@@ -98,7 +95,7 @@ const initialReports: Report[] = [
     category: 'waste_environment', sub_category: 'illegal_dumping',
     note_en: 'Construction debris and household garbage are being illegally dumped on the coast near the Mina fishing port.',
     note_ar: 'يتم إلقاء مخلفات البناء والقمامة المنزلية بشكل غير قانوني على الساحل بالقرب من ميناء الصيد في المينا.',
-    status: ReportStatus.New, severity: ReportSeverity.High, ai_credibility: Credibility.NeedsReview, confirmations_count: 25, created_at: d_sep(28), created_by: 'user-5'
+    status: ReportStatus.New, severity: ReportSeverity.High, confirmations_count: 25, created_at: d_sep(28), created_by: 'user-5'
   },
 ];
 
@@ -178,7 +175,6 @@ const generateReport = (id: number, city: City) => {
         note_ar: `هذا بلاغ بخصوص مشكلة تم ملاحظتها في منطقة ${city.name_ar}. الوضع يتطلب اهتماماً.`,
         status: Object.values(ReportStatus)[id % 4],
         severity: Object.values(ReportSeverity)[id % 3],
-        ai_credibility: Math.random() > 0.1 ? Credibility.Pass : Credibility.NeedsReview,
         confirmations_count: Math.floor(Math.random() * 40),
         created_at: d_sep(Math.floor(Math.random() * 28) + 1),
         created_by: allUsers[id % allUsers.length],

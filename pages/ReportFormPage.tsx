@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppContext } from '../../contexts/AppContext';
-import { ReportCategory, Report, ReportSeverity, Preview, ReportData, AiVerificationStatus, Credibility } from '../../types';
-import { PATHS } from '../../constants';
+import { AppContext } from '../contexts/AppContext';
+import { ReportCategory, Report, ReportSeverity, Preview, ReportData, AiVerificationStatus } from '../types';
+import { PATHS } from '../constants';
 import L from 'leaflet';
-import { getReportImageUrl } from '../../data/mockImages';
-import Spinner from '../../components/Spinner';
+import { getReportImageUrl } from '../data/mockImages';
+import Spinner from '../components/Spinner';
 
-import WizardStepper from '../../components/WizardStepper';
+import WizardStepper from '../components/WizardStepper';
 import Step1Type from './report/Step1_Type';
 import Step2Photo from './report/Step2_Photo';
 import Step3Disambiguation from './report/Step3_Disambiguation';
@@ -48,6 +48,14 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
     const [isTranscribing, setIsTranscribing] = React.useState(false);
     const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
     const audioChunksRef = React.useRef<Blob[]>([]);
+
+    // --- New Audio Visualizer State & Refs ---
+    const audioContextRef = React.useRef<AudioContext | null>(null);
+    const analyserRef = React.useRef<AnalyserNode | null>(null);
+    const sourceRef = React.useRef<MediaStreamAudioSourceNode | null>(null);
+    const animationFrameRef = React.useRef<number | null>(null);
+    const [visualizerData, setVisualizerData] = React.useState<Uint8Array | null>(null);
+    // --- End New Audio Visualizer State ---
 
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -201,7 +209,7 @@ Follow these steps with ZERO DEVIATION:
     }, [wizardData?.previews, runAiMediaAnalysis]);
 
 
-    // --- Voice Recording ---
+    // --- Voice Recording & Visualization ---
     const runAiTranscription = React.useCallback(async (audioBase64: string, mimeType: string) => {
         if (!process.env.API_KEY) {
             setIsTranscribing(false);
@@ -256,6 +264,28 @@ Your response MUST be a single, valid JSON object with "title" and "description"
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
+            // --- Setup Audio Visualizer ---
+            const audioContext = new (window.AudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+            audioContextRef.current = audioContext;
+            sourceRef.current = source;
+            analyserRef.current = analyser;
+
+            const draw = () => {
+                if (analyserRef.current) {
+                    const bufferLength = analyserRef.current.frequencyBinCount;
+                    const dataArray = new Uint8Array(bufferLength);
+                    analyserRef.current.getByteFrequencyData(dataArray);
+                    setVisualizerData(dataArray);
+                    animationFrameRef.current = requestAnimationFrame(draw);
+                }
+            };
+            draw();
+            // --- End Visualizer Setup ---
+
             const mimeTypes = ['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/webm','audio/ogg'];
             const supportedMimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
 
@@ -303,6 +333,20 @@ Your response MUST be a single, valid JSON object with "title" and "description"
     const stopRecording = () => {
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
+
+            // --- Cleanup Audio Visualizer ---
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+                animationFrameRef.current = null;
+            }
+            setVisualizerData(null);
+            audioContextRef.current?.close().catch(e => console.error("Error closing AudioContext", e));
+            sourceRef.current?.disconnect();
+            audioContextRef.current = null;
+            sourceRef.current = null;
+            analyserRef.current = null;
+            // --- End Visualizer Cleanup ---
+
             setIsRecording(false);
             setIsTranscribing(true);
         }
@@ -327,20 +371,6 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                 ? wizardData.detectedIssues.filter((_, index) => wizardData.multiReportSelection[index])
                 : [{ title: wizardData.title, description: wizardData.description, category: wizardData.category, sub_category: wizardData.sub_category, severity: wizardData.severity }];
 
-            // FIX: Added logic to determine the 'ai_credibility' field based on AI verification status.
-            let credibility: Credibility;
-            if (wizardData.withMedia) {
-                if (aiVerification.status === 'pass') {
-                    credibility = Credibility.Pass;
-                } else {
-                    // This covers 'fail', 'images_removed', 'idle'
-                    credibility = Credibility.NeedsReview;
-                }
-            } else {
-                // No media to verify, so it passes credibility check by default.
-                credibility = Credibility.Pass;
-            }
-
             const submittedReports: Report[] = [];
             for (const issue of issuesToSubmit) {
                 if (!issue.category || !issue.severity) continue;
@@ -357,7 +387,6 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                     area: wizardData.address || "Unknown Location",
                     municipality: wizardData.municipality || 'unknown',
                     photo_urls: photoUrls,
-                    ai_credibility: credibility,
                 };
                 const newReport = await submitReport(submissionData);
                 if (newReport) submittedReports.push(newReport);
@@ -428,7 +457,6 @@ Your response MUST be a single, valid JSON object with "title" and "description"
 
         const commonProps = {
             reportData: wizardData,
-            // FIX: Pass updateWizardData from context as the updateReportData prop.
             updateReportData: updateWizardData,
             prevStep,
             setWizardStep,
@@ -445,6 +473,7 @@ Your response MUST be a single, valid JSON object with "title" and "description"
             isTranscribing={isTranscribing}
             startRecording={startRecording}
             stopRecording={stopRecording}
+            visualizerData={visualizerData}
         />;
     };
     

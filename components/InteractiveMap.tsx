@@ -13,7 +13,6 @@ import MapControls from './MapControls';
 import { FaCircleCheck } from 'react-icons/fa6';
 import { createCategoryIcon } from '../utils/mapUtils';
 import useGeolocation from '../hooks/useGeolocation';
-import { getReportImageUrl } from '../data/mockImages';
 
 interface InteractiveMapProps {
     reports: Report[];
@@ -65,71 +64,17 @@ const SeverityIndicator: React.FC<{ severity: ReportSeverity; className?: string
     );
 };
 
-// --- Helper hook to convert data URLs to more performant object URLs ---
-const useObjectUrl = (dataUrl: string | undefined): string | undefined => {
-  const [objectUrl, setObjectUrl] = React.useState<string | undefined>();
-
-  React.useEffect(() => {
-    // If it's not a data URL, just use it as is (e.g., a regular URL or an existing blob URL)
-    if (!dataUrl || !dataUrl.startsWith('data:')) {
-      setObjectUrl(dataUrl);
-      return;
-    }
-
-    let objectUrlValue: string | undefined;
-
-    try {
-        const arr = dataUrl.split(',');
-        if (arr.length < 2) throw new Error("Invalid data URL");
-
-        const mimeMatch = arr[0].match(/:(.*?);/);
-        if (!mimeMatch) throw new Error("Could not parse MIME type from data URL");
-        const mime = mimeMatch[1];
-        
-        const bstr = atob(arr[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while(n--){
-            u8arr[n] = bstr.charCodeAt(n);
-        }
-        const blob = new Blob([u8arr], {type:mime});
-        
-        objectUrlValue = URL.createObjectURL(blob);
-        setObjectUrl(objectUrlValue);
-    } catch (error) {
-        console.error("Error converting data URL to object URL:", error);
-        // Fallback to the original dataUrl if conversion fails.
-        // This might be less performant but is better than showing nothing.
-        setObjectUrl(dataUrl);
-    }
-
-    return () => {
-      if (objectUrlValue) {
-        URL.revokeObjectURL(objectUrlValue);
-      }
-    };
-  }, [dataUrl]);
-
-  return objectUrl;
-};
-
-
 // --- Popup Component ---
-const MapPopup: React.FC<{ report: Report; onNavigate: () => void; }> = ({ report, onNavigate }) => {
-    const { t, language, categories, theme } = React.useContext(AppContext);
+const MapPopup: React.FC<{ report: Report; t: any; onNavigate: () => void; language: string; }> = ({ report, t, onNavigate, language }) => {
     const title = language === 'ar' ? report.title_ar : report.title_en;
-    const dataUrl = report.photo_urls?.[0];
-    const objectUrl = useObjectUrl(dataUrl);
-    
-    const finalUrl = objectUrl || getReportImageUrl(report.category, categories, 256, 112);
-    const isVideo = dataUrl?.startsWith('data:video/');
-
+    const url = report.photo_urls[0];
+    const isVideo = url.startsWith('data:video/');
     return (
         <div className="w-64 max-w-[90vw] overflow-hidden rounded-xl bg-card dark:bg-surface-dark shadow-lg">
             {isVideo ? (
-                <video src={finalUrl} className="w-full h-28 object-cover" muted loop playsInline autoPlay />
+                <video src={url} className="w-full h-28 object-cover" playsInline />
             ) : (
-                <img src={finalUrl} alt={title} className="w-full h-28 object-cover" />
+                <img src={url} alt={title} className="w-full h-28 object-cover" />
             )}
             <div className="p-3">
                 <h3 className="font-bold text-base text-navy dark:text-text-primary-dark line-clamp-2 mb-1">{title}</h3>
@@ -402,7 +347,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
                 const placeholder = document.createElement('div');
                 const root = createRoot(placeholder);
-                root.render(<MapPopup report={report} onNavigate={handleNavigate} />);
+                root.render(<MapPopup report={report} t={t} onNavigate={handleNavigate} language={language} />);
                 
                 if(mapRef.current) {
                     L.popup({ offset: [0, -25], minWidth: 256 })

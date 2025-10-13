@@ -54,10 +54,6 @@ export const DEFAULT_AVATAR_URL = `data:image/svg+xml;base64,${btoa(unescape(enc
 // --- Report Placeholder Generator ---
 // Creates a placeholder image on a canvas for reports, ensuring no external dependencies.
 export const getReportImageUrl = (category: ReportCategory, categoriesData: any, width = 600, height = 400): string => {
-    if (width === 0 || height === 0) {
-        console.warn("getReportImageUrl called with zero dimension, falling back to SVG avatar.");
-        return getAvatarUrl(category);
-    }
     try {
         const canvas = document.createElement('canvas');
         canvas.width = width;

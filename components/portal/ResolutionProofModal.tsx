@@ -35,21 +35,20 @@ const ResolutionProofModal: React.FC<ResolutionProofModalProps> = ({ report, onC
         const videoElement = videoRef.current;
         if (view === 'camera' && videoElement) {
             const handleVideoReady = () => {
-                if (videoElement.readyState >= videoElement.HAVE_METADATA && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+                if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
                     setIsVideoReady(true);
                 }
             };
-            
+            // 'canplay' is a more reliable event for when dimensions are available.
+            videoElement.addEventListener('canplay', handleVideoReady);
+            // 'playing' is also a good fallback.
             videoElement.addEventListener('playing', handleVideoReady);
-            videoElement.addEventListener('loadeddata', handleVideoReady);
-            videoElement.addEventListener('loadedmetadata', handleVideoReady);
             
             handleVideoReady(); // Initial check
 
             return () => {
+                videoElement.removeEventListener('canplay', handleVideoReady);
                 videoElement.removeEventListener('playing', handleVideoReady);
-                videoElement.removeEventListener('loadeddata', handleVideoReady);
-                videoElement.removeEventListener('loadedmetadata', handleVideoReady);
             };
         }
     }, [view]);
@@ -105,18 +104,11 @@ const ResolutionProofModal: React.FC<ResolutionProofModalProps> = ({ report, onC
                     throw new Error("Could not get canvas context.");
                 }
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const photoDataUrl = canvas.toDataURL('image/jpeg');
-
-                // Now that we have the data, we can clean up the stream and switch the view.
-                cleanupStream();
-                setView('select');
-
-                // Finally, update the state with the captured image data.
-                setPhoto(photoDataUrl);
+                setPhoto(canvas.toDataURL('image/jpeg'));
             } catch (error) {
                 console.error("Error capturing proof photo from video stream:", error);
                 alert(t.failedToCapture);
-                // Also clean up on error
+            } finally {
                 cleanupStream();
                 setView('select');
             }

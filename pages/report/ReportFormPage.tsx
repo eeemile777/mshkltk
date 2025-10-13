@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../../contexts/AppContext';
-import { ReportCategory, Report, ReportSeverity, Preview, ReportData, AiVerificationStatus, Credibility } from '../../types';
-import { PATHS } from '../../constants';
+import { ReportCategory, Report, ReportSeverity, Preview, ReportData, AiVerificationStatus } from '../../types';
+import { PATHS, CATEGORIES } from '../../constants';
 import L from 'leaflet';
 import { getReportImageUrl } from '../../data/mockImages';
 import Spinner from '../../components/Spinner';
@@ -10,12 +10,10 @@ import Spinner from '../../components/Spinner';
 import WizardStepper from '../../components/WizardStepper';
 import Step1Type from './report/Step1_Type';
 import Step2Photo from './report/Step2_Photo';
-import Step3Disambiguation from './report/Step3_Disambiguation';
 import Step3Location from './report/Step3_Location';
 import Step4Details from './report/Step4_Details';
 
 import { GoogleGenAI, Type } from '@google/genai';
-import { FaXmark } from 'react-icons/fa6';
 
 const fileToDataURL = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -26,12 +24,8 @@ const fileToDataURL = (file: File): Promise<string> => {
     });
 };
 
-interface ReportFormPageProps {
-  onSuccessRedirectPath?: string;
-}
-
-const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }) => {
-    const { t, language, currentUser, submitReport, flyToLocation, wizardData, isWizardActive, wizardStep, setWizardStep, updateWizardData, resetWizard, categories } = React.useContext(AppContext);
+const ReportFormPage: React.FC = () => {
+    const { t, language, currentUser, submitReport, flyToLocation, wizardData, isWizardActive, wizardStep, setWizardStep, updateWizardData, resetWizard } = React.useContext(AppContext);
     const navigate = useNavigate();
     
     // Redirect if wizard hasn't been started properly
@@ -82,54 +76,50 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
             const mediaParts = await Promise.all(wizardData.previews.map(p => fileToGenerativePart(p.file)));
             const langName = language === 'ar' ? 'Arabic' : 'English';
             
-            const categoryList = JSON.stringify(Object.keys(categories).reduce((acc: Record<string, string[]>, catKey) => {
-                const cat = categories[catKey as ReportCategory];
-                if (cat && cat.subCategories) {
-                    acc[catKey] = Object.keys(cat.subCategories);
-                }
+            const categoryList = JSON.stringify(Object.keys(CATEGORIES).reduce((acc: Record<string, string[]>, catKey) => {
+                const cat = CATEGORIES[catKey as ReportCategory];
+                acc[catKey] = Object.keys(cat.subCategories);
                 return acc;
             }, {}), null, 2);
 
-            const prompt = `You are an AI assistant for a civic issue reporting app. Your task is to analyze media (images AND videos) to identify all distinct issues and check for policy violations. Your response MUST be a single, valid JSON object.
+            const prompt = `You are an AI assistant for a civic issue reporting app. Your task is to analyze media (images AND videos) to identify issues and check for policy violations. Your response MUST be a single, valid JSON object.
 
 Follow these steps with ZERO DEVIATION:
 
-1.  **Policy/Safety Analysis (Per Media Part):** For EACH media part provided, determine if it violates our safety policies. A violation occurs if the media clearly shows: a human face, a readable vehicle license plate, identifiable military/police personnel or vehicles, or content unrelated to a civic issue. Create a list in \`media_to_flag\` containing the \`index\` and a brief, user-friendly \`reason\` (in ${langName}, phrased politely) for EVERY media part that violates the policies. If no violations are found, this list MUST be an empty array [].
+1.  **Policy/Safety Analysis (Per Media Part):** For EACH media part provided, determine if it violates our safety policies. A violation occurs if the media clearly shows:
+    -   A human face (especially selfies or close-ups).
+    -   A readable vehicle license plate.
+    -   Identifiable military or law enforcement personnel or vehicles.
+    -   Content that is not related to a potential civic issue (e.g., a picture of a pet, a document).
 
-2.  **Holistic Content Analysis:** Analyze ALL media parts together to identify every distinct civic issue. For example, if one photo shows a large crack in the road and another shows a smaller pothole, you must identify BOTH as separate issues.
+2.  **Filtering Decision:** Create a list in \`media_to_flag\` containing the \`index\` and a brief \`reason\` (in ${langName}) for EVERY media part that violates the policies. If no violations are found, this list MUST be an empty array [].
 
-3.  **Issue Generation:** Create an array called \`issues\`. For each distinct issue you identified, add an object to this array. Each object MUST contain:
-    -   **Categorization:** The MOST LIKELY parent \`category\` and child \`sub_category\` from this list: ${categoryList}.
-    -   **Severity Assessment:** The \`severity\` which MUST be one of these exact lowercase strings: 'high', 'medium', 'low'.
-    -   A concise, descriptive \`title\` (max 10 words, in ${langName}).
-    -   A clear \`description\` (20-40 words, in ${langName}), written from the citizen's first-person perspective (e.g., "I noticed that...").
+3.  **Holistic Content Analysis:** Analyze ALL media parts together, even those flagged for removal, to understand the user's intent. The content might be a clear problem (pothole), a potential issue (a leaning tree), or informational (an empty lot).
 
-4.  **Final JSON:** If you found one issue, the \`issues\` array will have one object. If you found two, it will have two. If you found no clear issues, the \`issues\` array MUST be empty.`;
+4.  **Content Generation (Mandatory):** Based on your holistic analysis, you MUST generate the following details. ALWAYS provide a value for each field.
+    -   **Categorization:** Select the MOST LIKELY parent \`category\` and child \`sub_category\` from this list: ${categoryList}. If no clear issue is present, use 'other_unknown' or an appropriate category (e.g., 'public_spaces' for a park).
+    -   **Severity Assessment:** Assess the severity. The value for \`severity\` MUST be one of these exact lowercase strings: 'high', 'medium', 'low'.
+    -   Generate a concise, descriptive \`title\` (max 10 words, in ${langName}).
+    -   Generate a clear \`description\` (20-40 words, in ${langName}), written from the citizen's first-person perspective (e.g., "I noticed that...").
+
+Your JSON output must strictly adhere to the schema. Your primary job is the policy check, but the content generation is equally critical for assisting the user. The final JSON schema should be: { "title": "...", "description": "...", "category": "...", "sub_category": "...", "severity": "...", "media_to_flag": [{ "index": 0, "reason": "..." }] }`;
             
             const parts = [{ text: prompt }, ...mediaParts];
             
+            // FIX: Updated generateContent call to use responseSchema for reliable JSON output and corrected contents structure.
             const response = await ai.models.generateContent({
               model: 'gemini-2.5-flash',
-              contents: { parts: parts },
+              contents: { parts },
               config: {
                 responseMimeType: "application/json",
                 responseSchema: {
                   type: Type.OBJECT,
                   properties: {
-                    issues: {
-                      type: Type.ARRAY,
-                      items: {
-                        type: Type.OBJECT,
-                        properties: {
-                          title: { type: Type.STRING },
-                          description: { type: Type.STRING },
-                          category: { type: Type.STRING },
-                          sub_category: { type: Type.STRING },
-                          severity: { type: Type.STRING },
-                        },
-                        required: ["title", "description", "category", "sub_category", "severity"]
-                      }
-                    },
+                    title: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    category: { type: Type.STRING },
+                    sub_category: { type: Type.STRING },
+                    severity: { type: Type.STRING },
                     media_to_flag: {
                       type: Type.ARRAY,
                       items: {
@@ -142,7 +132,7 @@ Follow these steps with ZERO DEVIATION:
                       }
                     }
                   },
-                  required: ["issues", "media_to_flag"]
+                  required: ["title", "description", "category", "sub_category", "severity", "media_to_flag"]
                 }
               }
             });
@@ -158,45 +148,41 @@ Follow these steps with ZERO DEVIATION:
                 return { ...preview, status: 'valid' as const };
             });
             
-            if (result.issues && result.issues.length > 0) {
-                updateWizardData({
-                    previews: newPreviews,
-                    detectedIssues: result.issues,
-                    multiReportSelection: result.issues.reduce((acc: any, _: any, index: number) => {
-                        acc[index] = true; // Pre-select all issues
-                        return acc;
-                    }, {}),
-                });
-                if (indicesToFlag.size > 0) {
-                    setAiVerification({ status: 'images_removed', message: t.aiMediaRemoved.replace('{count}', String(indicesToFlag.size)) });
-                } else {
-                    setAiVerification({ status: 'pass', message: t.aiVerified });
-                }
+            // ALWAYS update with the new AI-generated content, overwriting previous values.
+            updateWizardData({
+                previews: newPreviews,
+                title: result.title,
+                description: result.description,
+                category: result.category,
+                sub_category: result.sub_category,
+                severity: result.severity,
+            });
+
+            if (indicesToFlag.size > 0) {
+                 setAiVerification({ status: 'images_removed', message: t.aiMediaRemoved.replace('{count}', String(indicesToFlag.size)) });
             } else {
-                updateWizardData({
-                    previews: newPreviews,
-                    detectedIssues: [],
-                    title: '', description: '', category: null, sub_category: null, severity: null,
-                });
-                setAiVerification({ status: 'fail', message: t.aiRejected });
+                setAiVerification({ status: 'pass', message: t.aiVerified });
             }
 
         } catch (error) {
-            console.error("Gemini API Error:", JSON.stringify(error));
+            console.error("Gemini API Error:", error);
             setAiVerification({ status: 'fail', message: "AI analysis failed. Please add details manually." });
         } finally {
             setIsAiLoading(false);
         }
-    }, [wizardData, language, updateWizardData, isAiLoading, t, categories]);
+    }, [wizardData, language, updateWizardData, isAiLoading, t]);
 
     const prevPreviewsRef = React.useRef(wizardData?.previews);
 
     React.useEffect(() => {
         if (!wizardData) return;
+        // Trigger analysis if the number of previews changes or if the file references are different.
         if (prevPreviewsRef.current?.length !== wizardData.previews.length || 
             wizardData.previews.some((p, i) => p.file !== prevPreviewsRef.current?.[i]?.file)) {
+            
             runAiMediaAnalysis();
         }
+        
         prevPreviewsRef.current = wizardData.previews;
     }, [wizardData?.previews, runAiMediaAnalysis]);
 
@@ -221,6 +207,7 @@ Your response MUST be a single, valid JSON object with "title" and "description"
             const audioPart = { inlineData: { data: audioBase64, mimeType } };
             const textPart = { text: prompt };
             
+            // FIX: Updated generateContent call to use responseSchema for reliable JSON output and corrected contents structure.
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: { parts: [textPart, audioPart] },
@@ -236,7 +223,7 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                     }
                 }
             });
-
+            
             const result = JSON.parse(response.text);
             updateWizardData({
                 title: result.title,
@@ -245,6 +232,7 @@ Your response MUST be a single, valid JSON object with "title" and "description"
 
         } catch (error) {
             console.error("Gemini audio transcription error:", error);
+            // Optionally show an error toast to the user here
         } finally {
             setIsTranscribing(false);
         }
@@ -256,11 +244,17 @@ Your response MUST be a single, valid JSON object with "title" and "description"
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
-            const mimeTypes = ['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/webm','audio/ogg'];
+            const mimeTypes = [
+                'audio/webm;codecs=opus',
+                'audio/ogg;codecs=opus',
+                'audio/webm',
+                'audio/ogg',
+            ];
             const supportedMimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
 
             if (!supportedMimeType) {
                 console.error("No supported audio MIME type found for MediaRecorder.");
+                // You could set an error state here to show in the UI
                 return;
             }
 
@@ -274,14 +268,8 @@ Your response MUST be a single, valid JSON object with "title" and "description"
             mediaRecorderRef.current.onstop = () => {
                 const finalMimeType = supportedMimeType?.split(';')[0] || 'audio/webm';
                 const audioBlob = new Blob(audioChunksRef.current, { type: finalMimeType });
-                stream.getTracks().forEach(track => track.stop());
+                stream.getTracks().forEach(track => track.stop()); // Stop microphone access
                 
-                if (audioBlob.size === 0) {
-                    console.warn("Audio recording resulted in an empty file. Discarding.");
-                    setIsTranscribing(false);
-                    return;
-                }
-
                 const reader = new FileReader();
                 reader.readAsDataURL(audioBlob);
                 reader.onloadend = () => {
@@ -293,10 +281,12 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                     }
                 };
             };
+
             mediaRecorderRef.current.start();
             setIsRecording(true);
         } catch (err) {
             console.error("Error accessing microphone:", err);
+            // You could set an error state here to show in the UI
         }
     };
 
@@ -310,167 +300,102 @@ Your response MUST be a single, valid JSON object with "title" and "description"
 
 
     const handleSubmit = async () => {
-        if (!wizardData || !currentUser) return;
+        if (!wizardData) return;
+        const previewsToSubmit = wizardData.previews.filter(p => p.status !== 'rejected');
+        if (wizardData.withMedia === null || !currentUser || !wizardData.category || !wizardData.severity) return;
+        if (wizardData.withMedia === true && previewsToSubmit.length === 0) return;
         
         setIsSubmitting(true);
         
         try {
-            const previewsToSubmit = wizardData.previews.filter(p => p.status !== 'rejected');
-            let photoUrls: string[] = [];
+            let photoUrls: string[];
             if (wizardData.withMedia && previewsToSubmit.length > 0) {
-                 photoUrls = await Promise.all(previewsToSubmit.map(preview => fileToDataURL(preview.file)));
-            } else if (!wizardData.withMedia && wizardData.category) {
-                photoUrls = [getReportImageUrl(wizardData.category!, categories)];
-            }
-
-            const issuesToSubmit = wizardData.detectedIssues.length > 0
-                ? wizardData.detectedIssues.filter((_, index) => wizardData.multiReportSelection[index])
-                : [{ title: wizardData.title, description: wizardData.description, category: wizardData.category, sub_category: wizardData.sub_category, severity: wizardData.severity }];
-
-            let credibility: Credibility;
-            if (wizardData.withMedia) {
-                if (aiVerification.status === 'pass') {
-                    credibility = Credibility.Pass;
-                } else {
-                    // This covers 'fail', 'images_removed', 'idle'
-                    credibility = Credibility.NeedsReview;
-                }
+                 photoUrls = await Promise.all(
+                    previewsToSubmit.map(preview => fileToDataURL(preview.file))
+                );
             } else {
-                // No media to verify, so it passes credibility check by default.
-                credibility = Credibility.Pass;
+                // FIX: Pass the 'CATEGORIES' object as the second argument to 'getReportImageUrl' to resolve argument count mismatch.
+                photoUrls = [getReportImageUrl(wizardData.category!, CATEGORIES)];
             }
 
-            const submittedReports: Report[] = [];
-            for (const issue of issuesToSubmit) {
-                if (!issue.category || !issue.severity) continue;
+            const submissionData = {
+                created_by: currentUser.id,
+                category: wizardData.category,
+                sub_category: wizardData.sub_category || undefined,
+                title: wizardData.title,
+                note: wizardData.description,
+                severity: wizardData.severity,
+                lat: wizardData.location![0],
+                lng: wizardData.location![1],
+                area: wizardData.address || "Unknown Location",
+                municipality: wizardData.municipality || 'unknown',
+                photo_urls: photoUrls,
+            };
 
-                const submissionData = {
-                    created_by: currentUser.id,
-                    category: issue.category,
-                    sub_category: issue.sub_category || undefined,
-                    title: issue.title,
-                    note: issue.description,
-                    severity: issue.severity,
-                    lat: wizardData.location![0],
-                    lng: wizardData.location![1],
-                    area: wizardData.address || "Unknown Location",
-                    municipality: wizardData.municipality || 'unknown',
-                    photo_urls: photoUrls,
-                    ai_credibility: credibility,
-                };
-                const newReport = await submitReport(submissionData);
-                if (newReport) submittedReports.push(newReport);
-            }
-
+            await submitReport(submissionData);
             flyToLocation(wizardData.location!, 16);
             resetWizard();
-            navigate(onSuccessRedirectPath || PATHS.HOME, { replace: true, state: { newReport: submittedReports[0] } });
+            navigate(PATHS.HOME, { replace: true });
         } catch(e) {
             console.error("Failed to submit report:", e);
             setIsSubmitting(false);
         }
     };
     
-    // --- Wizard Flow Logic ---
-    const steps = React.useMemo(() => {
-        if (!wizardData || wizardData.withMedia === null) return [];
-        
-        const flow: { name: string; component: React.FC<any> }[] = [];
-        if (wizardData.withMedia) {
-            flow.push({ name: t.stepPhoto, component: Step2Photo });
-            if (wizardData.detectedIssues.length > 1) {
-                flow.push({ name: t.stepDisambiguation, component: Step3Disambiguation });
-            }
-            flow.push({ name: t.stepLocation, component: Step3Location });
-            flow.push({ name: t.stepDetails, component: Step4Details });
-        } else {
-            flow.push({ name: t.stepLocation, component: Step3Location });
-            flow.push({ name: t.stepDetails, component: Step4Details });
-        }
-        return flow;
-      }, [wizardData?.withMedia, wizardData?.detectedIssues.length, t]);
+    if (!wizardData) {
+        return <Spinner />;
+    }
 
-    const handleNextAfterPhoto = () => {
-        // This function decides where to go from the Photo step.
-        // The `steps` array will have already updated based on AI results.
-        // So just calling nextStep() will go to the correct next step.
-        if (wizardData?.detectedIssues.length === 1) {
-            const issue = wizardData.detectedIssues[0];
-            updateWizardData({
-                title: issue.title,
-                description: issue.description,
-                category: issue.category,
-                sub_category: issue.sub_category,
-                severity: issue.severity,
-            });
-        }
-        nextStep();
-    };
+    const stepperSteps = wizardData.withMedia === null ? [] : wizardData.withMedia ? [t.stepPhoto, t.stepLocation, t.stepDetails] : [t.stepLocation, t.stepDetails];
+    const stepperCurrentStep = wizardStep - (wizardData.withMedia ? 1 : 2);
 
-    if (!wizardData) return <Spinner />;
 
-    const stepperSteps = [t.stepPhoto, ...(wizardData.detectedIssues.length > 1 ? [t.stepDisambiguation] : []), t.stepLocation, t.stepDetails];
-    const noMediaStepperSteps = [t.stepLocation, t.stepDetails];
-    
     const renderStep = () => {
         if (wizardStep === 1) {
             return <Step1Type onSelect={(choice) => {
-                updateWizardData({ withMedia: choice === 'with' });
+                const isWithMedia = choice === 'with';
+                updateWizardData({ 
+                    withMedia: isWithMedia,
+                    previews: isWithMedia ? wizardData.previews : []
+                });
+                if (!isWithMedia) {
+                    setAiVerification({ status: 'idle', message: '' });
+                }
                 nextStep();
             }} />;
         }
 
-        const CurrentStepComponent = steps[wizardStep - 2]?.component;
-        if (!CurrentStepComponent) return null;
-
-        const isLastStep = wizardStep - 2 === steps.length - 1;
-
-        const commonProps = {
-            reportData: wizardData,
-            // FIX: Pass updateWizardData from context as the updateReportData prop.
-            updateReportData: updateWizardData,
-            prevStep,
-            setWizardStep,
-            isSubmitting,
-        };
-
-        return <CurrentStepComponent 
-            {...commonProps}
-            nextStep={CurrentStepComponent === Step2Photo ? handleNextAfterPhoto : (isLastStep ? handleSubmit : nextStep)}
-            onSubmit={handleSubmit}
-            isAiLoading={isAiLoading}
-            aiVerification={aiVerification}
-            isRecording={isRecording}
-            isTranscribing={isTranscribing}
-            startRecording={startRecording}
-            stopRecording={stopRecording}
-        />;
+        if (wizardData.withMedia) { // Reporting WITH media
+            switch (wizardStep) {
+                case 2:
+                    return <Step2Photo reportData={wizardData} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} isAiLoading={isAiLoading} aiVerification={aiVerification} />;
+                case 3:
+                    return <Step3Location reportData={wizardData} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} />;
+                case 4:
+                    return <Step4Details reportData={wizardData} updateReportData={updateWizardData} onSubmit={handleSubmit} prevStep={prevStep} isSubmitting={isSubmitting} isAiLoading={isAiLoading} isRecording={isRecording} isTranscribing={isTranscribing} startRecording={startRecording} stopRecording={stopRecording} />;
+                default:
+                    return null;
+            }
+        } else { // Reporting WITHOUT media
+             switch (wizardStep) {
+                case 2:
+                    return <Step3Location reportData={wizardData} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} />;
+                case 3:
+                    return <Step4Details reportData={wizardData} updateReportData={updateWizardData} onSubmit={handleSubmit} prevStep={prevStep} isSubmitting={isSubmitting} isAiLoading={false} isRecording={isRecording} isTranscribing={isTranscribing} startRecording={startRecording} stopRecording={stopRecording} />;
+                default:
+                    return null;
+            }
+        }
     };
-    
-    const isPhotoStep = wizardData?.withMedia === true && wizardStep === 2;
-    const currentStepperSteps = wizardData.withMedia ? stepperSteps : noMediaStepperSteps;
-    const stepperCurrentStep = wizardData.withMedia ? wizardStep - 1 : wizardStep;
 
 
     return (
-        <div className="h-full flex flex-col relative">
-             <button
-                onClick={() => { resetWizard(); navigate(onSuccessRedirectPath || PATHS.HOME); }}
-                className="absolute top-4 right-4 z-50 p-2 bg-black/20 text-white rounded-full backdrop-blur-sm hover:bg-black/40 transition-colors"
-                aria-label="Close report form"
-            >
-                <FaXmark size={20}/>
-            </button>
-
+        <div className="max-w-2xl mx-auto flex flex-col items-center" style={{ minHeight: 'calc(100vh - 10rem)'}}>
             {wizardStep > 1 && wizardData.withMedia !== null && (
-                <div className="w-full pt-8 px-4 flex-shrink-0">
-                    <WizardStepper currentStep={stepperCurrentStep} totalSteps={currentStepperSteps.length} stepNames={currentStepperSteps} />
-                </div>
+                <WizardStepper currentStep={stepperCurrentStep} totalSteps={stepperSteps.length} stepNames={stepperSteps} />
             )}
-            <div className={`flex-grow min-h-0 p-4 flex justify-center ${wizardStep === 1 ? 'pt-16' : ''}`}>
-                <div className={`w-full flex flex-col ${isPhotoStep ? '' : 'max-w-2xl'}`}>
-                    {renderStep()}
-                </div>
+            <div className="w-full flex-grow flex flex-col">
+                {renderStep()}
             </div>
         </div>
     );

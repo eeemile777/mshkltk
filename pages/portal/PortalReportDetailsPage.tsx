@@ -6,85 +6,10 @@ import { AppContext } from '../../contexts/AppContext';
 import { Report, Theme, ReportStatus, Comment, ReportHistory, User, ReportSeverity } from '../../types';
 import { STATUS_COLORS, TILE_URLS } from '../../constants';
 import { FaArrowLeft, FaArrowRight, FaCircleCheck, FaRegCommentDots, FaClockRotateLeft, FaMapLocationDot, FaCity, FaGlobe, FaPaperPlane, FaSpinner, FaLandmark, FaCamera, FaFlag } from 'react-icons/fa6';
-import { ReportDetailsSkeleton, Shimmer } from '../../components/SkeletonLoader';
+import { ReportDetailsSkeleton } from '../../components/SkeletonLoader';
 import { createCategoryIcon } from '../../utils/mapUtils';
 import Lightbox from '../../components/Lightbox';
 import ResolutionProofModal from '../../components/portal/ResolutionProofModal';
-
-const useObjectUrl = (dataUrl: string | undefined): string | undefined => {
-  const [objectUrl, setObjectUrl] = React.useState<string | undefined>();
-
-  React.useEffect(() => {
-    // If it's not a data URL, just use it as is (e.g., a regular URL or an existing blob URL)
-    if (!dataUrl || !dataUrl.startsWith('data:')) {
-      setObjectUrl(dataUrl);
-      return;
-    }
-
-    let objectUrlValue: string | undefined;
-
-    try {
-        const arr = dataUrl.split(',');
-        if (arr.length < 2) throw new Error("Invalid data URL");
-
-        const mimeMatch = arr[0].match(/:(.*?);/);
-        if (!mimeMatch) throw new Error("Could not parse MIME type from data URL");
-        const mime = mimeMatch[1];
-        
-        const bstr = atob(arr[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while(n--){
-            u8arr[n] = bstr.charCodeAt(n);
-        }
-        const blob = new Blob([u8arr], {type:mime});
-        
-        objectUrlValue = URL.createObjectURL(blob);
-        setObjectUrl(objectUrlValue);
-    } catch (error) {
-        console.error("Error converting data URL to object URL:", error);
-        // Fallback to the original dataUrl if conversion fails.
-        // This might be less performant but is better than showing nothing.
-        setObjectUrl(dataUrl);
-    }
-
-    return () => {
-      if (objectUrlValue) {
-        URL.revokeObjectURL(objectUrlValue);
-      }
-    };
-  }, [dataUrl]);
-
-  return objectUrl;
-};
-
-const MediaItem: React.FC<{ url: string; index: number; isProof: boolean; onMediaClick: (index: number) => void; className?: string }> = ({ url, index, isProof, onMediaClick, className }) => {
-    const { t } = React.useContext(AppContext);
-    const objectUrl = useObjectUrl(url);
-    const isVideo = url.startsWith('data:video/');
-
-    if (!objectUrl) {
-        return <div className={`bg-muted dark:bg-bg-dark rounded-lg ${className}`} />;
-    }
-
-    return (
-        <div className={`relative overflow-hidden rounded-lg group cursor-pointer ${className}`} onClick={() => onMediaClick(index)}>
-            {isVideo ? (
-                <video src={objectUrl} className="w-full h-full object-cover bg-black" controls playsInline />
-            ) : (
-                <img src={objectUrl} alt={`Report media ${index + 1}`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-            )}
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            {isProof && (
-                <div className="absolute bottom-2 left-2 bg-teal text-white px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1.5 z-10 shadow-lg">
-                    <FaCircleCheck />
-                    <span>{t.resolutionProof}</span>
-                </div>
-            )}
-        </div>
-    );
-};
-
 
 const SeverityIndicator: React.FC<{ severity: ReportSeverity; className?: string }> = ({ severity, className = '' }) => {
     const severityMap = {
@@ -112,13 +37,31 @@ const StatusPill: React.FC<{ status: Report['status'] }> = ({ status }) => {
 };
 
 const MediaGrid: React.FC<{ report: Report; onMediaClick: (index: number) => void }> = ({ report, onMediaClick }) => {
+    const { t } = React.useContext(AppContext);
     const urls = report.photo_urls;
     if (!urls || urls.length === 0) return null;
 
     const renderMedia = (index: number, className: string = '') => {
         const url = urls[index];
+        const isVideo = url.startsWith('data:video/');
         const isProofMedia = report.status === ReportStatus.Resolved && urls.length > 1 && index === urls.length - 1;
-        return <MediaItem url={url} index={index} isProof={isProofMedia} onMediaClick={onMediaClick} className={className} />;
+
+        return (
+            <div key={index} className={`relative overflow-hidden rounded-lg group cursor-pointer ${className}`} onClick={() => onMediaClick(index)}>
+                {isVideo ? (
+                    <video src={url} className="w-full h-full object-cover" muted loop playsInline autoPlay />
+                ) : (
+                    <img src={url} alt={`Report media ${index + 1}`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                )}
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                 {isProofMedia && (
+                    <div className="absolute bottom-2 left-2 bg-teal text-white px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1.5 z-10 shadow-lg">
+                        <FaCircleCheck />
+                        <span>{t.resolutionProof}</span>
+                    </div>
+                )}
+            </div>
+        );
     }
 
     const layoutClasses = "grid gap-2 h-96";
@@ -133,7 +76,11 @@ const MediaGrid: React.FC<{ report: Report; onMediaClick: (index: number) => voi
                 <div className={`${layoutClasses} grid-cols-2 grid-rows-2`}>
                     {renderMedia(0)}{renderMedia(1)}{renderMedia(2)}
                     <div className="relative overflow-hidden rounded-lg group cursor-pointer" onClick={() => onMediaClick(3)}>
-                        {renderMedia(3)}
+                        {urls[3].startsWith('data:video/') ? (
+                             <video src={urls[3]} className="w-full h-full object-cover" muted loop playsInline autoPlay />
+                        ) : (
+                            <img src={urls[3]} alt={`Report media 4`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                        )}
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><span className="text-white text-4xl font-bold">+{urls.length - 3}</span></div>
                     </div>
                 </div>
@@ -209,7 +156,14 @@ const CommentsSection: React.FC<{ report: Report }> = ({ report }) => {
                     return (
                         <div key={comment.id} className="flex items-start gap-3">
                             <img src={comment.user.avatarUrl} alt={comment.user.display_name} className="w-10 h-10 rounded-full flex-shrink-0" />
-                            <div className={`p-3 rounded-xl w-full ${isMunicipality ? 'bg-sky/10 dark:bg-cyan-dark/10 border border-sky/50 dark:border-cyan-dark/50' : 'bg-card dark:bg-surface-dark'}`}><div className="flex items-baseline justify-between"><p className="font-bold text-sm text-navy dark:text-text-primary-dark">{comment.user.display_name}</p>{isMunicipality && <span className="text-xs font-bold text-sky dark:text-cyan-dark bg-sky/20 dark:bg-cyan-dark/20 px-2 py-0.5 rounded-full flex items-center gap-1"><FaLandmark size={10}/> Municipality</span>}</div><p className="text-sm text-text-primary dark:text-text-primary-dark mt-1">{comment.text}</p><p className="text-xs text-text-secondary dark:text-text-secondary-dark mt-2 text-right">{new Date(comment.created_at).toLocaleDateString()}</p></div>
+                            <div className={`p-3 rounded-xl w-full ${isMunicipality ? 'bg-sky/10 dark:bg-cyan-dark/10 border border-sky/50 dark:border-cyan-dark/50' : 'bg-card dark:bg-surface-dark'}`}>
+                                <div className="flex items-baseline justify-between">
+                                    <p className="font-bold text-sm text-navy dark:text-text-primary-dark">{comment.user.display_name}</p>
+                                    {isMunicipality && <span className="text-xs font-bold text-sky dark:text-cyan-dark bg-sky/20 dark:bg-cyan-dark/20 px-2 py-0.5 rounded-full flex items-center gap-1"><FaLandmark size={10}/> Municipality</span>}
+                                </div>
+                                <p className="text-sm text-text-primary dark:text-text-primary-dark mt-1">{comment.text}</p>
+                                <p className="text-xs text-text-secondary dark:text-text-secondary-dark mt-2 text-right">{new Date(comment.created_at).toLocaleDateString()}</p>
+                            </div>
                         </div>
                     )
                 }) : <p className="text-center text-text-secondary dark:text-text-secondary-dark py-8">{t.noCommentsYet}</p>}

@@ -89,6 +89,7 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const mediaParts = await Promise.all(wizardData.previews.map(p => fileToGenerativePart(p.file)));
             const langName = language === 'ar' ? 'Arabic' : 'English';
+            const isSingleMedia = wizardData.previews.length === 1;
             
             const categoryList = JSON.stringify(Object.keys(categories).reduce((acc: Record<string, string[]>, catKey) => {
                 const cat = categories[catKey as ReportCategory];
@@ -98,13 +99,27 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
                 return acc;
             }, {}), null, 2);
 
-            const prompt = `You are an AI assistant for a civic issue reporting app. Your task is to analyze media (images AND videos) to identify all distinct issues and check for policy violations. Your response MUST be a single, valid JSON object.
+            let prompt = `You are an AI assistant for a civic issue reporting app. Your task is to analyze media (images AND videos) to identify issues and check for policy violations. Your response MUST be a single, valid JSON object.
 
 Follow these steps with ZERO DEVIATION:
 
 1.  **Policy/Safety Analysis (Per Media Part):** For EACH media part provided, determine if it violates our safety policies. A violation occurs if the media clearly shows: a human face, a readable vehicle license plate, identifiable military/police personnel or vehicles, or content unrelated to a civic issue. Create a list in \`media_to_flag\` containing the \`index\` and a brief, user-friendly \`reason\` (in ${langName}, phrased politely) for EVERY media part that violates the policies. If no violations are found, this list MUST be an empty array [].
+`;
 
-2.  **Holistic Content Analysis:** Analyze ALL media parts together to identify every distinct civic issue. For example, if one photo shows a large crack in the road and another shows a smaller pothole, you must identify BOTH as separate issues.
+            if (isSingleMedia) {
+                prompt += `
+2.  **Single Issue Analysis:** Analyze the single media part provided to identify the ONE MOST SIGNIFICANT civic issue present. Even if multiple minor issues exist, focus on the primary problem.
+
+3.  **Issue Generation:** Create an array called \`issues\` containing EXACTLY ONE object representing the most significant issue you identified. This object MUST contain:
+    -   **Categorization:** The MOST LIKELY parent \`category\` and child \`sub_category\` from this list: ${categoryList}.
+    -   **Severity Assessment:** The \`severity\` which MUST be one of these exact lowercase strings: 'high', 'medium', 'low'.
+    -   A concise, descriptive \`title\` (max 10 words, in ${langName}).
+    -   A clear \`description\` (20-40 words, in ${langName}), written from the citizen's first-person perspective (e.g., "I noticed that...").
+
+4.  **Final JSON:** The \`issues\` array MUST contain exactly one object. If no clear issue is found, still provide your best guess.`;
+            } else { // Multiple media
+                prompt += `
+2.  **Holistic Content Analysis:** Analyze ALL media parts together to identify every distinct civic issue. For example, if one photo shows a large crack in the road and another shows an overflowing dumpster, you must identify BOTH as separate issues.
 
 3.  **Issue Generation:** Create an array called \`issues\`. For each distinct issue you identified, add an object to this array. Each object MUST contain:
     -   **Categorization:** The MOST LIKELY parent \`category\` and child \`sub_category\` from this list: ${categoryList}.
@@ -113,7 +128,8 @@ Follow these steps with ZERO DEVIATION:
     -   A clear \`description\` (20-40 words, in ${langName}), written from the citizen's first-person perspective (e.g., "I noticed that...").
 
 4.  **Final JSON:** If you found one issue, the \`issues\` array will have one object. If you found two, it will have two. If you found no clear issues, the \`issues\` array MUST be empty.`;
-            
+            }
+
             const parts = [{ text: prompt }, ...mediaParts];
             
             const response = await ai.models.generateContent({
@@ -408,7 +424,8 @@ Your response MUST be a single, valid JSON object with "title" and "description"
         const flow: { name: string; component: React.FC<any> }[] = [];
         if (wizardData.withMedia) {
             flow.push({ name: t.stepPhoto, component: Step2Photo });
-            if (wizardData.detectedIssues.length > 1) {
+            // Only show disambiguation if there are MULTIPLE photos AND MULTIPLE issues were detected.
+            if (wizardData.previews.length > 1 && wizardData.detectedIssues.length > 1) {
                 flow.push({ name: t.stepDisambiguation, component: Step3Disambiguation });
             }
             flow.push({ name: t.stepLocation, component: Step3Location });
@@ -418,12 +435,11 @@ Your response MUST be a single, valid JSON object with "title" and "description"
             flow.push({ name: t.stepDetails, component: Step4Details });
         }
         return flow;
-      }, [wizardData?.withMedia, wizardData?.detectedIssues.length, t]);
+    }, [wizardData?.withMedia, wizardData?.previews.length, wizardData?.detectedIssues.length, t]);
 
     const handleNextAfterPhoto = () => {
-        // This function decides where to go from the Photo step.
-        // The `steps` array will have already updated based on AI results.
-        // So just calling nextStep() will go to the correct next step.
+        // If we have only one issue (which will always be the case for a single photo),
+        // we can pre-populate the main wizard data fields for the details step.
         if (wizardData?.detectedIssues.length === 1) {
             const issue = wizardData.detectedIssues[0];
             updateWizardData({
@@ -434,13 +450,25 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                 severity: issue.severity,
             });
         }
+        // The `steps` array is reactive, so just calling nextStep() will go to the correct next step
+        // (either Disambiguation or Location).
         nextStep();
     };
 
     if (!wizardData) return <Spinner />;
 
-    const stepperSteps = [t.stepPhoto, ...(wizardData.detectedIssues.length > 1 ? [t.stepDisambiguation] : []), t.stepLocation, t.stepDetails];
-    const noMediaStepperSteps = [t.stepLocation, t.stepDetails];
+    const stepperSteps = React.useMemo(() => {
+        if (!wizardData || wizardData.withMedia === null) return [];
+        if (!wizardData.withMedia) return [t.stepLocation, t.stepDetails];
+        
+        const steps = [t.stepPhoto];
+        if (wizardData.previews.length > 1 && wizardData.detectedIssues.length > 1) {
+            steps.push(t.stepDisambiguation);
+        }
+        steps.push(t.stepLocation);
+        steps.push(t.stepDetails);
+        return steps;
+    }, [wizardData, t]);
     
     const renderStep = () => {
         if (wizardStep === 1) {
@@ -478,8 +506,8 @@ Your response MUST be a single, valid JSON object with "title" and "description"
     };
     
     const isPhotoStep = wizardData?.withMedia === true && wizardStep === 2;
-    const currentStepperSteps = wizardData.withMedia ? stepperSteps : noMediaStepperSteps;
-    const stepperCurrentStep = wizardData.withMedia ? wizardStep - 1 : wizardStep;
+    const currentStepperSteps = stepperSteps;
+    const stepperCurrentStep = wizardStep - 1;
 
 
     return (

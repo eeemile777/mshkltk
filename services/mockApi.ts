@@ -51,6 +51,7 @@ const initializeDatabase = async () => {
         role: 'municipality',
         municipality_id: 'beirut',
         is_active: true,
+        portal_access_level: 'read_write',
       },
       {
         id: 'user-municipality-tripoli',
@@ -69,6 +70,7 @@ const initializeDatabase = async () => {
         role: 'municipality',
         municipality_id: 'tripoli',
         is_active: true,
+        portal_access_level: 'read_write',
       }
     ];
     
@@ -320,6 +322,7 @@ export const createAdminUser = async (data: {
     scoped_sub_categories?: string[];
     portal_title?: string;
     portal_subtitle?: string;
+    portal_access_level?: 'read_write' | 'read_only';
 }, actor?: User): Promise<User> => {
     await dbReady;
     const allUsers = await dbService.getAll<User>('users');
@@ -353,6 +356,7 @@ export const createAdminUser = async (data: {
         is_active: true,
         portal_title: data.portal_title,
         portal_subtitle: data.portal_subtitle,
+        portal_access_level: data.portal_access_level || 'read_write',
     };
     
     if (data.role === 'municipality') {
@@ -661,6 +665,11 @@ export const confirmReport = async (reportId: string, actor: User): Promise<{rep
 
 export const addComment = async (reportId: string, text: string, actor: User): Promise<{ comment: Comment & { user: User }, newNotifications: Notification[] }> => {
     await dbReady;
+    
+    if (actor.role !== 'citizen' && actor.role !== 'super_admin' && actor.portal_access_level === 'read_only') {
+        throw new Error('Permission Denied: This user has read-only access and cannot add comments.');
+    }
+
     const report = await dbService.get<Report>('reports', reportId);
     if (!report) throw new Error('Report not found');
     
@@ -733,6 +742,11 @@ export const toggleSubscription = async (reportId: string, actorId: string): Pro
 
 export const updateReportStatus = async (reportId: string, status: ReportStatus, proofPhotoUrl?: string, actor?: User): Promise<Report> => {
     await dbReady;
+
+    if (actor && actor.role !== 'citizen' && actor.role !== 'super_admin' && actor.portal_access_level === 'read_only') {
+        throw new Error('Permission Denied: This user has read-only access and cannot change report statuses.');
+    }
+    
     const report = await dbService.get<Report>('reports', reportId);
     if (!report) throw new Error('Report not found');
     
@@ -775,6 +789,11 @@ export const updateReportStatus = async (reportId: string, status: ReportStatus,
 
 export const requestResolutionProof = async (reportId: string, actor: User): Promise<Notification[]> => {
     await dbReady;
+
+    if (actor.role !== 'citizen' && actor.role !== 'super_admin' && actor.portal_access_level === 'read_only') {
+        throw new Error('Permission Denied: This user has read-only access and cannot request proof.');
+    }
+
     const report = await dbService.get<Report>('reports', reportId);
     if (!report) throw new Error('Report not found');
 

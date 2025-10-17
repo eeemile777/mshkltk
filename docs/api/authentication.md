@@ -37,17 +37,14 @@ Endpoints for handling user registration, login (for citizens, portals, and supe
 ### User Login (Citizen, Portal, Super Admin)
 
 -   **Endpoint:** `POST /api/login`
--   **Description:** Authenticates a user and returns a JWT. A query parameter can distinguish login types.
+-   **Description:** Authenticates a user and returns a JWT. The backend must differentiate the login type to ensure the user has the correct role for the target application area.
 -   **Authentication:** None.
--   **Query Parameters:**
-    -   `?type=portal`: For municipality login.
-    -   `?type=superadmin`: For super admin login.
-    -   (No parameter): For citizen login.
 -   **Request Body:**
     ```json
     {
-      "username": "nader",
-      "password": "password123"
+      "username": "nader_h",
+      "password": "password123",
+      "type": "citizen" // or "portal" or "superadmin"
     }
     ```
 -   **Success Response (200 OK):**
@@ -62,7 +59,7 @@ Endpoints for handling user registration, login (for citizens, portals, and supe
     { "error": "invalid_credentials", "message": "Invalid username or password." }
     ```
 -   **Error Response (403 Forbidden):**
-    -   Returned if a user tries to access the wrong portal (e.g., citizen trying to log into the municipality portal).
+    -   Returned if a user tries to access the wrong portal (e.g., a citizen trying to log into the municipality portal).
     ```json
     { "error": "access_denied", "message": "This user does not have portal access." }
     ```

@@ -7,30 +7,22 @@ Endpoints for creating, fetching, and interacting with civic issue reports.
 ### Get All Reports
 
 -   **Endpoint:** `GET /api/reports`
--   **Description:** Fetches a list of all reports, with support for pagination.
+-   **Description:** Fetches a list of all reports. For portal users, this should be automatically scoped based on their role and permissions.
 -   **Authentication:** Required.
--   **Query Parameters (Optional):**
-    -   `?page=1`: The page number to retrieve.
-    -   `?limit=20`: The number of items per page.
 -   **Success Response (200 OK):**
     ```json
-    {
-      "data": [
-        { "...Report Object..." },
-        { "...Report Object..." }
-      ],
-      "totalPages": 15,
-      "currentPage": 1
-    }
+    [
+      { "...Report Object..." },
+      { "...Report Object..." }
+    ]
     ```
-    *Note: If pagination is not implemented, the response can be a simple array of all reports as previously defined.*
 
 ---
 
 ### Submit a New Report
 
 -   **Endpoint:** `POST /api/reports`
--   **Description:** Creates a new report.
+-   **Description:** Creates a new report. The backend must handle base64 data URLs in `photo_urls`, save them to a file storage service (like S3), and replace them with the final hosted URLs before saving to the database.
 -   **Authentication:** Required.
 -   **Request Body:**
     ```json
@@ -74,7 +66,7 @@ Endpoints for creating, fetching, and interacting with civic issue reports.
 ### Confirm a Report
 
 -   **Endpoint:** `POST /api/reports/:id/confirm`
--   **Description:** Increments the confirmation count for a report. The backend should prevent a user from confirming the same report twice or confirming their own report.
+-   **Description:** Increments the confirmation count for a report. The backend must prevent a user from confirming the same report twice or confirming their own report.
 -   **Authentication:** Required.
 -   **Success Response (200 OK):**
     -   Returns the updated `Report` object.
@@ -92,20 +84,21 @@ Endpoints for creating, fetching, and interacting with civic issue reports.
 -   **Description:** Subscribes the current user to a report for notifications.
 -   **Authentication:** Required.
 -   **Success Response (200 OK):**
-    -   Returns the updated `Report` object.
+    -   Returns the updated `Report` object and the updated `User` object.
 
 -   **Endpoint:** `DELETE /api/reports/:id/subscribe`
 -   **Description:** Unsubscribes the current user from a report.
 -   **Authentication:** Required.
--   **Success Response (204 No Content):**
+-   **Success Response (200 OK):**
+    -   Returns the updated `Report` object and the updated `User` object.
 
 ---
 
 ### Update Report Status (Portal/Admin Only)
 
 -   **Endpoint:** `PUT /api/reports/:id/status`
--   **Description:** Allows a municipality or super admin user to update the status of a report.
--   **Authentication:** Required (Municipality or Super Admin role).
+-   **Description:** Allows a municipality or super admin user to update the status of a report. Backend must verify the user has `'read_write'` permissions.
+-   **Authentication:** Required (Portal or Super Admin role).
 -   **Request Body:**
     ```json
     {
@@ -116,10 +109,20 @@ Endpoints for creating, fetching, and interacting with civic issue reports.
 -   **Success Response (200 OK):**
     -   Returns the updated `Report` object.
 -   **Error Response (403 Forbidden):**
-    -   Returned if a user without the proper role attempts this action.
+    -   Returned if a user without the proper role or with 'read_only' permissions attempts this action.
     ```json
     { "error": "permission_denied", "message": "User does not have permission to update report status." }
     ```
+
+---
+
+### Request Resolution Proof (Portal/Admin Only)
+
+-   **Endpoint:** `POST /api/reports/:id/request-proof`
+-   **Description:** Allows a portal user to send a notification to the original reporter asking for a photo to verify a resolution.
+-   **Authentication:** Required (Portal or Super Admin role with `'read_write'` access).
+-   **Success Response (200 OK):**
+    -   Returns the `Notification` object(s) that were created.
 
 ---
 

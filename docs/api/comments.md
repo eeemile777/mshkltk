@@ -7,7 +7,7 @@ Endpoints for managing comments on reports.
 ### Get Comments for a Report
 
 -   **Endpoint:** `GET /api/reports/:id/comments`
--   **Description:** Fetches all comments associated with a specific report, ordered from newest to oldest.
+-   **Description:** Fetches all comments associated with a specific report, ordered from newest to oldest. The response should include the author's `User` object for each comment.
 -   **Authentication:** Required.
 -   **Success Response (200 OK):**
     ```json
@@ -28,7 +28,7 @@ Endpoints for managing comments on reports.
 ### Add a Comment to a Report
 
 -   **Endpoint:** `POST /api/reports/:id/comments`
--   **Description:** Adds a new comment to a report. The backend should automatically notify subscribed users.
+-   **Description:** Adds a new comment to a report. The backend should automatically create and send notifications to all subscribed users. For portal users, the backend must verify they have `'read_write'` permissions.
 -   **Authentication:** Required.
 -   **Request Body:**
     ```json
@@ -38,6 +38,8 @@ Endpoints for managing comments on reports.
     ```
 -   **Success Response (201 Created):**
     -   Returns the newly created `Comment` object, including the hydrated `user` object.
+-   **Error Response (403 Forbidden):**
+    -   Returned if a portal user with `read_only` access attempts to comment.
 
 ---
 

@@ -106,6 +106,7 @@ export interface User {
   avatarUrl: string;
   onboarding_complete?: boolean;
   role: 'citizen' | 'municipality' | 'super_admin' | 'utility' | 'union_of_municipalities';
+  portal_access_level?: 'read_write' | 'read_only';
   municipality_id?: string; // e.g., 'beirut'
   scoped_categories?: ReportCategory[]; // For 'utility' role
   scoped_municipalities?: string[]; // For 'utility' or 'union_of_municipalities' role

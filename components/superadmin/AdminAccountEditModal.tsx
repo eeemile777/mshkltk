@@ -24,6 +24,7 @@ const AdminAccountEditModal: React.FC<AdminAccountEditModalProps> = ({ mode, use
         portalTitle: user?.portal_title || '',
         portalSubtitle: user?.portal_subtitle || '',
         isActive: user?.is_active ?? true,
+        portalAccessLevel: user?.portal_access_level || 'read_write',
     });
     const [isSaving, setIsSaving] = React.useState(false);
     
@@ -60,6 +61,7 @@ const AdminAccountEditModal: React.FC<AdminAccountEditModalProps> = ({ mode, use
                 portal_title: formData.portalTitle,
                 portal_subtitle: formData.portalSubtitle,
                 is_active: formData.isActive,
+                portal_access_level: formData.portalAccessLevel as 'read_write' | 'read_only',
             };
             if (formData.newPassword) updates.newPassword = formData.newPassword;
             
@@ -102,13 +104,23 @@ const AdminAccountEditModal: React.FC<AdminAccountEditModalProps> = ({ mode, use
                 <button onClick={onClose} className="absolute top-4 right-4 text-text-secondary dark:text-text-secondary-dark"><FaXmark /></button>
                 <h2 className="text-2xl font-bold text-navy dark:text-text-primary-dark mb-4">{isAddMode ? 'Add New Admin Account' : `Edit ${user?.display_name}`}</h2>
                 <form onSubmit={handleSubmit} className="flex-grow min-h-0 flex flex-col gap-4 overflow-y-auto pr-2">
-                    <div>
-                        <label className="font-bold">Account Role</label>
-                        <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as User['role']})} className="w-full p-2 bg-muted dark:bg-bg-dark rounded-lg">
-                            <option value="municipality">Municipality</option>
-                            <option value="union_of_municipalities">Union of Municipalities</option>
-                            <option value="utility">Utility / Public Institution</option>
-                        </select>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="font-bold">Account Role</label>
+                            <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as User['role']})} className="w-full p-2 bg-muted dark:bg-bg-dark rounded-lg">
+                                <option value="municipality">Municipality</option>
+                                <option value="union_of_municipalities">Union of Municipalities</option>
+                                <option value="utility">Utility / Public Institution</option>
+                            </select>
+                        </div>
+                         <div>
+                            <label className="font-bold">Portal Access Level</label>
+                            {/* FIX: Cast the select value to the correct type to prevent type errors. */}
+                            <select value={formData.portalAccessLevel} onChange={e => setFormData({...formData, portalAccessLevel: e.target.value as 'read_write' | 'read_only'})} className="w-full p-2 bg-muted dark:bg-bg-dark rounded-lg">
+                                <option value="read_write">Read & Write</option>
+                                <option value="read_only">Read Only</option>
+                            </select>
+                        </div>
                     </div>
                     <div>
                         <label className="font-bold">Display Name</label>

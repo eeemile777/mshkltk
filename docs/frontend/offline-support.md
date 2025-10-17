@@ -5,13 +5,13 @@ The Mshkltk application is designed to be resilient to network interruptions, al
 ## Core Components
 
 1.  **Service Worker (`sw.js`):**
-    -   **Caching:** On installation, the service worker caches the main application shell (`index.html` and key assets). It uses a network-first strategy for other requests, falling back to the cache if the network is unavailable.
+    -   **Caching:** On installation, the service worker caches the main application shell (`index.html` and key assets). It uses a network-first, cache-fallback strategy for other requests, ensuring the app works offline while providing fresh data when online.
     -   **Background Sync:** It listens for the `sync` event. The frontend registers a sync event with the tag `sync-new-reports` when an offline report is created.
 
 2.  **IndexedDB for Pending Reports:**
     -   A dedicated IndexedDB object store named `pending-reports` is managed directly within `AppContext.tsx`.
-    -   When `submitReport` is called and the browser is offline (`navigator.onLine` is `false`), the report data is not sent to the API. Instead, it's saved as a `PendingReportData` object in this store.
-    -   The report is also added to the local React state with an `isPending: true` flag, so the user sees their report immediately in the UI.
+    -   When `submitReport` is called and the browser is offline (`navigator.onLine` is `false`) or the initial online submission fails, the report data is saved as a `PendingReportData` object in this store.
+    -   The report is also added to the local React state with an `isPending: true` flag, so the user sees their report immediately in the UI with a "Pending Sync" status.
 
 ## The Offline Submission Flow
 
@@ -20,7 +20,7 @@ The Mshkltk application is designed to be resilient to network interruptions, al
     -   The function checks `navigator.onLine`. It's `false`.
     -   The report payload is wrapped in a `PendingReportData` object, which includes a unique `timestamp` to serve as its key.
     -   This object is saved to the `pending-reports` IndexedDB store using the `addPendingReport` helper.
-    -   The function then registers a background sync task: `sw.sync.register('sync-new-reports')`. This tells the browser to fire a `sync` event in the service worker as soon as the network is available, even if the user has closed the tab.
+    -   The function then registers a background sync task: `navigator.serviceWorker.ready.then(sw => sw.sync.register('sync-new-reports'))`. This tells the browser to fire a `sync` event in the service worker as soon as the network is available, even if the user has closed the tab.
 3.  **User Comes Online:** The browser detects a stable network connection.
 4.  **Service Worker `sync` Event:**
     -   The `sync` event with the tag `sync-new-reports` is fired in `sw.js`.

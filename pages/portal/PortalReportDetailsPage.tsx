@@ -132,6 +132,8 @@ const CommentsSection: React.FC<{ report: Report }> = ({ report }) => {
     const { comments, currentUser, addCommentForReport } = React.useContext(PortalContext);
     const [newComment, setNewComment] = React.useState('');
     const [isPosting, setIsPosting] = React.useState(false);
+    
+    const canWrite = currentUser?.portal_access_level === 'read_write' || currentUser?.role === 'super_admin';
 
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -168,19 +170,21 @@ const CommentsSection: React.FC<{ report: Report }> = ({ report }) => {
                     )
                 }) : <p className="text-center text-text-secondary dark:text-text-secondary-dark py-8">{t.noCommentsYet}</p>}
             </div>
-            <form onSubmit={handleCommentSubmit} className="mt-4 flex items-center gap-2 pt-4 border-t border-border-light dark:border-border-dark">
-                <img src={currentUser?.avatarUrl} alt="Your avatar" className="w-10 h-10 rounded-full" />
-                <textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder={t.addComment}
-                    rows={1}
-                    className="flex-grow p-2 bg-card dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-full resize-none focus:ring-2 focus:ring-teal-dark"
-                />
-                <button type="submit" disabled={isPosting || !newComment.trim()} className="p-3 bg-teal-dark text-white rounded-full disabled:bg-gray-600">
-                    {isPosting ? <FaSpinner className="animate-spin" /> : <FaPaperPlane />}
-                </button>
-            </form>
+            {canWrite && (
+                <form onSubmit={handleCommentSubmit} className="mt-4 flex items-center gap-2 pt-4 border-t border-border-light dark:border-border-dark">
+                    <img src={currentUser?.avatarUrl} alt="Your avatar" className="w-10 h-10 rounded-full" />
+                    <textarea
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder={t.addComment}
+                        rows={1}
+                        className="flex-grow p-2 bg-card dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-full resize-none focus:ring-2 focus:ring-teal-dark"
+                    />
+                    <button type="submit" disabled={isPosting || !newComment.trim()} className="p-3 bg-teal-dark text-white rounded-full disabled:bg-gray-600">
+                        {isPosting ? <FaSpinner className="animate-spin" /> : <FaPaperPlane />}
+                    </button>
+                </form>
+            )}
         </div>
     );
 };
@@ -248,11 +252,13 @@ const MiniMap: React.FC<{ report: Report }> = ({ report }) => {
 const PortalReportDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { t, language, flyToLocation, theme } = React.useContext(AppContext);
-  const { reports, users, loading, fetchCommentsForReport, fetchHistoryForReport, updateReportStatus, resolveReportWithProof, categories } = React.useContext(PortalContext);
+  const { reports, users, loading, fetchCommentsForReport, fetchHistoryForReport, updateReportStatus, resolveReportWithProof, categories, currentUser } = React.useContext(PortalContext);
   const [lightboxState, setLightboxState] = React.useState<{ isOpen: boolean, startIndex: number }>({ isOpen: false, startIndex: 0 });
   const [isCopied, setIsCopied] = React.useState(false);
   const [resolvingReport, setResolvingReport] = React.useState<Report | null>(null);
   const navigate = useNavigate();
+
+  const canWrite = currentUser?.portal_access_level === 'read_write' || currentUser?.role === 'super_admin';
 
   const report = React.useMemo(() => reports.find(r => r.id === id), [reports, id]);
   
@@ -299,7 +305,7 @@ const PortalReportDetailsPage: React.FC = () => {
   };
 
   const getNextStatusAction = (): { label: string, action: () => void, status: ReportStatus } | null => {
-      if (!report) return null;
+      if (!report || !canWrite) return null;
       switch (report.status) {
           case ReportStatus.New:
               return { label: t.markAsReceived, action: () => handleStatusChange(ReportStatus.Received), status: ReportStatus.Received };
@@ -379,22 +385,26 @@ const PortalReportDetailsPage: React.FC = () => {
             </>
           )}
           
-          <h3 className="text-lg font-bold text-navy dark:text-text-primary-dark mb-4">{t.actions}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {nextAction ? (
-                  <button
-                      onClick={nextAction.action}
-                      className="w-full flex items-center justify-center gap-3 py-3 px-6 bg-teal text-white text-md font-bold rounded-full shadow-lg hover:bg-opacity-90 transform hover:scale-105 transition-transform"
-                  >
-                      <FaArrowRight /> {nextAction.label}
-                  </button>
-              ) : (
-                  <div className="flex items-center justify-center gap-2 p-3 bg-muted dark:bg-bg-dark rounded-full text-text-secondary dark:text-text-secondary-dark font-semibold">
-                      <FaCircleCheck /> {t.reportIsResolved}
-                  </div>
-              )}
-          </div>
-          <div className="border-t border-border-light dark:border-border-dark my-6"></div>
+          {canWrite && (
+            <>
+              <h3 className="text-lg font-bold text-navy dark:text-text-primary-dark mb-4">{t.actions}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {nextAction ? (
+                      <button
+                          onClick={nextAction.action}
+                          className="w-full flex items-center justify-center gap-3 py-3 px-6 bg-teal text-white text-md font-bold rounded-full shadow-lg hover:bg-opacity-90 transform hover:scale-105 transition-transform"
+                      >
+                          <FaArrowRight /> {nextAction.label}
+                      </button>
+                  ) : (
+                      <div className="flex items-center justify-center gap-2 p-3 bg-muted dark:bg-bg-dark rounded-full text-text-secondary dark:text-text-secondary-dark font-semibold">
+                          <FaCircleCheck /> {t.reportIsResolved}
+                      </div>
+                  )}
+              </div>
+              <div className="border-t border-border-light dark:border-border-dark my-6"></div>
+            </>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">

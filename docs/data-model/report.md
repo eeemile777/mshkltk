@@ -9,7 +9,7 @@ The `Report` model is the core entity of the Mshkltk application. It contains al
 | `id`                  | `string` (UUID)       | Primary key for the report.                                                                                   |
 | `title_en`            | `string`              | The report title in English.                                                                                  |
 | `title_ar`            | `string`              | The report title in Arabic.                                                                                   |
-| `photo_urls`          | `string[]`            | An array of URLs to photos/videos for the report. These can be data URLs or hosted URLs.                      |
+| `photo_urls`          | `string[]`            | An array of URLs to photos/videos for the report. These can be base64 data URLs or hosted URLs.               |
 | `lat`                 | `number`              | The latitude of the report's location.                                                                        |
 | `lng`                 | `number`              | The longitude of the report's location.                                                                       |
 | `area`                | `string`              | The human-readable address or area name (e.g., "Ashrafieh, Beirut").                                          |

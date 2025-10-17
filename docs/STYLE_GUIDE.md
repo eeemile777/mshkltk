@@ -6,16 +6,17 @@ This document outlines the core visual identity and design principles of the Msh
 
 ## 1. Color Palette
 
-The color palette is defined in `tailwind.config` and is central to the application's look and feel.
+The color palette is defined in the Tailwind configuration script in `index.html` and is central to the application's look and feel.
 
 ### Primary Colors
--   **Teal (`#00BFA6`):** The main brand color. Used for primary actions, navigation highlights, and positive affirmations.
+-   **Teal (`#00BFA6`):** The main brand color. Used for primary actions (submit, FAB), navigation highlights, and positive affirmations.
 -   **Mango (`#FFA62B`):** A secondary accent color. Used for gamification elements (points, badges), trending items, and attention-grabbing UI.
 -   **Navy (`#0D3B66`):** The primary text and heading color in light mode. Provides strong, professional contrast.
 -   **Coral (`#FF5A5F`):** Used for destructive actions (delete), high-severity warnings, and error states.
+-   **Sky (`#4BA3C3`):** A calm blue used for informational UI elements and for the 'Utility' entity portal theme.
 
 ### Neutral Palette (Light Mode)
--   **Sand (`#F4EDEA`):** The main background color, giving a warm, soft feel.
+-   **Sand (`#F4EDEA`):** The main application background color, giving a warm, soft feel.
 -   **Card (`#FFFFFF`):** The background for all cards, modals, and primary content surfaces.
 -   **Muted (`#F8F6F4`):** A slightly off-white used for hover states or contained sections within cards.
 -   **Text Primary (`#102027`):** A very dark blue-gray for body text. Softer than pure black.
@@ -40,6 +41,7 @@ Fonts are loaded from Google Fonts in `index.html`.
 -   **Secondary (Arabic): `Cairo`**
     -   Used for all Arabic UI text. Chosen for its excellent readability on screens.
     -   Weights: 400 (Regular), 700 (Bold).
+-   **Fallback:** `Rubik` is also loaded and serves as a good alternative sans-serif.
 
 ---
 
@@ -57,3 +59,10 @@ Fonts are loaded from Google Fonts in `index.html`.
 ### Cards
 -   **Standard:** `bg-card` / `bg-surface-dark` with a `rounded-2xl` border radius and a subtle `shadow-md`. This is the standard container for most content.
 -   **Interactivity:** Cards often have a `hover:shadow-lg` and `transition` effect to provide visual feedback on interactive elements.
+
+## 4. Animation
+The application uses a set of custom animations defined in the Tailwind config to provide a fluid and engaging user experience.
+-   **`logo-pulse`:** A subtle pulsing effect on the main logo to give it life.
+-   **`fade-in`:** A standard fade-in for modals and new content.
+-   **`shimmer`:** A loading animation used in skeleton placeholders.
+-   **`float-subtle`:** A slow, gentle floating animation for background decorative icons.

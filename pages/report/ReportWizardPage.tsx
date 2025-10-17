@@ -382,22 +382,22 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                 case 2:
                     return <Step2Photo reportData={wizardData} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} isAiLoading={isAiLoading} aiVerification={aiVerification} />;
                 case 3:
-// FIX: Add missing 'setWizardStep' prop to Step3Location component.
+                    // FIX: Pass missing `setWizardStep` prop to match component interface.
                     return <Step3Location reportData={wizardData} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} setWizardStep={setWizardStep} />;
                 case 4:
-// FIX: Add missing 'setWizardStep' prop to Step4Details component.
-                    return <Step4Details reportData={wizardData} updateReportData={updateWizardData} onSubmit={handleSubmit} prevStep={prevStep} isSubmitting={isSubmitting} isAiLoading={isAiLoading} isRecording={isRecording} isTranscribing={isTranscribing} startRecording={startRecording} stopRecording={stopRecording} setWizardStep={setWizardStep} />;
+                    // FIX: Pass missing `setWizardStep` and `visualizerData` props to match component interface.
+                    return <Step4Details reportData={wizardData} updateReportData={updateWizardData} onSubmit={handleSubmit} prevStep={prevStep} isSubmitting={isSubmitting} isAiLoading={isAiLoading} isRecording={isRecording} isTranscribing={isTranscribing} startRecording={startRecording} stopRecording={stopRecording} setWizardStep={setWizardStep} visualizerData={null} />;
                 default:
                     return null;
             }
         } else { // Reporting WITHOUT media
              switch (wizardStep) {
                 case 2:
-// FIX: Add missing 'setWizardStep' prop to Step3Location component.
+                    // FIX: Pass missing `setWizardStep` prop to match component interface.
                     return <Step3Location reportData={wizardData} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} setWizardStep={setWizardStep} />;
                 case 3:
-// FIX: Add missing 'setWizardStep' prop to Step4Details component.
-                    return <Step4Details reportData={wizardData} updateReportData={updateWizardData} onSubmit={handleSubmit} prevStep={prevStep} isSubmitting={isSubmitting} isAiLoading={false} isRecording={isRecording} isTranscribing={isTranscribing} startRecording={startRecording} stopRecording={stopRecording} setWizardStep={setWizardStep} />;
+                    // FIX: Pass missing `setWizardStep` and `visualizerData` props to match component interface.
+                    return <Step4Details reportData={wizardData} updateReportData={updateWizardData} onSubmit={handleSubmit} prevStep={prevStep} isSubmitting={isSubmitting} isAiLoading={false} isRecording={isRecording} isTranscribing={isTranscribing} startRecording={startRecording} stopRecording={stopRecording} setWizardStep={setWizardStep} visualizerData={null} />;
                 default:
                     return null;
             }

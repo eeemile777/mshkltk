@@ -20,4 +20,4 @@ The `Comment` model represents a single comment made by a user on a `Report`.
 ## Cascading Logic
 
 -   **On `Report` Deletion:** If a `Report` is deleted, all of its associated `Comments` should also be deleted to maintain data integrity.
--   **On `User` Deletion:** If a `User` is deleted, their `Comments` should be either anonymized (by setting `user_id` to a generic "Deleted User" ID) or deleted, depending on the application's data retention policy. Anonymizing is generally preferred.
+-   **On `User` Deletion:** If a `User` is deleted, their `Comments` should be anonymized by setting `user_id` to a generic "deleted_user" ID. This preserves the conversation history on reports while respecting user deletion.

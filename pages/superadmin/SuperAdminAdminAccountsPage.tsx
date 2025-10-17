@@ -65,6 +65,7 @@ const SuperAdminAdminAccountsPage: React.FC = () => {
                 scoped_municipalities: data.scoped_municipalities,
                 scoped_sub_categories: data.scoped_sub_categories,
                 is_active: data.is_active,
+                portal_access_level: data.portal_access_level,
             });
         } else if (mode === 'edit' && userId) {
             await updateUser(userId, data);

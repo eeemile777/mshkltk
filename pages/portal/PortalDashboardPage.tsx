@@ -23,10 +23,12 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
 );
 
 const PortalDashboardPage: React.FC = () => {
-    const { reports, loading, allReportHistory, updateReportStatus, resolveReportWithProof } = React.useContext(PortalContext);
+    const { reports, loading, allReportHistory, updateReportStatus, resolveReportWithProof, currentUser } = React.useContext(PortalContext);
     const { t, theme, language } = React.useContext(AppContext);
     const navigate = useNavigate();
     const [resolvingReport, setResolvingReport] = React.useState<Report | null>(null);
+    
+    const canWrite = currentUser?.portal_access_level === 'read_write' || currentUser?.role === 'super_admin';
 
     const handleStatusChange = async (report: Report, newStatus: ReportStatus) => {
         if (newStatus === ReportStatus.Resolved) {
@@ -66,7 +68,7 @@ const PortalDashboardPage: React.FC = () => {
                     </div>
                     <FaArrowRight className="text-text-secondary/50 dark:text-text-secondary-dark/50 flex-shrink-0" />
                 </div>
-                {nextAction && (
+                {canWrite && nextAction && (
                     <button
                         onClick={(e) => { e.stopPropagation(); handleStatusChange(report, nextAction.status); }}
                         className="w-full text-xs font-bold py-1.5 rounded-md bg-teal/20 text-teal dark:bg-teal-dark/20 dark:text-teal-dark hover:bg-teal/30 dark:hover:bg-teal-dark/30 transition-colors"

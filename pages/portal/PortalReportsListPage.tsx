@@ -36,7 +36,7 @@ const StatusPill: React.FC<{ status: Report['status'] }> = ({ status }) => {
 };
 
 const PortalReportsListPage: React.FC = () => {
-    const { reports, loading, updateReportStatus, resolveReportWithProof, categories } = React.useContext(PortalContext);
+    const { reports, loading, updateReportStatus, resolveReportWithProof, categories, currentUser } = React.useContext(PortalContext);
     const { t, flyToLocation, language, theme } = React.useContext(AppContext);
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -54,6 +54,8 @@ const PortalReportsListPage: React.FC = () => {
     const [activeStatuses, setActiveStatuses] = React.useState<Set<ReportStatus>>(new Set());
     const [searchQuery, setSearchQuery] = React.useState('');
     const [sortConfig, setSortConfig] = React.useState<SortConfig>({ key: 'created_at', direction: 'descending' });
+    
+    const canWrite = currentUser?.portal_access_level === 'read_write' || currentUser?.role === 'super_admin';
 
     React.useEffect(() => {
         const statusFromUrl = searchParams.get('status');
@@ -331,6 +333,7 @@ const PortalReportsListPage: React.FC = () => {
                                   <td className="p-4 w-48 align-top">
                                     {(() => {
                                         const getNextAction = (): { label: string; action: () => void; className: string } | null => {
+                                            if (!canWrite) return null;
                                             switch (report.status) {
                                                 case ReportStatus.New:
                                                     return { label: `Mark ${t.received}`, action: () => handleStatusChange(report, ReportStatus.Received), className: 'bg-sky/20 text-sky dark:bg-cyan-dark/20 dark:text-cyan-dark hover:bg-sky/30 dark:hover:bg-cyan-dark/30' };

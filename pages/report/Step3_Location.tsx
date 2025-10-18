@@ -182,7 +182,6 @@ const Step3Location: React.FC<{
   // AI Municipality Detection
   React.useEffect(() => {
     const address = reportData.address;
-    // If we don't have an address, or if we *already have* a municipality for the current location, don't run.
     if (!address || reportData.municipality || address === t.addressNotFound || address === t.fetchError || !process.env.API_KEY || isReverseGeocoding) {
         return;
     }
@@ -263,91 +262,91 @@ const Step3Location: React.FC<{
 
   return (
     <div className="flex flex-col h-full w-full">
-      <AiRejectionNotice reportData={reportData} onGoBack={() => setWizardStep(2)} />
-      <div className="text-center flex-shrink-0">
-        <h1 className="text-3xl font-bold text-navy dark:text-text-primary-dark mb-2">{t.dragPin}</h1>
-        <p className="text-lg text-text-secondary dark:text-text-secondary-dark mb-4">{t.privacyNotice}</p>
-      </div>
-
-      <div className="relative z-0 w-full rounded-2xl overflow-hidden shadow-lg bg-muted dark:bg-bg-dark flex-shrink-0" style={{ height: 280 }}>
-        <InteractiveMap 
-            reports={reports}
-            isDraggablePinVisible={true}
-            draggablePinPosition={reportData.location}
-            onDraggablePinDragStart={() => {
-                userHasManuallySetLocation.current = true;
-            }}
-            onDraggablePinMove={(position) => {
-                updateReportData({ location: position, municipality: '' });
-            }}
-            initialCenter={reportData.location || undefined}
-            initialZoom={15}
-            hideUserLocationMarker={true}
-        />
-        <button type="button" onClick={() => handleUseCurrentLocation(false)} className="absolute top-4 right-4 z-[1000] flex items-center gap-2 px-3 py-2 text-sm font-semibold text-teal dark:text-teal-dark bg-card dark:bg-surface-dark rounded-full shadow-lg hover:scale-105 transition-transform">
-          <FaLocationDot />
-          {t.useCurrentLocation}
-        </button>
-      </div>
-
-      <div className="flex-grow min-h-0 overflow-y-auto mt-4 pr-2 space-y-2">
-        <div className="p-4 bg-muted dark:bg-surface-dark rounded-xl flex items-start gap-4 text-start transition-shadow duration-300 animate-subtle-glow">
-          <FaRegAddressCard className="h-6 w-6 text-teal dark:text-teal-dark mt-2 flex-shrink-0" />
-          <div className="relative w-full" ref={searchContainerRef}>
-            <label className="font-bold text-navy dark:text-text-primary-dark">{t.address}</label>
-            <div className="relative">
-                <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    onFocus={() => setShowSuggestions(true)}
-                    placeholder={t.fetchingAddress}
-                    className="w-full bg-transparent border-0 border-b-2 border-border-light dark:border-border-dark focus:border-teal dark:focus:border-teal-dark focus:ring-0 p-1 text-sm text-text-secondary dark:text-text-secondary-dark"
-                />
-                {(isReverseGeocoding || isSearching) && <FaSpinner className="animate-spin absolute top-1/2 -translate-y-1/2 right-2 text-teal dark:text-teal-dark" />}
+        <div className="flex-grow min-h-0 overflow-y-auto pb-4 pr-1 space-y-4">
+            <AiRejectionNotice reportData={reportData} onGoBack={() => setWizardStep(2)} />
+            <div className="text-center flex-shrink-0">
+                <h1 className="text-3xl font-bold text-navy dark:text-text-primary-dark mb-2">{t.dragPin}</h1>
+                <p className="text-lg text-text-secondary dark:text-text-secondary-dark">{t.privacyNotice}</p>
             </div>
-            {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute top-full mt-1 w-full bg-card dark:bg-surface-dark rounded-lg shadow-xl z-20 max-h-48 overflow-y-auto border border-border-light dark:border-border-dark">
-                    {suggestions.map(s => (
-                        <button key={s.place_id} onClick={() => handleSuggestionClick(s)} className="w-full text-left px-3 py-2 hover:bg-muted dark:hover:bg-bg-dark text-sm text-text-secondary dark:text-text-secondary-dark flex items-center gap-2">
-                           <FaMagnifyingGlass size={12} className="flex-shrink-0"/> <span>{s.display_name}</span>
-                        </button>
-                    ))}
+
+            <div className="relative z-0 w-full rounded-2xl overflow-hidden shadow-lg bg-muted dark:bg-bg-dark flex-shrink-0" style={{ height: 280 }}>
+                <InteractiveMap 
+                    reports={reports}
+                    isDraggablePinVisible={true}
+                    draggablePinPosition={reportData.location}
+                    onDraggablePinDragStart={() => {
+                        userHasManuallySetLocation.current = true;
+                    }}
+                    onDraggablePinMove={(position) => {
+                        updateReportData({ location: position, municipality: '' });
+                    }}
+                    initialCenter={reportData.location || undefined}
+                    initialZoom={15}
+                    hideUserLocationMarker={true}
+                />
+                <button type="button" onClick={() => handleUseCurrentLocation(false)} className="absolute top-4 right-4 z-[1000] flex items-center gap-2 px-3 py-2 text-sm font-semibold text-teal dark:text-teal-dark bg-card dark:bg-surface-dark rounded-full shadow-lg hover:scale-105 transition-transform">
+                <FaLocationDot />
+                {t.useCurrentLocation}
+                </button>
+            </div>
+            
+            <div className="p-4 bg-muted dark:bg-surface-dark rounded-xl flex items-start gap-4 text-start transition-shadow duration-300 animate-subtle-glow">
+            <FaRegAddressCard className="h-6 w-6 text-teal dark:text-teal-dark mt-2 flex-shrink-0" />
+            <div className="relative w-full" ref={searchContainerRef}>
+                <label className="font-bold text-navy dark:text-text-primary-dark">{t.address}</label>
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        onFocus={() => setShowSuggestions(true)}
+                        placeholder={t.fetchingAddress}
+                        className="w-full bg-transparent border-0 border-b-2 border-border-light dark:border-border-dark focus:border-teal dark:focus:border-teal-dark focus:ring-0 p-1 text-sm text-text-secondary dark:text-text-secondary-dark"
+                    />
+                    {(isReverseGeocoding || isSearching) && <FaSpinner className="animate-spin absolute top-1/2 -translate-y-1/2 right-2 text-teal dark:text-teal-dark" />}
                 </div>
-            )}
-          </div>
-        </div>
-        
-        <div className="p-4 bg-muted dark:bg-surface-dark rounded-xl flex items-start gap-4 text-start">
-            <FaCity className="h-6 w-6 text-teal dark:text-teal-dark mt-1 flex-shrink-0" />
-            <div>
-                <label className="font-bold text-navy dark:text-text-primary-dark">{t.municipality}</label>
-                {isDetectingMunicipality ? (
-                    <p className="text-sm text-text-secondary dark:text-text-secondary-dark flex items-center gap-2"><FaSpinner className="animate-spin" /> {t.aiAnalyzing}</p>
-                ) : (
-                    <p className="text-sm text-text-secondary dark:text-text-secondary-dark capitalize">{reportData.municipality || 'Not detected'}</p>
+                {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute top-full mt-1 w-full bg-card dark:bg-surface-dark rounded-lg shadow-xl z-20 max-h-48 overflow-y-auto border border-border-light dark:border-border-dark">
+                        {suggestions.map(s => (
+                            <button key={s.place_id} onClick={() => handleSuggestionClick(s)} className="w-full text-left px-3 py-2 hover:bg-muted dark:hover:bg-bg-dark text-sm text-text-secondary dark:text-text-secondary-dark flex items-center gap-2">
+                            <FaMagnifyingGlass size={12} className="flex-shrink-0"/> <span>{s.display_name}</span>
+                            </button>
+                        ))}
+                    </div>
                 )}
             </div>
-        </div>
+            </div>
+            
+            <div className="p-4 bg-muted dark:bg-surface-dark rounded-xl flex items-start gap-4 text-start">
+                <FaCity className="h-6 w-6 text-teal dark:text-teal-dark mt-1 flex-shrink-0" />
+                <div>
+                    <label className="font-bold text-navy dark:text-text-primary-dark">{t.municipality}</label>
+                    {isDetectingMunicipality ? (
+                        <p className="text-sm text-text-secondary dark:text-text-secondary-dark flex items-center gap-2"><FaSpinner className="animate-spin" /> {t.aiAnalyzing}</p>
+                    ) : (
+                        <p className="text-sm text-text-secondary dark:text-text-secondary-dark capitalize">{reportData.municipality || 'Not detected'}</p>
+                    )}
+                </div>
+            </div>
 
-        <div className="p-4 bg-muted dark:bg-surface-dark rounded-xl flex items-start gap-4 text-start">
-            <FaGlobe className="h-6 w-6 text-teal dark:text-teal-dark mt-1 flex-shrink-0" />
-            <div>
-                <label className="font-bold text-navy dark:text-text-primary-dark">{t.coordinates}</label>
-                {reportData.location ? (
-                    <p className="text-sm text-text-secondary dark:text-text-secondary-dark font-mono">Lat: {reportData.location[0].toFixed(6)}, Lng: {reportData.location[1].toFixed(6)}</p>
-                ) : ( <p className="text-sm text-text-secondary dark:text-text-secondary-dark">Waiting for location...</p> )}
+            <div className="p-4 bg-muted dark:bg-surface-dark rounded-xl flex items-start gap-4 text-start">
+                <FaGlobe className="h-6 w-6 text-teal dark:text-teal-dark mt-1 flex-shrink-0" />
+                <div>
+                    <label className="font-bold text-navy dark:text-text-primary-dark">Coordinates</label>
+                    {reportData.location ? (
+                        <p className="text-sm text-text-secondary dark:text-text-secondary-dark font-mono">Lat: {reportData.location[0].toFixed(6)}, Lng: {reportData.location[1].toFixed(6)}</p>
+                    ) : ( <p className="text-sm text-text-secondary dark:text-text-secondary-dark">Waiting for location...</p> )}
+                </div>
             </div>
-        </div>
-        
-        {nearbyReports.length > 0 && (
-          <div className="p-4 bg-mango/10 dark:bg-mango-dark/10 rounded-xl animate-fade-in">
-            <h3 className="font-bold text-mango dark:text-mango-dark mb-2">{t.similarReportsNearby}</h3>
-            <div className="space-y-2">
-              {nearbyReports.map(report => <NearbyReportCard key={report.id} report={report} />)}
+            
+            {nearbyReports.length > 0 && (
+            <div className="p-4 bg-mango/10 dark:bg-mango-dark/10 rounded-xl animate-fade-in">
+                <h3 className="font-bold text-mango dark:text-mango-dark mb-2">{t.similarReportsNearby}</h3>
+                <div className="space-y-2">
+                {nearbyReports.map(report => <NearbyReportCard key={report.id} report={report} />)}
+                </div>
             </div>
-          </div>
-        )}
+            )}
       </div>
       
       <div className="flex-shrink-0 py-4 w-full flex items-center justify-between">

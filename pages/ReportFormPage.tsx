@@ -9,12 +9,11 @@ import Spinner from '../components/Spinner';
 
 import WizardStepper from '../components/WizardStepper';
 import Step1Type from './report/Step1_Type';
-import Step2Photo from './report/Step2_Photo';
 import Step3Location from './report/Step3_Location';
 import Step4Details from './report/Step4_Details';
 
 import { GoogleGenAI, Type } from '@google/genai';
-import { FaXmark, FaVideoSlash, FaCamera, FaImages, FaTrash, FaSpinner, FaArrowLeft, FaArrowRight, FaStop, FaMicrophone } from 'react-icons/fa6';
+import { FaXmark, FaVideoSlash, FaCamera, FaImages, FaTrash, FaSpinner, FaArrowLeft, FaArrowRight, FaStop, FaMicrophone, FaCircleCheck, FaTriangleExclamation, FaCircleInfo } from 'react-icons/fa6';
 
 // --- EXIF Orientation Correction Helpers ---
 
@@ -178,13 +177,12 @@ const fileToDataURL = (file: File): Promise<string> => {
     });
 };
 
-// FIX: Add interface for component props to accept onSuccessRedirectPath
 interface ReportFormPageProps {
   onSuccessRedirectPath?: string;
 }
 
 const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }) => {
-    const { t, language, currentUser, submitReport, flyToLocation, wizardData, isWizardActive, wizardStep, setWizardStep, updateWizardData, resetWizard } = React.useContext(AppContext);
+    const { t, language, currentUser, submitReport, flyToLocation, wizardData, isWizardActive, wizardStep, setWizardStep, updateWizardData, resetWizard, categories } = React.useContext(AppContext);
     const navigate = useNavigate();
     
     React.useEffect(() => {
@@ -228,25 +226,52 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
     };
 
     const runAiMediaAnalysis = React.useCallback(async () => {
-        if (isAiLoading || !wizardData || wizardData.previews.length === 0 || !process.env.API_KEY) {
+        if (!wizardData || wizardData.previews.length === 0) {
             setAiVerification({ status: 'idle', message: '' });
             return;
         }
         
+        if (!process.env.API_KEY) {
+            setAiVerification({ status: 'fail', message: "AI analysis requires an API key." });
+            return;
+        }
+
         setIsAiLoading(true);
-        setAiVerification({ status: 'pending', message: t.aiAnalyzing });
+        setAiVerification({ status: 'pending', message: t.aiAnalyzingCanProceed });
 
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const mediaParts = await Promise.all(wizardData.previews.map(p => fileToGenerativePart(p.file)));
             const langName = language === 'ar' ? 'Arabic' : 'English';
-            const categoryList = JSON.stringify(Object.keys(CATEGORIES).reduce((acc: Record<string, string[]>, catKey) => {
-                const cat = CATEGORIES[catKey as ReportCategory];
-                acc[catKey] = Object.keys(cat.subCategories);
+            const categoryList = JSON.stringify(Object.keys(categories).reduce((acc: Record<string, string[]>, catKey) => {
+                const cat = categories[catKey as ReportCategory];
+                if (cat && cat.subCategories) {
+                   acc[catKey] = Object.keys(cat.subCategories);
+                }
                 return acc;
             }, {}), null, 2);
 
-            const prompt = `You are an AI assistant...`; // Prompt remains the same
+            const prompt = `You are an AI assistant for a civic issue reporting app. Your task is to analyze media (images AND videos) to identify issues and check for policy violations. Your response MUST be a single, valid JSON object.
+
+Follow these steps with ZERO DEVIATION:
+
+1.  **Policy/Safety Analysis (Per Media Part):** For EACH media part provided, determine if it violates our safety policies. A violation occurs if the media clearly shows:
+    -   A human face (especially selfies or close-ups).
+    -   A readable vehicle license plate.
+    -   Identifiable military or law enforcement personnel or vehicles.
+    -   Content that is not related to a potential civic issue (e.g., a picture of a pet, a document).
+
+2.  **Filtering Decision:** Create a list in \`media_to_flag\` containing the \`index\` and a brief \`reason\` (in ${langName}) for EVERY media part that violates the policies. If no violations are found, this list MUST be an empty array [].
+
+3.  **Holistic Content Analysis:** Analyze ALL media parts together, even those flagged for removal, to understand the user's intent. The content might be a clear problem (pothole), a potential issue (a leaning tree), or informational (an empty lot).
+
+4.  **Content Generation (Mandatory):** Based on your holistic analysis, you MUST generate the following details. ALWAYS provide a value for each field.
+    -   **Categorization:** Select the MOST LIKELY parent \`category\` and child \`sub_category\` from this list: ${categoryList}. If no clear issue is present, use 'other_unknown' or an appropriate category (e.g., 'public_spaces' for a park).
+    -   **Severity Assessment:** Assess the severity. The value for \`severity\` MUST be one of these exact lowercase strings: 'high', 'medium', 'low'.
+    -   Generate a concise, descriptive \`title\` (max 10 words, in ${langName}).
+    -   Generate a clear \`description\` (20-40 words, in ${langName}), written from the citizen's first-person perspective (e.g., "I noticed that...").
+
+Your JSON output must strictly adhere to the schema. Your primary job is the policy check, but the content generation is equally critical for assisting the user.`;
             
             const response = await ai.models.generateContent({
               model: 'gemini-2.5-flash',
@@ -275,7 +300,7 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
         } finally {
             setIsAiLoading(false);
         }
-    }, [wizardData, language, updateWizardData, isAiLoading, t]);
+    }, [wizardData, language, updateWizardData, t, categories]);
 
     const prevPreviewsRef = React.useRef(wizardData?.previews);
 
@@ -292,7 +317,12 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const langName = language === 'ar' ? 'Arabic' : 'English';
-            const prompt = `...`; // Prompt remains the same
+            const prompt = `You are a helpful assistant. A citizen is reporting a civic issue via audio. Your task is to process their recording.
+1.  First, transcribe the audio. The user might speak in ${langName} or a mix of languages.
+2.  From the transcription, craft a 'title' (max 10 words) and a 'description' (20-50 words).
+3.  CRITICAL: The tone must be a first-person narrative, as if you are the citizen reporting the issue. Use "I saw...", "There is a...", etc. Do NOT say "The user reported..." or describe it from a third-person perspective.
+4.  The final output must be in ${langName}.
+Your response MUST be a single, valid JSON object with "title" and "description" keys.`;
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: { parts: [{ text: prompt }, { inlineData: { data: audioBase64, mimeType } }] },
@@ -326,7 +356,7 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
                     previewsToSubmit.map(preview => fileToDataURL(preview.file))
                 );
             } else {
-                photoUrls = [getReportImageUrl(wizardData.category!, CATEGORIES)];
+                photoUrls = [getReportImageUrl(wizardData.category!, categories)];
             }
 
             const submissionData = {
@@ -346,7 +376,6 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
             const newReport = await submitReport(submissionData);
             flyToLocation(wizardData.location!, 16);
             resetWizard();
-            // FIX: Use the optional onSuccessRedirectPath prop, falling back to HOME.
             navigate(onSuccessRedirectPath || PATHS.HOME, { replace: true, state: { newReport } });
         } catch(e) {
             console.error("Failed to submit report:", e);
@@ -460,43 +489,83 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
         if (isLongPress.current) { /* stopRecording logic here */ } else { takePhoto(); }
         isLongPress.current = false;
     };
-    const handleRemovePreview = (index: number) => { /* ... implementation remains the same ... */ };
+    const handleRemovePreview = (index: number) => {
+        const newPreviews = wizardData?.previews.filter((_, i) => i !== index) || [];
+        updateWizardData({ previews: newPreviews });
+    };
+
+    const AiStatusIcon = () => {
+        if (isAiLoading) return <FaSpinner className="animate-spin" />;
+        if (aiVerification.status === 'pass') return <FaCircleCheck className="text-teal" />;
+        if (aiVerification.status === 'fail' || aiVerification.status === 'images_removed') return <FaTriangleExclamation className="text-mango" />;
+        return <FaCircleInfo />;
+    };
 
     const renderStep = () => {
+        if (!wizardData) return <Spinner />;
+
         if (wizardStep === 1) {
              return <Step1Type onSelect={(choice) => { updateWizardData({ withMedia: choice === 'with' }); nextStep(); }} />;
         }
-        if (wizardData?.withMedia && wizardStep === 2) {
+        if (wizardData.withMedia && wizardStep === 2) {
+             const BackIcon = language === 'ar' ? FaArrowRight : FaArrowLeft;
+             const NextIcon = language === 'ar' ? FaArrowLeft : FaArrowRight;
              return (
                 <div className="flex flex-col h-full w-full">
                     <div className="relative flex-grow rounded-2xl bg-black overflow-hidden shadow-lg">
                         {cameraError ? <div className="w-full h-full flex flex-col items-center justify-center text-center p-4 bg-gray-800 text-white"><FaVideoSlash className="text-4xl mb-4" /><h3>{t.cameraAccessError}</h3><p className="text-sm">{cameraError}</p></div> : <><video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />{!isVideoReady && <div className="absolute inset-0 flex items-center justify-center bg-black/50"><FaSpinner className="animate-spin text-white text-4xl" /></div>}</>}
-                        {/* Other UI overlays */}
+                        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none"></div>
+
                         <div className="absolute inset-x-0 bottom-0 z-10 p-4 text-white">
-                           {/* Preview Rendering */}
+                           {wizardData.previews.length > 0 && (
+                            <div className="space-y-2 mb-2">
+                                {aiVerification.status !== 'idle' && (
+                                    <div className={`text-sm p-2 rounded-lg flex items-center gap-2 backdrop-blur-sm ${
+                                        aiVerification.status === 'pending' ? 'bg-sky/20' : 
+                                        (aiVerification.status === 'fail' || aiVerification.status === 'images_removed' ? 'bg-mango/20' : 'bg-teal/20')
+                                      }`}>
+                                        <AiStatusIcon />
+                                        <span className="font-semibold">{aiVerification.message}</span>
+                                    </div>
+                                )}
+                                 <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                                    {wizardData.previews.map((preview, index) => (
+                                    <div key={preview.url} className="relative w-16 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 border-white/50">
+                                        {preview.type === 'video' ? (
+                                        <video src={preview.url} className="w-full h-full object-cover" />
+                                        ) : (
+                                        <img src={preview.url} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                                        )}
+                                        {preview.status === 'rejected' && <div className="absolute inset-0 bg-coral/80 flex flex-col items-center justify-center text-white text-center p-1" title={preview.rejectionReason}><FaTriangleExclamation size={16}/><span className="text-[10px] font-bold mt-1 leading-tight">{t.aiRejectedShort}</span></div>}
+                                        <button onClick={() => handleRemovePreview(index)} className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5">
+                                        <FaTrash size={8} />
+                                        </button>
+                                    </div>
+                                    ))}
+                                </div>
+                            </div>
+                           )}
                            <div className="text-center text-xs mb-4"><p>{t.tapForPhoto}</p><p>{t.holdToRecord}</p></div>
                            <div className="flex items-center justify-around">
-                               <button onClick={() => fileInputRef.current?.click()} disabled={(wizardData?.previews.length || 0) >= 5} className="flex flex-col items-center gap-1 font-bold text-sm disabled:opacity-50"><div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center"><FaImages size={20} /></div><span>{t.gallery}</span></button>
+                               <button onClick={() => fileInputRef.current?.click()} disabled={(wizardData.previews.length || 0) >= 5} className="flex flex-col items-center gap-1 font-bold text-sm disabled:opacity-50"><div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center"><FaImages size={20} /></div><span>{t.gallery}</span></button>
                                <input type="file" ref={fileInputRef} onChange={(e) => handleFiles(e.target.files)} accept="image/*,video/*" multiple className="hidden" />
-                               <button onTouchStart={handlePressStart} onTouchEnd={handlePressEnd} onMouseDown={handlePressStart} onMouseUp={handlePressEnd} onMouseLeave={handlePressEnd} disabled={!!cameraError || !isVideoReady || (wizardData?.previews.length || 0) >= 5} className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none disabled:opacity-50 ${isRecording ? 'bg-coral animate-pulse' : 'bg-white shadow-xl'}`}><div className={`w-16 h-16 rounded-full bg-white transition-all duration-200 ${isRecording ? 'scale-50' : ''}`} /></button>
+                               <button onTouchStart={handlePressStart} onTouchEnd={handlePressEnd} onMouseDown={handlePressStart} onMouseUp={handlePressEnd} onMouseLeave={handlePressEnd} disabled={!!cameraError || !isVideoReady || (wizardData.previews.length || 0) >= 5} className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none disabled:opacity-50 ${isRecording ? 'bg-coral animate-pulse' : 'bg-white shadow-xl'}`}><div className={`w-16 h-16 rounded-full bg-white transition-all duration-200 ${isRecording ? 'scale-50' : ''}`} /></button>
                                <div className="w-12 h-12" />
                            </div>
                         </div>
                     </div>
                     <div className="flex-shrink-0 pt-4 w-full flex items-center justify-between">
-                        <button type="button" onClick={prevStep} className="flex items-center gap-2 px-6 py-3 text-lg font-bold"><FaArrowLeft /> {t.backStep}</button>
-                        <button type="button" onClick={nextStep} disabled={!wizardData?.previews.some(p => p.status !== 'rejected')} className="flex items-center gap-2 px-6 py-3 text-lg font-bold text-white bg-teal rounded-full disabled:bg-gray-500">{t.nextStep} <FaArrowRight /></button>
+                        <button type="button" onClick={prevStep} className="flex items-center gap-2 px-6 py-3 text-lg font-bold"><BackIcon /> {t.backStep}</button>
+                        <button type="button" onClick={nextStep} disabled={!wizardData.previews.some(p => p.status !== 'rejected')} className="flex items-center gap-2 px-6 py-3 text-lg font-bold text-white bg-teal rounded-full disabled:bg-gray-500">{t.nextStep} <NextIcon /></button>
                     </div>
                 </div>
              );
         }
         if ((wizardData?.withMedia && wizardStep === 3) || (!wizardData?.withMedia && wizardStep === 2)) {
-             // FIX: Pass missing `setWizardStep` prop to match component interface.
-             return <Step3Location reportData={wizardData!} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} setWizardStep={setWizardStep} />;
+             return <Step3Location reportData={wizardData} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} setWizardStep={setWizardStep} />;
         }
         if ((wizardData?.withMedia && wizardStep === 4) || (!wizardData?.withMedia && wizardStep === 3)) {
-             // FIX: Pass missing `setWizardStep` and `visualizerData` props to match component interface.
-             return <Step4Details reportData={wizardData!} updateReportData={updateWizardData} onSubmit={handleSubmit} prevStep={prevStep} isSubmitting={isSubmitting} isAiLoading={isAiLoading} isRecording={isRecording} isTranscribing={isTranscribing} startRecording={startRecording} stopRecording={stopRecording} setWizardStep={setWizardStep} visualizerData={null} />;
+             return <Step4Details reportData={wizardData} updateReportData={updateWizardData} onSubmit={handleSubmit} prevStep={prevStep} isSubmitting={isSubmitting} isAiLoading={isAiLoading} isRecording={isRecording} isTranscribing={isTranscribing} startRecording={startRecording} stopRecording={stopRecording} setWizardStep={setWizardStep} visualizerData={null} />;
         }
         return null;
     };
@@ -507,12 +576,12 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
     const stepperCurrentStep = wizardStep - (wizardData.withMedia ? 1 : 2);
 
     return (
-        <div className="max-w-2xl mx-auto flex flex-col items-center" style={{ minHeight: 'calc(100vh - 10rem)'}}>
+        <div className="max-w-2xl mx-auto h-full flex flex-col items-center">
             <button onClick={() => { resetWizard(); navigate(PATHS.HOME); }} className="absolute top-4 right-4 z-50 p-2"><FaXmark size={20}/></button>
             {wizardStep > 1 && wizardData.withMedia !== null && (
                 <WizardStepper currentStep={stepperCurrentStep} totalSteps={stepperSteps.length} stepNames={stepperSteps} />
             )}
-            <div className="w-full flex-grow flex flex-col">
+            <div className="w-full flex-grow min-h-0 flex flex-col">
                 {renderStep()}
             </div>
         </div>

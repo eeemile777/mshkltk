@@ -11,16 +11,23 @@ const SuperAdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const [username, setUsername] = React.useState(location.state?.username || '');
-  const [password, setPassword] = React.useState(location.state?.password || '');
+  // Check for auto-login credentials from sessionStorage (redirected from citizen login)
+  const autoUsername = sessionStorage.getItem('autoLoginUsername');
+  const autoPassword = sessionStorage.getItem('autoLoginPassword');
+  
+  const [username, setUsername] = React.useState(location.state?.username || autoUsername || '');
+  const [password, setPassword] = React.useState(location.state?.password || autoPassword || '');
   const [error, setError] = React.useState('');
-  const [loading, setLoading] = React.useState(!!location.state?.username);
+  const [loading, setLoading] = React.useState(!!(location.state?.username || (autoUsername && autoPassword)));
 
   const from = location.state?.from?.pathname || PATHS.SUPER_ADMIN_DASHBOARD;
 
   const performLogin = React.useCallback(async (user: string, pass: string) => {
     setLoading(true);
     setError('');
+    // Clear auto-login credentials from sessionStorage
+    sessionStorage.removeItem('autoLoginUsername');
+    sessionStorage.removeItem('autoLoginPassword');
     try {
       await login({ username: user, password: pass });
       navigate(from, { replace: true });
@@ -31,10 +38,13 @@ const SuperAdminLoginPage: React.FC = () => {
   }, [login, navigate, from, t.invalidCredentials]);
   
   React.useEffect(() => {
+    // Auto-login if credentials are available
     if (location.state?.username && location.state?.password) {
         performLogin(location.state.username, location.state.password);
+    } else if (autoUsername && autoPassword) {
+        performLogin(autoUsername, autoPassword);
     }
-  }, [location.state, performLogin]);
+  }, [location.state, autoUsername, autoPassword, performLogin]);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +92,7 @@ const SuperAdminLoginPage: React.FC = () => {
               disabled={loading}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-lg text-lg font-bold text-white bg-coral-dark hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-dark focus:ring-mango-dark disabled:bg-gray-600"
           >
-            {loading ? <FaSpinner className="animate-spin" /> : t.login}
+            {loading ? <span className="animate-spin"><FaSpinner /></span> : t.login}
           </button>
         </form>
       </div>

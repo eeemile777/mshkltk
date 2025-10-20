@@ -12,6 +12,15 @@ A bilingual (English/Arabic) civic-tech PWA for citizens to report local issues.
 -   **Offline First:** Full offline capability for report submission, with background sync when connectivity is restored.
 -   **Bilingual & RTL Support:** Seamlessly switch between English (LTR) and Arabic (RTL).
 
+## Current Status
+
+✅ **Backend:** Fully implemented with 29 API endpoints  
+✅ **Database:** PostgreSQL 15 + PostGIS running in Docker  
+✅ **Frontend:** Integrated with real backend API  
+✅ **Authentication:** JWT-based auth system working  
+✅ **Testing:** 46 automated E2E tests (Playwright)  
+⏳ **Production Deployment:** Ready for cloud deployment
+
 ## Development Setup
 
 This project is intended to be set up with a modern JavaScript build tool like Vite. The current prototype uses an `importmap` for simplicity, but the following instructions outline the standard procedure for a production-ready setup.
@@ -74,4 +83,48 @@ A backend developer can use the `mockApi.ts` file and the comprehensive document
     -   **[Testing Strategy](./docs/TESTING.md):** The roadmap for implementing automated tests.
     -   **[Directory Map](./mshkltk_directory_map.md):** A detailed file-by-file breakdown of the entire project.
 
-For a detailed map of all files and their purpose, please refer to the documentation.
+## Quick Start
+
+**Prerequisites:**
+- Node.js 18+ installed
+- Docker Desktop installed and running
+
+**Setup (First Time):**
+```bash
+# 1. Install dependencies
+npm install
+cd server && npm install && cd ..
+
+# 2. Set up database (Docker)
+./setup-database-docker.sh
+
+# 3. Start the app
+npm run dev
+```
+
+**Daily Development:**
+```bash
+# Start database (if not running)
+docker start mshkltk-postgres
+
+# Start app (frontend + backend)
+npm run dev
+
+# Run tests
+npm test
+```
+
+**Access Points:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:3001
+- Admin Login: Username: `miloadmin`, Password: `admin123`
+
+## Documentation
+
+For detailed documentation, see the `/docs` folder:
+- `/docs/api/` - API endpoint documentation
+- `/docs/data-model/` - Database schema documentation
+- `/docs/frontend/` - Frontend architecture documentation
+- `CURRENT_STATUS.md` - Current development status
+- `PRODUCTION_STATUS.md` - Production readiness checklist
+- `tests/README.md` - Testing documentation

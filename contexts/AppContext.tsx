@@ -2,9 +2,8 @@ import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Language, Theme, Report, User, Notification, Badge, ReportCategory, ReportStatus, Comment, ReportHistory, PendingReportData, TimeFilter, NotificationType, Preview, ReportData, DynamicCategory, DynamicBadge, GamificationSettings } from '../types';
 import { translations, BADGES, PATHS, ICON_MAP } from '../constants';
-import * as api from '../services/mockApi';
+import * as api from '../services/api';
 import L from 'leaflet';
-import { GoogleGenAI } from '@google/genai';
 import { dbService } from '../services/db';
 
 
@@ -71,6 +70,7 @@ const deletePendingReport = (timestamp: number): Promise<void> => {
 // --- End IndexedDB Helpers ---
 
 // --- Helper Functions for State Initialization ---
+
 const getInitialState = <T extends string>(key: string, allValues: T[]): Set<T> => {
     try {
         const item = localStorage.getItem(key);
@@ -85,22 +85,6 @@ const getInitialState = <T extends string>(key: string, allValues: T[]): Set<T> 
         console.error(`Error reading ${key} from localStorage`, error);
     }
     return new Set();
-};
-
-const translateText = async (text: string, targetLanguage: 'English' | 'Arabic'): Promise<string> => {
-    if (!text.trim() || !process.env.API_KEY) return text;
-    try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `Translate the following text to ${targetLanguage}. Respond with ONLY the translated text, no extra formatting or explanations. Text to translate: "${text}"`;
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-        });
-        return response.text.trim();
-    } catch (error) {
-        console.error(`Gemini translation error to ${targetLanguage}:`, error);
-        return text;
-    }
 };
 
 
@@ -480,7 +464,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const clearImpersonationRedirect = React.useCallback(() => setImpersonationRedirectPath(null), []);
   
   const exitImpersonation = React.useCallback(async (redirectPath: string) => {
-    await api.logout(true); // Clear any temporary portal session
+    api.logout(); // Clear JWT token
     setOverrideUser(null);
     setRealUser(null);
     setImpersonationRedirectPath(redirectPath);
@@ -503,7 +487,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return user;
   }, [handleUserUpdate, currentUser]);
   
-  const login = React.useCallback(async (data) => { const user = await api.loginUser(data); await handleUserUpdate(user); return user; }, [handleUserUpdate]);
+  const login = React.useCallback(async (data) => { 
+    const user = await api.loginUser(data); 
+    
+    // Check if user is a super admin or portal user
+    if (user.role === 'super_admin') {
+      // Throw a special error to trigger redirect to super admin portal
+      const error: any = new Error('Super admin accounts must login through the super admin portal');
+      error.redirectTo = '/superadmin/login';
+      error.user = user;
+      throw error;
+    } else if (user.role === 'portal' && user.portal_access_level) {
+      // Throw a special error to trigger redirect to portal login
+      const error: any = new Error('Portal accounts must login through the portal');
+      error.redirectTo = '/portal/login';
+      error.user = user;
+      throw error;
+    }
+    
+    await handleUserUpdate(user); 
+    return user; 
+  }, [handleUserUpdate]);
+  
   const loginAnonymous = React.useCallback(async () => { const user = await api.createAnonymousUser(); await handleUserUpdate(user); return user; }, [handleUserUpdate]);
   const logout = React.useCallback(async () => { await api.logout(); setCurrentUser(null); setReports([]); setNotifications([]); setComments([]); setReportHistory([]); }, []);
 
@@ -517,7 +522,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const clearMapTarget = React.useCallback(() => setMapTargetLocation(null), []);
 
   const setTempUserOverride = React.useCallback(async (impersonatedUser: User | null, impersonatorUser: User | null = null, redirectPath: string | null = null) => {
-    await api.logout(true);
+    api.logout(); // Clear current JWT token
     if (impersonatedUser && impersonatorUser && (impersonatedUser.role !== 'citizen')) {
         await api.setCurrentUser(impersonatedUser, true);
     }

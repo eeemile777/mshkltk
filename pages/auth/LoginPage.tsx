@@ -25,12 +25,22 @@ const LoginPage: React.FC = () => {
       await login({ username, password });
       navigate(from, { replace: true });
     } catch (err: any) {
+      // Check if this is a redirect error (super admin or portal user)
+      if (err.redirectTo) {
+        // Store credentials temporarily for auto-login on the target page
+        sessionStorage.setItem('autoLoginUsername', username);
+        sessionStorage.setItem('autoLoginPassword', password);
+        // Redirect to the appropriate login page
+        navigate(err.redirectTo, { replace: true });
+        return;
+      }
+      
+      // Legacy fallback for portal user detection
       if (err.message && (err.message.includes('portals') || err.message.includes('portal access'))) {
-          // This is likely a portal user, redirect to portal login with credentials.
           navigate('/portal/login', { state: { username, password }, replace: true });
       } else {
           setError(err.message || t.invalidCredentials);
-          setLoading(false); // Only stop loading on final error
+          setLoading(false);
       }
     }
   };
@@ -67,7 +77,7 @@ const LoginPage: React.FC = () => {
           disabled={loading}
           className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-lg text-lg font-bold text-white bg-teal hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-dark disabled:bg-gray-400"
       >
-        {loading && !showLoginForm ? <FaSpinner className="animate-spin" /> : t.continueAsGuest}
+        {loading && !showLoginForm ? <span className="animate-spin"><FaSpinner /></span> : t.continueAsGuest}
       </button>
 
       <div className="relative my-6">
@@ -99,7 +109,7 @@ const LoginPage: React.FC = () => {
               </p>
             )}
             <button type="submit" disabled={loading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-lg text-lg font-bold text-white bg-navy dark:bg-sand dark:text-navy hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-dark disabled:bg-gray-400">
-              {loading ? <FaSpinner className="animate-spin" /> : t.login}
+              {loading ? <span className="animate-spin"><FaSpinner /></span> : t.login}
             </button>
           </form>
           <div className="mt-6 text-center">

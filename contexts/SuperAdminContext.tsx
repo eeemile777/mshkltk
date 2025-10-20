@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { User, Report, Comment, ReportHistory, DynamicCategory, DynamicBadge, GamificationSettings, ReportCategory, AuditLog } from '../types';
-import * as api from '../services/mockApi';
+import { Language, Report, User, ReportStatus, ReportCategory, ReportHistory, DynamicCategory, DynamicBadge, GamificationSettings, AuditLog } from '../types';
+import * as api from '../services/api';
 import { dbService } from '../services/db';
 
 interface SuperAdminContextType {
@@ -115,14 +115,14 @@ export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [currentUser, refreshKey]);
 
   const login = React.useCallback(async (data: Pick<User, 'username'> & {password: string}) => {
-    const user = await api.loginUser(data, false, true); // isPortal=false, isSuperAdmin=true
-    await api.setCurrentUser(user, false, true);
+    const user = await api.loginUser(data);
+    await api.setCurrentUser(user);
     setCurrentUser(user);
     return user;
   }, []);
 
   const logout = React.useCallback(async () => {
-    await api.logout(false, true); // isPortal=false, isSuperAdmin=true
+    api.logout();
     setCurrentUser(null);
   }, []);
 
@@ -132,7 +132,7 @@ export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const updateReport = React.useCallback(async (reportId: string, updates: Partial<Report>) => {
       if (!currentUser) return;
-      const updatedReport = await api.updateReport(reportId, updates, currentUser);
+      const updatedReport = await api.updateReport(reportId, updates);
       setAllReports(prev => prev.map(r => r.id === reportId ? updatedReport : r));
   }, [currentUser]);
 
@@ -145,7 +145,7 @@ export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const deleteComment = React.useCallback(async (commentId: string) => {
       if (!currentUser) return;
-      await api.deleteComment(commentId, currentUser);
+      await api.deleteComment(commentId);
       setComments(prev => prev.filter(c => c.id !== commentId));
       refreshData();
   }, [currentUser, refreshData]);
@@ -166,7 +166,7 @@ export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const deleteUser = React.useCallback(async (userId: string) => {
     if (!currentUser) return;
-    await api.deleteUser(userId, currentUser);
+    await api.deleteUser(userId);
     setAllUsers(prev => prev.filter(u => u.id !== userId));
     refreshData();
   }, [currentUser, refreshData]);

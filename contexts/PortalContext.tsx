@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { User, Report, ReportStatus, Comment, ReportHistory, DynamicCategory, ReportCategory } from '../types';
-import * as api from '../services/mockApi';
+import { Language, Report, User, ReportStatus, ReportHistory, DynamicCategory } from '../types';
+import * as api from '../services/api';
 import { dbService } from '../services/db';
 import { ICON_MAP } from '../constants';
 
@@ -139,13 +139,13 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [currentUser, refreshKey]);
 
   const login = React.useCallback(async (data: Pick<User, 'username'> & {password: string}) => {
-    const user = await api.loginUser(data, true);
+    const user = await api.loginUser(data);
     await api.setCurrentUser(user, true);
     setCurrentUser(user);
     return user;
   }, []);
 
-  const logout = React.useCallback(async () => { await api.logout(true); setCurrentUser(null); }, []);
+  const logout = React.useCallback(async () => { api.logout(); setCurrentUser(null); }, []);
 
   const updateReportStatus = React.useCallback(async (reportId: string, status: ReportStatus) => {
     if (!currentUser) return;

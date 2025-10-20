@@ -132,6 +132,9 @@ const Step3Location: React.FC<{
   
   React.useEffect(() => {
     if (!reportData.location) {
+      // Set a default location immediately (Beirut, Lebanon) before geolocation loads
+      const defaultLocation: [number, number] = [33.8938, 35.5018];
+      updateReportData({ location: defaultLocation });
       handleUseCurrentLocation(true);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -250,7 +253,7 @@ const Step3Location: React.FC<{
   if (geoState.loading || !reportData.location) {
     return (
       <div className="flex flex-col items-center justify-center h-full w-full text-center p-4">
-        <FaSpinner className="animate-spin text-4xl text-teal dark:text-teal-dark mb-4" />
+        <FaSpinner className="animate-spin text-4xl text-teal dark:text-teal-dark mb-4" {...({} as any)} />
         <h1 className="text-2xl font-bold text-navy dark:text-text-primary-dark mb-2">{t.useCurrentLocation}</h1>
         <p className="text-text-secondary dark:text-text-secondary-dark mb-4">{t.fetchingAddress}</p>
         {geoState.error && <p className="mt-4 p-4 bg-coral/10 text-coral dark:text-coral-dark rounded-xl max-w-sm font-semibold">{geoState.error}</p>}
@@ -291,7 +294,7 @@ const Step3Location: React.FC<{
             </div>
             
             <div className="p-4 bg-muted dark:bg-surface-dark rounded-xl flex items-start gap-4 text-start transition-shadow duration-300 animate-subtle-glow">
-            <FaRegAddressCard className="h-6 w-6 text-teal dark:text-teal-dark mt-2 flex-shrink-0" />
+            <FaRegAddressCard className="h-6 w-6 text-teal dark:text-teal-dark mt-2 flex-shrink-0" {...({} as any)} />
             <div className="relative w-full" ref={searchContainerRef}>
                 <label className="font-bold text-navy dark:text-text-primary-dark">{t.address}</label>
                 <div className="relative">
@@ -303,13 +306,13 @@ const Step3Location: React.FC<{
                         placeholder={t.fetchingAddress}
                         className="w-full bg-transparent border-0 border-b-2 border-border-light dark:border-border-dark focus:border-teal dark:focus:border-teal-dark focus:ring-0 p-1 text-sm text-text-secondary dark:text-text-secondary-dark"
                     />
-                    {(isReverseGeocoding || isSearching) && <FaSpinner className="animate-spin absolute top-1/2 -translate-y-1/2 right-2 text-teal dark:text-teal-dark" />}
+                    {(isReverseGeocoding || isSearching) && <FaSpinner className="animate-spin absolute top-1/2 -translate-y-1/2 right-2 text-teal dark:text-teal-dark" {...({} as any)} />}
                 </div>
                 {showSuggestions && suggestions.length > 0 && (
                     <div className="absolute top-full mt-1 w-full bg-card dark:bg-surface-dark rounded-lg shadow-xl z-20 max-h-48 overflow-y-auto border border-border-light dark:border-border-dark">
                         {suggestions.map(s => (
                             <button key={s.place_id} onClick={() => handleSuggestionClick(s)} className="w-full text-left px-3 py-2 hover:bg-muted dark:hover:bg-bg-dark text-sm text-text-secondary dark:text-text-secondary-dark flex items-center gap-2">
-                            <FaMagnifyingGlass size={12} className="flex-shrink-0"/> <span>{s.display_name}</span>
+                            <FaMagnifyingGlass size={12} className="flex-shrink-0" {...({} as any)} /> <span>{s.display_name}</span>
                             </button>
                         ))}
                     </div>
@@ -318,11 +321,11 @@ const Step3Location: React.FC<{
             </div>
             
             <div className="p-4 bg-muted dark:bg-surface-dark rounded-xl flex items-start gap-4 text-start">
-                <FaCity className="h-6 w-6 text-teal dark:text-teal-dark mt-1 flex-shrink-0" />
+                <FaCity className="h-6 w-6 text-teal dark:text-teal-dark mt-1 flex-shrink-0" {...({} as any)} />
                 <div>
                     <label className="font-bold text-navy dark:text-text-primary-dark">{t.municipality}</label>
                     {isDetectingMunicipality ? (
-                        <p className="text-sm text-text-secondary dark:text-text-secondary-dark flex items-center gap-2"><FaSpinner className="animate-spin" /> {t.aiAnalyzing}</p>
+                        <p className="text-sm text-text-secondary dark:text-text-secondary-dark flex items-center gap-2"><FaSpinner className="animate-spin" {...({} as any)} /> {t.aiAnalyzing}</p>
                     ) : (
                         <p className="text-sm text-text-secondary dark:text-text-secondary-dark capitalize">{reportData.municipality || 'Not detected'}</p>
                     )}
@@ -330,7 +333,7 @@ const Step3Location: React.FC<{
             </div>
 
             <div className="p-4 bg-muted dark:bg-surface-dark rounded-xl flex items-start gap-4 text-start">
-                <FaGlobe className="h-6 w-6 text-teal dark:text-teal-dark mt-1 flex-shrink-0" />
+                <FaGlobe className="h-6 w-6 text-teal dark:text-teal-dark mt-1 flex-shrink-0" {...({} as any)} />
                 <div>
                     <label className="font-bold text-navy dark:text-text-primary-dark">Coordinates</label>
                     {reportData.location ? (

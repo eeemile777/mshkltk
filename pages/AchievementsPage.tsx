@@ -4,7 +4,7 @@ import * as React from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { BADGES } from '../constants';
 import { User, LeaderboardFilter, Badge } from '../types';
-import * as api from '../services/mockApi';
+import * as api from '../services/api';
 import { LeaderboardSkeleton } from '../components/SkeletonLoader';
 import { FaTrophy, FaMedal, FaCircleExclamation } from 'react-icons/fa6';
 
@@ -23,7 +23,7 @@ const UserRow: React.FC<{ user: User, rank: number }> = ({ user, rank }) => {
     return (
         <div className="flex items-center gap-4 bg-muted dark:bg-bg-dark p-3 rounded-xl">
             <div className={`w-10 text-center font-bold text-lg flex-shrink-0 ${rankColor}`}>
-                {isTop3 ? <FaMedal className="inline-block" /> : rank}
+                {isTop3 ? <FaMedal className="inline-block" {...({} as any)} /> : rank}
             </div>
             <img src={user.avatarUrl} alt={user.display_name} className="w-12 h-12 rounded-full" />
             <div className="flex-1 min-w-0">
@@ -64,7 +64,7 @@ const LeaderboardTab: React.FC = () => {
 
     React.useEffect(() => {
         setLoading(true);
-        api.fetchLeaderboardUsers()
+        api.getLeaderboard(50)
             .then(setUsers)
             .catch(console.error)
             .finally(() => setLoading(false));
@@ -94,6 +94,7 @@ const LeaderboardTab: React.FC = () => {
         <div className="relative">
              <div className="flex justify-center items-center gap-2 mb-6">
                 <FilterButton label={t.allTime} filterId={LeaderboardFilter.All} />
+                {/* Time-based filters disabled - requires backend support for point history tracking */}
                 <FilterButton label={t.thisMonth} filterId={LeaderboardFilter.Month} disabled={true} />
                 <FilterButton label={t.thisWeek} filterId={LeaderboardFilter.Week} disabled={true} />
             </div>
@@ -146,45 +147,69 @@ const AchievementsTab: React.FC = () => {
     );
 }
 
+interface TabButtonProps {
+    tabId: ActiveTab;
+    label: string;
+    isActive: boolean;
+    onClick: (tabId: ActiveTab) => void;
+}
+
+const TabButton: React.FC<TabButtonProps> = ({ tabId, label, isActive, onClick }) => (
+    <button
+      onClick={() => onClick(tabId)}
+      className={`px-4 py-2 text-sm sm:text-base font-bold transition-colors ${
+        isActive
+          ? 'border-b-2 border-teal dark:border-teal-dark text-teal dark:text-teal-dark'
+          : 'text-text-secondary dark:text-text-secondary-dark hover:text-navy dark:hover:text-text-primary-dark'
+      }`}
+    >
+      {label}
+    </button>
+);
 
 const CommunityPage: React.FC = () => {
     const { currentUser, t } = React.useContext(AppContext);
     const [activeTab, setActiveTab] = React.useState<ActiveTab>('leaderboard');
     
-    const TabButton: React.FC<{ tabId: ActiveTab; label: string }> = ({ tabId, label }) => (
-        <button
-          onClick={() => setActiveTab(tabId)}
-          className={`px-4 py-2 text-sm sm:text-base font-bold transition-colors ${
-            activeTab === tabId
-              ? 'border-b-2 border-teal dark:border-teal-dark text-teal dark:text-teal-dark'
-              : 'text-text-secondary dark:text-text-secondary-dark hover:text-navy dark:hover:text-text-primary-dark'
-          }`}
-        >
-          {label}
-        </button>
-      );
+    const handleTabClick = React.useCallback((tabId: ActiveTab) => {
+        console.log('Tab clicked:', tabId);
+        setActiveTab(tabId);
+    }, []);
 
     return (
         <div className="max-w-4xl mx-auto">
             <div className="text-center mb-6">
-                 <FaTrophy className="mx-auto text-5xl text-mango dark:text-mango-dark mb-2" />
+                 <FaTrophy className="mx-auto text-5xl text-mango dark:text-mango-dark mb-2" {...({} as any)} />
                  <h1 className="text-3xl font-bold text-navy dark:text-text-primary-dark">{t.communityPageTitle}</h1>
             </div>
 
             {currentUser?.is_anonymous && (
                 <div className="bg-mango/20 dark:bg-mango-dark/20 text-mango-dark dark:text-mango-dark p-4 rounded-xl mb-6 flex items-center gap-3">
-                    <FaCircleExclamation className="h-5 w-5"/>
+                    <FaCircleExclamation className="h-5 w-5" {...({} as any)} />
                     <p className="font-semibold">{t.guestMessage}</p>
                 </div>
             )}
             
             <div className="flex justify-center border-b border-border-light dark:border-border-dark mb-6">
-                <TabButton tabId="leaderboard" label={t.leaderboard} />
-                <TabButton tabId="achievements" label={t.achievements} />
+                <TabButton 
+                    tabId="leaderboard" 
+                    label={t.leaderboard} 
+                    isActive={activeTab === 'leaderboard'}
+                    onClick={handleTabClick}
+                />
+                <TabButton 
+                    tabId="achievements" 
+                    label={t.achievements}
+                    isActive={activeTab === 'achievements'}
+                    onClick={handleTabClick}
+                />
             </div>
 
-            <div>
-                {activeTab === 'leaderboard' ? <LeaderboardTab /> : <AchievementsTab />}
+            <div className={activeTab === 'leaderboard' ? 'block' : 'hidden'}>
+                <LeaderboardTab />
+            </div>
+            <div className={activeTab === 'achievements' ? 'block' : 'hidden'}>
+                <AchievementsTab />
             </div>
         </div>
     );

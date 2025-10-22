@@ -429,21 +429,56 @@ export const toggleSubscription = async (reportId: string, userId: string): Prom
 };
 
 /**
- * Fetch report history (not yet implemented on backend)
+ * Fetch report history by report ID
  */
 export const fetchHistoryByReportId = async (reportId: string): Promise<any[]> => {
-  // TODO: Implement on backend
-  console.warn('fetchHistoryByReportId not yet implemented on backend');
-  return [];
+  const token = getAuthToken();
+  const response = await fetch(`${API_BASE_URL}/reports/${reportId}/history`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch report history');
+  }
+  
+  return await response.json();
 };
 
 /**
- * Fetch all report history (not yet implemented on backend)
+ * Fetch all report history (Super Admin only)
  */
 export const fetchAllReportHistory = async (): Promise<any[]> => {
-  // TODO: Implement on backend
-  console.warn('fetchAllReportHistory not yet implemented on backend');
-  return [];
+  // For now, we'll fetch all reports and their histories
+  // In production, you might want a dedicated endpoint for this
+  const token = getAuthToken();
+  const response = await fetch(`${API_BASE_URL}/reports`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch reports');
+  }
+  
+  const reports = await response.json();
+  
+  // Fetch history for each report
+  const allHistory = await Promise.all(
+    reports.map(async (report: any) => {
+      try {
+        return await fetchHistoryByReportId(report.id);
+      } catch (error) {
+        console.error(`Failed to fetch history for report ${report.id}:`, error);
+        return [];
+      }
+    })
+  );
+  
+  // Flatten the array
+  return allHistory.flat();
 };
 
 /**
@@ -486,12 +521,32 @@ export const getCurrentSuperAdminUser = async (): Promise<any> => {
 };
 
 /**
- * Fetch audit logs (not yet implemented on backend)
+ * Fetch audit logs (Super Admin only)
  */
-export const fetchAuditLogs = async (): Promise<any[]> => {
-  // TODO: Implement on backend
-  console.warn('fetchAuditLogs not yet implemented on backend');
-  return [];
+export const fetchAuditLogs = async (filters?: { entity_type?: string; actor_id?: string; limit?: number; offset?: number }): Promise<any[]> => {
+  const token = getAuthToken();
+  const params = new URLSearchParams();
+  
+  if (filters) {
+    if (filters.entity_type) params.append('entity_type', filters.entity_type);
+    if (filters.actor_id) params.append('actor_id', filters.actor_id);
+    if (filters.limit) params.append('limit', filters.limit.toString());
+    if (filters.offset) params.append('offset', filters.offset.toString());
+  }
+  
+  const url = `${API_BASE_URL}/audit-logs${params.toString() ? `?${params.toString()}` : ''}`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch audit logs');
+  }
+  
+  return await response.json();
 };
 
 /**
@@ -502,81 +557,297 @@ export const deleteReportAndAssociatedData = async (reportId: string, user?: any
 };
 
 /**
- * Update user (admin function)
+ * Update user (admin function - Super Admin only)
  */
 export const updateUser = async (userId: string, updates: any, adminUser?: any): Promise<any> => {
-  // In production, this should validate admin permissions
-  // For now, map to the updateCurrentUser if it's the current user
+  const token = getAuthToken();
+  
+  // If updating self, use the PATCH /users/me endpoint
   if (userId === adminUser?.id) {
     return await updateCurrentUser(updates);
   }
-  // TODO: Implement admin update user endpoint on backend
-  console.warn('updateUser for other users not yet implemented on backend');
-  return updates;
+  
+  // Otherwise, use the admin PATCH /users/:id endpoint (requires super_admin role)
+  const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(updates),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to update user');
+  }
+  
+  return await response.json();
 };
 
 /**
- * Create admin user
+ * Create admin user (Super Admin only)
  */
 export const createAdminUser = async (userData: any, adminUser?: any): Promise<any> => {
-  // TODO: Implement on backend with proper role assignment
-  return await register(userData);
+  const token = getAuthToken();
+  
+  // Use the new POST /api/users endpoint (requires super_admin role)
+  const response = await fetch(`${API_BASE_URL}/users`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(userData),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to create admin user');
+  }
+  
+  return await response.json();
 };
 
 /**
- * Update dynamic category (not yet implemented on backend)
+ * Update dynamic category (Super Admin only) - NOW IMPLEMENTED
  */
 export const updateDynamicCategory = async (category: any, adminUser?: any): Promise<void> => {
-  // TODO: Implement on backend
-  console.warn('updateDynamicCategory not yet implemented on backend');
+  await updateCategory(category.id, category);
 };
 
 /**
- * Add dynamic category (not yet implemented on backend)
+ * Add dynamic category (Super Admin only) - NOW IMPLEMENTED
  */
 export const addDynamicCategory = async (category: any, adminUser?: any): Promise<void> => {
-  // TODO: Implement on backend
-  console.warn('addDynamicCategory not yet implemented on backend');
+  await createCategory(category);
 };
 
 /**
- * Delete dynamic category (not yet implemented on backend)
+ * Delete dynamic category (Super Admin only) - NOW IMPLEMENTED
  */
 export const deleteDynamicCategory = async (categoryId: string, categoryName: string, adminUser?: any): Promise<void> => {
-  // TODO: Implement on backend
-  console.warn('deleteDynamicCategory not yet implemented on backend');
+  await deleteCategory(categoryId);
 };
 
 /**
- * Update gamification settings (not yet implemented on backend)
- */
-export const updateGamificationSettings = async (settings: any, adminUser?: any): Promise<void> => {
-  // TODO: Implement on backend
-  console.warn('updateGamificationSettings not yet implemented on backend');
-};
-
-/**
- * Update dynamic badge (not yet implemented on backend)
+ * Update dynamic badge (Super Admin only) - NOW IMPLEMENTED
  */
 export const updateDynamicBadge = async (badge: any, adminUser?: any): Promise<void> => {
-  // TODO: Implement on backend
-  console.warn('updateDynamicBadge not yet implemented on backend');
+  await updateBadge(badge.id, badge);
 };
 
 /**
- * Add dynamic badge (not yet implemented on backend)
+ * Add dynamic badge (Super Admin only) - NOW IMPLEMENTED
  */
 export const addDynamicBadge = async (badge: any, adminUser?: any): Promise<void> => {
-  // TODO: Implement on backend
-  console.warn('addDynamicBadge not yet implemented on backend');
+  await createBadge(badge);
 };
 
 /**
- * Delete dynamic badge (not yet implemented on backend)
+ * Delete dynamic badge (Super Admin only) - NOW IMPLEMENTED
  */
 export const deleteDynamicBadge = async (badgeId: string, badgeName: string, adminUser?: any): Promise<void> => {
-  // TODO: Implement on backend
-  console.warn('deleteDynamicBadge not yet implemented on backend');
+  await deleteBadge(badgeId);
+};
+
+// --- Additional Functions for Compatibility ---
+
+/**
+ * Fetch trending reports (with backend algorithm)
+ */
+export const fetchTrendingReports = async (municipality?: string, limit: number = 20): Promise<any[]> => {
+  const params = new URLSearchParams();
+  if (municipality) params.append('municipality', municipality);
+  params.append('limit', limit.toString());
+  
+  const url = `${API_BASE_URL}/reports/trending${params.toString() ? `?${params.toString()}` : ''}`;
+  
+  const response = await fetch(url);
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch trending reports');
+  }
+  
+  return await response.json();
+};
+
+/**
+ * Fetch leaderboard users (alias for getLeaderboard)
+ */
+export const fetchLeaderboardUsers = async (): Promise<any[]> => {
+  return getLeaderboard(50);
+};
+
+// --- Configuration API ---
+
+/**
+ * Get all dynamic categories
+ */
+export const getDynamicCategories = async (): Promise<any[]> => {
+  const response = await fetch(`${API_BASE_URL}/config/categories`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch categories');
+  }
+  const data = await response.json();
+  return data.categories;
+};
+
+/**
+ * Create new category (Super Admin only)
+ */
+export const createCategory = async (categoryData: {
+  name_en: string;
+  name_ar: string;
+  icon: string;
+  color: string;
+  is_active?: boolean;
+}): Promise<any> => {
+  return apiRequest('/config/categories', {
+    method: 'POST',
+    body: JSON.stringify(categoryData),
+  });
+};
+
+/**
+ * Update category (Super Admin only)
+ */
+export const updateCategory = async (categoryId: string, updates: any): Promise<any> => {
+  return apiRequest(`/config/categories/${categoryId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+};
+
+/**
+ * Delete category (Super Admin only)
+ */
+export const deleteCategory = async (categoryId: string): Promise<any> => {
+  return apiRequest(`/config/categories/${categoryId}`, {
+    method: 'DELETE',
+  });
+};
+
+/**
+ * Get all gamification badges
+ */
+export const getDynamicBadges = async (): Promise<any[]> => {
+  const response = await fetch(`${API_BASE_URL}/config/badges`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch badges');
+  }
+  const data = await response.json();
+  return data.badges;
+};
+
+/**
+ * Create new badge (Super Admin only)
+ */
+export const createBadge = async (badgeData: {
+  name_en: string;
+  name_ar: string;
+  description_en: string;
+  description_ar: string;
+  icon: string;
+  condition_type: string;
+  condition_value: number;
+  points_reward: number;
+  is_active?: boolean;
+}): Promise<any> => {
+  return apiRequest('/config/badges', {
+    method: 'POST',
+    body: JSON.stringify(badgeData),
+  });
+};
+
+/**
+ * Update badge (Super Admin only)
+ */
+export const updateBadge = async (badgeId: string, updates: any): Promise<any> => {
+  return apiRequest(`/config/badges/${badgeId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+};
+
+/**
+ * Delete badge (Super Admin only)
+ */
+export const deleteBadge = async (badgeId: string): Promise<any> => {
+  return apiRequest(`/config/badges/${badgeId}`, {
+    method: 'DELETE',
+  });
+};
+
+/**
+ * Get gamification settings
+ */
+export const getGamificationSettings = async (): Promise<any> => {
+  const response = await fetch(`${API_BASE_URL}/config/gamification`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch gamification settings');
+  }
+  return response.json();
+};
+
+/**
+ * Update gamification settings (Super Admin only)
+ */
+export const updateGamificationSettings = async (settings: {
+  points_per_report?: number;
+  points_per_confirmation?: number;
+  points_per_comment?: number;
+  points_per_resolution?: number;
+}): Promise<any> => {
+  return apiRequest('/config/gamification', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  });
+};
+
+// --- AI API ---
+
+/**
+ * Analyze media using AI
+ */
+export const analyzeMedia = async (params: {
+  mediaData: string;
+  mimeType: string;
+  language?: string;
+  availableCategories?: string[];
+}): Promise<{ category: string; title: string; description: string }> => {
+  return apiRequest('/ai/analyze-media', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+};
+
+/**
+ * Detect municipality from GPS coordinates
+ */
+export const detectMunicipality = async (latitude: number, longitude: number): Promise<{
+  municipality: string;
+  region: string;
+  address: string;
+}> => {
+  return apiRequest('/ai/detect-municipality', {
+    method: 'POST',
+    body: JSON.stringify({ latitude, longitude }),
+  });
+};
+
+/**
+ * Transcribe audio to text
+ */
+export const transcribeAudio = async (params: {
+  audioData: string;
+  mimeType: string;
+  language?: string;
+}): Promise<{ text: string }> => {
+  return apiRequest('/ai/transcribe-audio', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
 };
 
 // Export helper functions

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend-Backend Integration Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .test-header {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .result {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status-online {
+            background: #28a745;
+            color: white;
+        }
+        .status-offline {
+            background: #dc3545;
+            color: white;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .endpoint-url {
+            background: #e9ecef;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9em;
+            margin: 10px 0;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Frontend ↔️ Backend Integration Test</h1>
+        
+        <!-- Backend Status -->
+        <div class="test-section">
+            <div class="test-header">
+                1. Backend Server Status
+                <span id="backend-status" class="status-badge status-offline">Checking...</span>
+            </div>
+            <div class="endpoint-url">GET http://localhost:3001/api/</div>
+            <button onclick="testBackendStatus()">Test Backend</button>
+            <div id="backend-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Authentication -->
+        <div class="test-section">
+            <div class="test-header">2. Authentication Test</div>
+            <div class="endpoint-url">POST http://localhost:3001/api/auth/login</div>
+            <button onclick="testLogin()">Login (miloadmin / admin123)</button>
+            <button onclick="clearToken()" style="background: #dc3545;">Clear Token</button>
+            <div id="auth-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Fetch Reports -->
+        <div class="test-section">
+            <div class="test-header">3. Fetch Reports</div>
+            <div class="endpoint-url">GET http://localhost:3001/api/reports</div>
+            <button onclick="testFetchReports()">Fetch Reports</button>
+            <div id="reports-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Fetch Users -->
+        <div class="test-section">
+            <div class="test-header">4. Fetch Users (Super Admin)</div>
+            <div class="endpoint-url">GET http://localhost:3001/api/users/portal/all</div>
+            <button onclick="testFetchUsers()">Fetch Users</button>
+            <div id="users-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Trending Reports -->
+        <div class="test-section">
+            <div class="test-header">5. Trending Reports (NEW Endpoint)</div>
+            <div class="endpoint-url">GET http://localhost:3001/api/reports/trending</div>
+            <button onclick="testTrending()">Get Trending</button>
+            <div id="trending-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Audit Logs -->
+        <div class="test-section">
+            <div class="test-header">6. Audit Logs (NEW Endpoint)</div>
+            <div class="endpoint-url">GET http://localhost:3001/api/audit-logs</div>
+            <button onclick="testAuditLogs()">Get Audit Logs</button>
+            <div id="audit-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Run All Tests -->
+        <div class="test-section" style="text-align: center;">
+            <button onclick="runAllTests()" style="font-size: 1.2em; padding: 15px 40px;">
+                🚀 Run All Tests
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3001/api';
+        
+        function getToken() {
+            return localStorage.getItem('auth_token');
+        }
+        
+        function setToken(token) {
+            localStorage.setItem('auth_token', token);
+        }
+        
+        function clearToken() {
+            localStorage.removeItem('auth_token');
+            showResult('auth-result', '✅ Token cleared from localStorage', 'success');
+        }
+        
+        function showResult(elementId, content, type = 'success') {
+            const el = document.getElementById(elementId);
+            el.style.display = 'block';
+            el.className = `result ${type}`;
+            el.innerHTML = typeof content === 'object' ? 
+                '<pre>' + JSON.stringify(content, null, 2) + '</pre>' : 
+                content;
+        }
+        
+        async function testBackendStatus() {
+            try {
+                showResult('backend-result', '<div class="loading"></div> Testing...', '');
+                const response = await fetch(`${API_BASE_URL}/`);
+                const text = await response.text();
+                
+                document.getElementById('backend-status').className = 'status-badge status-online';
+                document.getElementById('backend-status').textContent = 'Online ✅';
+                
+                showResult('backend-result', `✅ Backend is online!\n\nResponse: ${text || response.statusText}`, 'success');
+            } catch (error) {
+                document.getElementById('backend-status').className = 'status-badge status-offline';
+                document.getElementById('backend-status').textContent = 'Offline ❌';
+                showResult('backend-result', `❌ Backend is offline!\n\nError: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testLogin() {
+            try {
+                showResult('auth-result', '<div class="loading"></div> Logging in...', '');
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'miloadmin', password: 'admin123' })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.token) {
+                    setToken(data.token);
+                    showResult('auth-result', `✅ Login successful!\n\nUser: ${data.user.username}\nRole: ${data.user.role}\n\nToken saved to localStorage!`, 'success');
+                } else {
+                    showResult('auth-result', `❌ Login failed!\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('auth-result', `❌ Login error!\n\nError: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testFetchReports() {
+            try {
+                showResult('reports-result', '<div class="loading"></div> Fetching reports...', '');
+                const response = await fetch(`${API_BASE_URL}/reports`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('reports-result', `✅ Fetched ${data.length} reports!\n\n${JSON.stringify(data.slice(0, 3), null, 2)}\n\n... and ${data.length - 3} more`, 'success');
+                } else {
+                    showResult('reports-result', `❌ Failed to fetch reports!\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('reports-result', `❌ Fetch error!\n\nError: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testFetchUsers() {
+            const token = getToken();
+            if (!token) {
+                showResult('users-result', '❌ No token! Please login first.', 'error');
+                return;
+            }
+            
+            try {
+                showResult('users-result', '<div class="loading"></div> Fetching users...', '');
+                const response = await fetch(`${API_BASE_URL}/users/portal/all`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('users-result', `✅ Fetched ${data.length} users!\n\n${JSON.stringify(data.slice(0, 3), null, 2)}\n\n... and ${data.length - 3} more`, 'success');
+                } else {
+                    showResult('users-result', `❌ Failed to fetch users!\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('users-result', `❌ Fetch error!\n\nError: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testTrending() {
+            try {
+                showResult('trending-result', '<div class="loading"></div> Fetching trending reports...', '');
+                const response = await fetch(`${API_BASE_URL}/reports/trending?limit=5`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('trending-result', `✅ Fetched ${data.length} trending reports!\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('trending-result', `❌ Failed to fetch trending!\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('trending-result', `❌ Fetch error!\n\nError: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAuditLogs() {
+            const token = getToken();
+            if (!token) {
+                showResult('audit-result', '❌ No token! Please login first.', 'error');
+                return;
+            }
+            
+            try {
+                showResult('audit-result', '<div class="loading"></div> Fetching audit logs...', '');
+                const response = await fetch(`${API_BASE_URL}/audit-logs?limit=10`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('audit-result', `✅ Fetched ${data.length} audit logs!\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('audit-result', `❌ Failed to fetch audit logs!\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('audit-result', `❌ Fetch error!\n\nError: ${error.message}`, 'error');
+            }
+        }
+        
+        async function runAllTests() {
+            await testBackendStatus();
+            await new Promise(r => setTimeout(r, 500));
+            await testLogin();
+            await new Promise(r => setTimeout(r, 500));
+            await testFetchReports();
+            await new Promise(r => setTimeout(r, 500));
+            await testFetchUsers();
+            await new Promise(r => setTimeout(r, 500));
+            await testTrending();
+            await new Promise(r => setTimeout(r, 500));
+            await testAuditLogs();
+        }
+        
+        // Auto-check backend status on load
+        window.addEventListener('load', () => {
+            testBackendStatus();
+        });
+    </script>
+</body>
+</html>

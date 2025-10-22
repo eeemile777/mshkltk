@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Recording Test - Mshkltk AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .auth-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .auth-section input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .auth-section input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .recorder {
+            text-align: center;
+        }
+        
+        .status {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .status.recording {
+            background: #ffebee;
+            color: #c62828;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        button.danger {
+            background: #ef5350;
+        }
+        
+        button.danger:hover {
+            background: #d32f2f;
+        }
+        
+        button.success {
+            background: #66bb6a;
+        }
+        
+        button.success:hover {
+            background: #4caf50;
+        }
+        
+        .result {
+            background: #e8f5e9;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 4px solid #66bb6a;
+        }
+        
+        .result h3 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+        
+        .result pre {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        
+        .error {
+            background: #ffebee;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 4px solid #ef5350;
+            color: #c62828;
+        }
+        
+        audio {
+            width: 100%;
+            margin: 20px 0;
+        }
+        
+        .language-select {
+            margin-bottom: 20px;
+        }
+        
+        .language-select label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .language-select select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ Audio Recording & Transcription</h1>
+        <p class="subtitle">Test the Gemini AI audio transcription endpoint</p>
+        
+        <div class="auth-section">
+            <h3 style="margin-bottom: 15px; color: #333;">Authentication</h3>
+            <input type="text" id="username" placeholder="Username (e.g., miloadmin)" value="miloadmin">
+            <input type="password" id="password" placeholder="Password" value="admin123">
+            <button onclick="login()" class="success">Login & Get Token</button>
+            <div id="tokenStatus" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+        </div>
+        
+        <div class="language-select">
+            <label for="language">Transcription Language:</label>
+            <select id="language">
+                <option value="en">English</option>
+                <option value="ar">Arabic (العربية)</option>
+            </select>
+        </div>
+        
+        <div class="recorder">
+            <div id="status" class="status">Ready to record</div>
+            
+            <button id="recordBtn" onclick="startRecording()">
+                🎙️ Start Recording
+            </button>
+            <button id="stopBtn" onclick="stopRecording()" disabled class="danger">
+                ⏹️ Stop Recording
+            </button>
+            <button id="transcribeBtn" onclick="transcribe()" disabled class="success">
+                🤖 Transcribe with AI
+            </button>
+            
+            <audio id="audioPlayer" controls style="display: none;"></audio>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+    
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let audioBlob;
+        let token = '';
+        
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const statusDiv = document.getElementById('tokenStatus');
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    token = data.token;
+                    statusDiv.innerHTML = `✅ Logged in as <strong>${data.user.username}</strong> (${data.user.role})`;
+                    statusDiv.style.color = '#2e7d32';
+                } else {
+                    statusDiv.innerHTML = `❌ Login failed: ${data.error}`;
+                    statusDiv.style.color = '#c62828';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `❌ Error: ${error.message}`;
+                statusDiv.style.color = '#c62828';
+            }
+        }
+        
+        async function startRecording() {
+            if (!token) {
+                alert('Please login first!');
+                return;
+            }
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audioPlayer = document.getElementById('audioPlayer');
+                    audioPlayer.src = audioUrl;
+                    audioPlayer.style.display = 'block';
+                    document.getElementById('transcribeBtn').disabled = false;
+                    document.getElementById('status').textContent = 'Recording saved! Click "Transcribe" to analyze';
+                    document.getElementById('status').classList.remove('recording');
+                };
+                
+                mediaRecorder.start();
+                document.getElementById('recordBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                document.getElementById('status').textContent = '🔴 Recording... Speak now!';
+                document.getElementById('status').classList.add('recording');
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                        <br><small>Make sure you allow microphone access!</small>
+                    </div>
+                `;
+            }
+        }
+        
+        function stopRecording() {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            document.getElementById('recordBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+        
+        async function transcribe() {
+            if (!audioBlob) {
+                alert('No recording found!');
+                return;
+            }
+            
+            if (!token) {
+                alert('Please login first!');
+                return;
+            }
+            
+            const language = document.getElementById('language').value;
+            document.getElementById('status').textContent = '🤖 Transcribing with Gemini AI...';
+            document.getElementById('transcribeBtn').disabled = true;
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', audioBlob, 'recording.webm');
+                formData.append('language', language);
+                
+                const response = await fetch('http://localhost:3001/api/ai/transcribe-audio', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = `
+                        <div class="result">
+                            <h3>✅ Transcription Result</h3>
+                            <pre>${data.text}</pre>
+                        </div>
+                    `;
+                    document.getElementById('status').textContent = '✅ Transcription complete!';
+                } else {
+                    document.getElementById('result').innerHTML = `
+                        <div class="error">
+                            <strong>Error:</strong> ${data.error || data.message}
+                            ${data.details ? `<br><small>${data.details}</small>` : ''}
+                        </div>
+                    `;
+                    document.getElementById('status').textContent = '❌ Transcription failed';
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <div class="error">
+                        <strong>Network Error:</strong> ${error.message}
+                    </div>
+                `;
+                document.getElementById('status').textContent = '❌ Error occurred';
+            } finally {
+                document.getElementById('transcribeBtn').disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

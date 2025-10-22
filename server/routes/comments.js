@@ -12,8 +12,47 @@ const { getReportById } = require('../db/queries/reports');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 
 /**
- * POST /api/comments
- * Create a new comment on a report (requires authentication)
+ * @swagger
+ * /api/comments:
+ *   post:
+ *     summary: Create a new comment on a report
+ *     description: Add a comment to a report and notify all subscribed users (requires authentication)
+ *     tags: [Comments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - report_id
+ *               - text
+ *             properties:
+ *               report_id:
+ *                 type: string
+ *                 description: ID of the report to comment on
+ *                 example: "report-123"
+ *               text:
+ *                 type: string
+ *                 description: Comment text content
+ *                 example: "I noticed this issue too!"
+ *     responses:
+ *       201:
+ *         description: Comment created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Comment'
+ *       400:
+ *         description: Missing required fields
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       404:
+ *         description: Report not found
+ *       500:
+ *         description: Server error
  */
 router.post('/', authMiddleware, async (req, res) => {
   try {
@@ -60,8 +99,31 @@ router.post('/', authMiddleware, async (req, res) => {
 });
 
 /**
- * GET /api/comments/report/:reportId
- * Get all comments for a specific report
+ * @swagger
+ * /api/comments/report/{reportId}:
+ *   get:
+ *     summary: Get all comments for a report
+ *     description: Retrieve all comments associated with a specific report
+ *     tags: [Comments]
+ *     parameters:
+ *       - in: path
+ *         name: reportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the report
+ *         example: "report-123"
+ *     responses:
+ *       200:
+ *         description: List of comments retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Comment'
+ *       500:
+ *         description: Server error
  */
 router.get('/report/:reportId', async (req, res) => {
   try {
@@ -74,8 +136,31 @@ router.get('/report/:reportId', async (req, res) => {
 });
 
 /**
- * GET /api/comments/:id
- * Get a single comment by ID
+ * @swagger
+ * /api/comments/{id}:
+ *   get:
+ *     summary: Get a single comment by ID
+ *     description: Retrieve detailed information about a specific comment
+ *     tags: [Comments]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Comment ID
+ *         example: "comment-456"
+ *     responses:
+ *       200:
+ *         description: Comment retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Comment'
+ *       404:
+ *         description: Comment not found
+ *       500:
+ *         description: Server error
  */
 router.get('/:id', async (req, res) => {
   try {
@@ -93,8 +178,52 @@ router.get('/:id', async (req, res) => {
 });
 
 /**
- * PATCH /api/comments/:id
- * Update a comment (only by the author or admin)
+ * @swagger
+ * /api/comments/{id}:
+ *   patch:
+ *     summary: Update a comment
+ *     description: Edit the text of an existing comment (only by author or super admin)
+ *     tags: [Comments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Comment ID
+ *         example: "comment-456"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - text
+ *             properties:
+ *               text:
+ *                 type: string
+ *                 description: Updated comment text
+ *                 example: "I noticed this issue has been fixed!"
+ *     responses:
+ *       200:
+ *         description: Comment updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Comment'
+ *       400:
+ *         description: Missing required text field
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       403:
+ *         description: Forbidden - not authorized to edit this comment
+ *       404:
+ *         description: Comment not found
+ *       500:
+ *         description: Server error
  */
 router.patch('/:id', authMiddleware, async (req, res) => {
   try {
@@ -124,8 +253,43 @@ router.patch('/:id', authMiddleware, async (req, res) => {
 });
 
 /**
- * DELETE /api/comments/:id
- * Delete a comment (only by the author or admin)
+ * @swagger
+ * /api/comments/{id}:
+ *   delete:
+ *     summary: Delete a comment
+ *     description: Remove a comment from a report (only by author or super admin)
+ *     tags: [Comments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Comment ID
+ *         example: "comment-456"
+ *     responses:
+ *       200:
+ *         description: Comment deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment deleted successfully"
+ *                 comment:
+ *                   $ref: '#/components/schemas/Comment'
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       403:
+ *         description: Forbidden - not authorized to delete this comment
+ *       404:
+ *         description: Comment not found
+ *       500:
+ *         description: Server error
  */
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {

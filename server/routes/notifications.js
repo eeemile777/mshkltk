@@ -11,8 +11,42 @@ const {
 const { authMiddleware } = require('../middleware/auth');
 
 /**
- * GET /api/notifications
- * Get all notifications for the authenticated user
+ * @swagger
+ * /api/notifications:
+ *   get:
+ *     summary: Get user's notifications
+ *     description: Retrieve all notifications for the authenticated user with pagination
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of notifications to return
+ *         example: 20
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of notifications to skip
+ *         example: 0
+ *     responses:
+ *       200:
+ *         description: Notifications retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Notification'
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Server error
  */
 router.get('/', authMiddleware, async (req, res) => {
   try {
@@ -32,8 +66,29 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 /**
- * GET /api/notifications/unread-count
- * Get the count of unread notifications
+ * @swagger
+ * /api/notifications/unread-count:
+ *   get:
+ *     summary: Get unread notification count
+ *     description: Retrieve the number of unread notifications for the authenticated user
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Unread count retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 count:
+ *                   type: integer
+ *                   example: 5
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Server error
  */
 router.get('/unread-count', authMiddleware, async (req, res) => {
   try {
@@ -46,8 +101,35 @@ router.get('/unread-count', authMiddleware, async (req, res) => {
 });
 
 /**
- * PATCH /api/notifications/:id/read
- * Mark a notification as read
+ * @swagger
+ * /api/notifications/{id}/read:
+ *   patch:
+ *     summary: Mark notification as read
+ *     description: Mark a specific notification as read for the authenticated user
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Notification ID
+ *         example: "notif-123"
+ *     responses:
+ *       200:
+ *         description: Notification marked as read successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Notification'
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       404:
+ *         description: Notification not found
+ *       500:
+ *         description: Server error
  */
 router.patch('/:id/read', authMiddleware, async (req, res) => {
   try {
@@ -65,8 +147,32 @@ router.patch('/:id/read', authMiddleware, async (req, res) => {
 });
 
 /**
- * POST /api/notifications/mark-all-read
- * Mark all notifications as read for the authenticated user
+ * @swagger
+ * /api/notifications/mark-all-read:
+ *   post:
+ *     summary: Mark all notifications as read
+ *     description: Mark all notifications as read for the authenticated user
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All notifications marked as read successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "All notifications marked as read"
+ *                 count:
+ *                   type: integer
+ *                   example: 12
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Server error
  */
 router.post('/mark-all-read', authMiddleware, async (req, res) => {
   try {
@@ -79,8 +185,39 @@ router.post('/mark-all-read', authMiddleware, async (req, res) => {
 });
 
 /**
- * DELETE /api/notifications/:id
- * Delete a specific notification
+ * @swagger
+ * /api/notifications/{id}:
+ *   delete:
+ *     summary: Delete a notification
+ *     description: Delete a specific notification for the authenticated user
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Notification ID
+ *         example: "notif-123"
+ *     responses:
+ *       200:
+ *         description: Notification deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Notification deleted successfully"
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       404:
+ *         description: Notification not found
+ *       500:
+ *         description: Server error
  */
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
@@ -98,8 +235,32 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
 /**
- * DELETE /api/notifications
- * Delete all notifications for the authenticated user
+ * @swagger
+ * /api/notifications:
+ *   delete:
+ *     summary: Delete all notifications
+ *     description: Delete all notifications for the authenticated user
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All notifications deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "All notifications deleted successfully"
+ *                 count:
+ *                   type: integer
+ *                   example: 25
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       500:
+ *         description: Server error
  */
 router.delete('/', authMiddleware, async (req, res) => {
   try {

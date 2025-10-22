@@ -31,11 +31,11 @@ const createReport = async (reportData) => {
       subscribed_user_ids
     ) VALUES (
       $1, $2, $3, ST_SetSRID(ST_MakePoint($5, $4), 4326)::geography, $4, $5, $6, $7,
-      $8, $9, $10, $11, $12, $13, $14, ARRAY[$14]::text[]
+      $8, $9, $10, $11, $12, $13, $14, ARRAY[$15]::text[]
     ) RETURNING *`,
     [
       title_en, title_ar, photo_urls, lat, lng, area, municipality,
-      category, sub_category, note_en, note_ar, status, severity, created_by
+      category, sub_category, note_en, note_ar, status, severity, created_by, created_by
     ]
   );
 

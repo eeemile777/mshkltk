@@ -5,8 +5,59 @@ const { generateSalt, hashPassword, verifyPassword } = require('../utils/crypto'
 const { generateToken } = require('../middleware/auth');
 
 /**
- * POST /api/auth/register
- * Register a new user account
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user account
+ *     description: Creates a new user account with username and password
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: "john_doe"
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 6
+ *                 example: "securePass123"
+ *               first_name:
+ *                 type: string
+ *                 example: "John"
+ *               last_name:
+ *                 type: string
+ *                 example: "Doe"
+ *               role:
+ *                 type: string
+ *                 enum: [citizen, portal_admin, super_admin]
+ *                 default: citizen
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *                 token:
+ *                   type: string
+ *                   description: JWT authentication token
+ *       400:
+ *         description: Invalid input
+ *       409:
+ *         description: Username already exists
+ *       500:
+ *         description: Server error
  */
 router.post('/register', async (req, res) => {
   try {
@@ -65,8 +116,50 @@ router.post('/register', async (req, res) => {
 });
 
 /**
- * POST /api/auth/login
- * Login with username and password
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login with username and password
+ *     description: Authenticate a user and receive a JWT token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: "john_doe"
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: "securePass123"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *                 token:
+ *                   type: string
+ *                   description: JWT authentication token
+ *       400:
+ *         description: Missing credentials
+ *       401:
+ *         description: Invalid credentials
+ *       403:
+ *         description: Account is suspended
+ *       500:
+ *         description: Server error
  */
 router.post('/login', async (req, res) => {
   try {
@@ -112,8 +205,50 @@ router.post('/login', async (req, res) => {
 });
 
 /**
- * POST /api/auth/verify
- * Verify if a token is still valid
+ * @swagger
+ * /api/auth/verify:
+ *   post:
+ *     summary: Verify JWT token
+ *     description: Verifies if a JWT token is still valid and returns decoded user information
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token is valid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 valid:
+ *                   type: boolean
+ *                   example: true
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: integer
+ *                       example: 1
+ *                     role:
+ *                       type: string
+ *                       example: "citizen"
+ *                     iat:
+ *                       type: integer
+ *                       description: Issued at timestamp
+ *                     exp:
+ *                       type: integer
+ *                       description: Expiration timestamp
+ *       401:
+ *         description: Token is invalid or missing
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 valid:
+ *                   type: boolean
+ *                   example: false
  */
 router.post('/verify', async (req, res) => {
   const authHeader = req.headers.authorization;

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { User, LeaderboardFilter } from '../types';
-import * as api from '../services/mockApi';
+import * as api from '../services/api';
 import { LeaderboardSkeleton } from '../components/SkeletonLoader';
 import { FaTrophy, FaMedal } from 'react-icons/fa6';
 
@@ -18,7 +18,7 @@ const UserRow: React.FC<{ user: User, rank: number }> = ({ user, rank }) => {
     return (
         <div className="flex items-center gap-4 bg-muted dark:bg-bg-dark p-3 rounded-xl">
             <div className={`w-10 text-center font-bold text-lg flex-shrink-0 ${rankColor}`}>
-                {isTop3 ? <FaMedal className="inline-block" /> : rank}
+                {isTop3 ? <FaMedal {...({ className: "inline-block" } as any)} /> : rank}
             </div>
             <img src={user.avatarUrl} alt={user.display_name} className="w-12 h-12 rounded-full" />
             <div className="flex-1 min-w-0">
@@ -91,7 +91,7 @@ const LeaderboardPage: React.FC = () => {
     return (
         <div className="max-w-2xl mx-auto relative">
             <div className="text-center mb-6">
-                 <FaTrophy className="mx-auto text-5xl text-mango dark:text-mango-dark mb-2" />
+                 <FaTrophy {...({ className: "mx-auto text-5xl text-mango dark:text-mango-dark mb-2" } as any)} />
                  <h1 className="text-3xl font-bold text-navy dark:text-text-primary-dark">{t.leaderboard}</h1>
             </div>
            

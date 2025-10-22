@@ -119,6 +119,7 @@ interface AppContextType {
   isOnboardingActive: boolean;
   finishOnboarding: () => void;
   skipOnboarding: () => void;
+  restartOnboarding: () => void;
   toggleReportSubscription: (reportId: string) => Promise<void>;
 
   achievementToastId: string | null;
@@ -187,6 +188,7 @@ const defaultContextValue: any = {
   isOnboardingActive: false,
   finishOnboarding: () => {},
   skipOnboarding: () => {},
+  restartOnboarding: () => {},
   comments: [],
   reportHistory: [],
   categories: {},
@@ -470,11 +472,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setImpersonationRedirectPath(redirectPath);
   }, []);
   
-  const finishOnboarding = React.useCallback(() => {
+  const finishOnboarding = React.useCallback(async () => {
     setIsOnboardingActive(false);
-    if (currentUser) handleUserUpdate({ ...currentUser, onboarding_complete: true });
-  }, [currentUser, handleUserUpdate]);
-  const skipOnboarding = React.useCallback(() => setIsOnboardingActive(false), []);
+    if (currentUser) {
+      // Update local state immediately
+      const updatedUser = { ...currentUser, onboarding_complete: true };
+      setCurrentUser(updatedUser);
+      
+      // Persist to backend
+      try {
+        await api.updateCurrentUser({ onboarding_complete: true });
+      } catch (error) {
+        console.error('Failed to save onboarding completion:', error);
+      }
+    }
+  }, [currentUser]);
+  
+  const skipOnboarding = React.useCallback(async () => {
+    setIsOnboardingActive(false);
+    if (currentUser) {
+      // Update local state immediately
+      const updatedUser = { ...currentUser, onboarding_complete: true };
+      setCurrentUser(updatedUser);
+      
+      // Persist to backend
+      try {
+        await api.updateCurrentUser({ onboarding_complete: true });
+      } catch (error) {
+        console.error('Failed to save onboarding skip:', error);
+      }
+    }
+  }, [currentUser]);
+  
+  const restartOnboarding = React.useCallback(() => {
+    setIsOnboardingActive(true);
+  }, []);
   
   const signup = React.useCallback(async (data, options) => {
     if (options?.upgradingFromGuest && currentUser?.is_anonymous) {
@@ -689,7 +721,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     language, theme, toggleLanguage, toggleTheme, t, reports, loading, authLoading, currentUser: effectiveCurrentUser, overrideUser, realUser, isImpersonating, exitImpersonation, notifications,
     unreadNotificationsCount: notifications.filter(n => !n.read).length,
     signup, login, loginAnonymous, logout, updateUserAvatar, submitReport, confirmReport, updateReportInState, setTempUserOverride,
-    markNotificationsAsRead, isOnboardingActive, finishOnboarding, skipOnboarding, toggleReportSubscription, achievementToastId,
+    markNotificationsAsRead, isOnboardingActive, finishOnboarding, skipOnboarding, restartOnboarding, toggleReportSubscription, achievementToastId,
     clearAchievementToast, comments, reportHistory, fetchComments, addComment, fetchReportHistory, mapCenter, mapZoom,
     setMapView, mapTargetLocation, flyToLocation, clearMapTarget, activeCategories, toggleCategory, setCategories: setCategoriesFilter,
     clearCategories, activeStatuses, toggleStatus, setStatuses, clearStatuses, activeTimeFilter, setTimeFilter: setActiveTimeFilter,
@@ -700,7 +732,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }), [
     language, theme, toggleLanguage, toggleTheme, t, reports, loading, authLoading, effectiveCurrentUser, overrideUser, realUser, isImpersonating, exitImpersonation, notifications,
     signup, login, loginAnonymous, logout, updateUserAvatar, submitReport, confirmReport, updateReportInState, setTempUserOverride,
-    markNotificationsAsRead, isOnboardingActive, finishOnboarding, skipOnboarding, toggleReportSubscription, achievementToastId,
+    markNotificationsAsRead, isOnboardingActive, finishOnboarding, skipOnboarding, restartOnboarding, toggleReportSubscription, achievementToastId,
     clearAchievementToast, comments, reportHistory, fetchComments, addComment, fetchReportHistory, mapCenter, mapZoom,
     setMapView, mapTargetLocation, flyToLocation, clearMapTarget, activeCategories, toggleCategory, setCategoriesFilter,
     clearCategories, activeStatuses, toggleStatus, setStatuses, clearStatuses, activeTimeFilter, setActiveTimeFilter,

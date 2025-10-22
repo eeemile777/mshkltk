@@ -272,24 +272,26 @@ const Step3Location: React.FC<{
                 <p className="text-lg text-text-secondary dark:text-text-secondary-dark">{t.privacyNotice}</p>
             </div>
 
-            <div className="relative z-0 w-full rounded-2xl overflow-hidden shadow-lg bg-muted dark:bg-bg-dark flex-shrink-0" style={{ height: 280 }}>
-                <InteractiveMap 
-                    reports={reports}
-                    isDraggablePinVisible={true}
-                    draggablePinPosition={reportData.location}
-                    onDraggablePinDragStart={() => {
-                        userHasManuallySetLocation.current = true;
-                    }}
-                    onDraggablePinMove={(position) => {
-                        updateReportData({ location: position, municipality: '' });
-                    }}
-                    initialCenter={reportData.location || undefined}
-                    initialZoom={15}
-                    hideUserLocationMarker={true}
-                />
-                <button type="button" onClick={() => handleUseCurrentLocation(false)} className="absolute top-4 right-4 z-[1000] flex items-center gap-2 px-3 py-2 text-sm font-semibold text-teal dark:text-teal-dark bg-card dark:bg-surface-dark rounded-full shadow-lg hover:scale-105 transition-transform">
-                <FaLocationDot />
-                {t.useCurrentLocation}
+            <div className="relative w-full flex-shrink-0" style={{ height: 280 }}>
+                <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-lg bg-muted dark:bg-bg-dark">
+                    <InteractiveMap 
+                        reports={reports}
+                        isDraggablePinVisible={true}
+                        draggablePinPosition={reportData.location}
+                        onDraggablePinDragStart={() => {
+                            userHasManuallySetLocation.current = true;
+                        }}
+                        onDraggablePinMove={(position) => {
+                            updateReportData({ location: position, municipality: '' });
+                        }}
+                        initialCenter={reportData.location || undefined}
+                        initialZoom={15}
+                        hideUserLocationMarker={true}
+                    />
+                </div>
+                <button type="button" onClick={() => handleUseCurrentLocation(false)} className="absolute top-4 right-4 z-[500] flex items-center gap-2 px-3 py-2 text-sm font-semibold text-teal dark:text-teal-dark bg-card dark:bg-surface-dark rounded-full shadow-lg hover:scale-105 transition-transform">
+                    <FaLocationDot {...({} as any)} />
+                    {t.useCurrentLocation}
                 </button>
             </div>
             

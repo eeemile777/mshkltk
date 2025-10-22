@@ -2,7 +2,7 @@ import * as React from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { PATHS, STATUS_COLORS, BADGES } from '../constants';
-import { FaMoon, FaSun, FaGlobe, FaTrophy, FaArrowRightFromBracket, FaCircleExclamation, FaClockRotateLeft, FaRankingStar, FaCamera } from 'react-icons/fa6';
+import { FaMoon, FaSun, FaGlobe, FaTrophy, FaArrowRightFromBracket, FaCircleExclamation, FaClockRotateLeft, FaRankingStar, FaCamera, FaCirclePlay } from 'react-icons/fa6';
 import { Theme, Report, ReportSeverity } from '../types';
 import { ProfileSkeleton } from '../components/SkeletonLoader';
 import { getAvatarUrl } from '../data/mockImages';
@@ -44,7 +44,7 @@ const ReportListItem: React.FC<{ report: Report }> = ({ report }) => {
                     )}
                     {report.isPending && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg" title={t.pending_sync}>
-                            <FaClockRotateLeft className="text-white h-6 w-6" />
+                            <FaClockRotateLeft {...({} as any)} className="text-white h-6 w-6" />
                         </div>
                     )}
                 </div>
@@ -70,7 +70,7 @@ const ReportListItem: React.FC<{ report: Report }> = ({ report }) => {
 
 
 const ProfilePage: React.FC = () => {
-  const { currentUser, reports, t, toggleTheme, theme, toggleLanguage, logout, searchQuery, updateUserAvatar, language } = React.useContext(AppContext);
+  const { currentUser, reports, t, toggleTheme, theme, toggleLanguage, logout, searchQuery, updateUserAvatar, language, restartOnboarding } = React.useContext(AppContext);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = React.useState<ActiveTab>('my_reports');
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
@@ -97,6 +97,13 @@ const ProfilePage: React.FC = () => {
   const handleSignUpToSave = () => {
     // Pass a state to signal the signup page that we are upgrading an account
     navigate(PATHS.AUTH_SIGNUP, { state: { upgrading: true } });
+  };
+  
+  const handleReplayTutorial = () => {
+    // Start the onboarding tour
+    restartOnboarding();
+    // Navigate to the map page where the tour happens
+    navigate(PATHS.MAP);
   };
   
   const applySearchFilter = (report: Report) => {
@@ -144,7 +151,7 @@ const ProfilePage: React.FC = () => {
 
               {currentUser.is_anonymous && (
                 <div className="bg-mango/20 dark:bg-mango-dark/20 text-mango-dark dark:text-mango-dark p-4 rounded-xl mb-6 flex flex-col sm:flex-row items-center gap-4">
-                    <FaCircleExclamation className="h-8 w-8 flex-shrink-0"/>
+                    <FaCircleExclamation {...({} as any)} className="h-8 w-8 flex-shrink-0"/>
                     <div className="flex-grow text-center sm:text-left">
                         <h3 className="font-bold">{t.youAreGuest}</h3>
                         <p className="text-sm">{t.progressNotSaved}</p>
@@ -225,19 +232,25 @@ const ProfilePage: React.FC = () => {
                     <div className="flex items-center justify-between">
                         <label className="font-medium text-text-secondary dark:text-text-secondary-dark">{t.darkMode}</label>
                         <button onClick={toggleTheme} className="p-2 rounded-full bg-muted dark:bg-bg-dark text-text-primary dark:text-text-primary-dark">
-                            {theme === Theme.LIGHT ? <FaMoon/> : <FaSun/>}
+                            {theme === Theme.LIGHT ? <FaMoon {...({} as any)} /> : <FaSun {...({} as any)} />}
                         </button>
                     </div>
                     <div className="flex items-center justify-between">
                         <label className="font-medium text-text-secondary dark:text-text-secondary-dark">{t.language}</label>
                         <button onClick={toggleLanguage} className="p-2 rounded-full bg-muted dark:bg-bg-dark text-text-primary dark:text-text-primary-dark">
-                            <FaGlobe/>
+                            <FaGlobe {...({} as any)} />
+                        </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <label className="font-medium text-text-secondary dark:text-text-secondary-dark">{t.replayTutorial}</label>
+                        <button onClick={handleReplayTutorial} className="p-2 rounded-full bg-muted dark:bg-bg-dark text-teal dark:text-teal-dark">
+                            <FaCirclePlay {...({} as any)} />
                         </button>
                     </div>
                       <div className="flex items-center justify-between">
                         <label className="font-medium text-text-secondary dark:text-text-secondary-dark">{t.logout}</label>
                         <button onClick={handleLogout} className="p-2 rounded-full bg-muted dark:bg-bg-dark text-coral dark:text-coral-dark">
-                            <FaArrowRightFromBracket/>
+                            <FaArrowRightFromBracket {...({} as any)} />
                         </button>
                     </div>
                 </div>

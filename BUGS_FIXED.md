@@ -122,26 +122,71 @@ After page refresh, please verify:
 
 ### 🐛 Bug #6: Draggable Pin Not Visible in Location Step
 **Location:** Report Wizard > Step 3 (Location)  
-**Symptom:** No draggable pin visible on the map, users can't select a location  
-**Root Cause:** 
-- The draggable pin only renders when `reportData.location` exists
-- Initially `reportData.location` is `null`
-- Geolocation request takes time to complete
-- During this time, no pin was visible
+**Symptom:** No draggable pin visible on the map even though it was supposed to be there  
+**Root Cause (ACTUAL):** 
+- The draggable pin was using Tailwind CSS classes (`bg-teal`, `rounded-full`, etc.)
+- These classes were in a dynamically generated HTML string inside a Leaflet divIcon
+- **Tailwind classes don't work in dynamic HTML strings** - they need to be processed at build time
+- The pin element was rendering but was invisible because the styles weren't applied
 
-**Fix Applied:**
+**First Attempted Fix (INCOMPLETE):**
 - Set a default location (Beirut: [33.8938, 35.5018]) immediately when component loads
-- Then request user's actual location via geolocation
-- Pin appears instantly, then smoothly updates to user's real location
-- Benefits:
-  - Instant pin visibility
-  - User can immediately start dragging
-  - Better UX than waiting for geolocation
+- This ensured `reportData.location` was set, but **didn't fix the visibility issue**
+
+**Real Fix Applied:**
+- Replaced all Tailwind classes with **inline CSS styles** in the pin HTML
+- Changed `class="bg-teal rounded-full"` to `style="background-color: #14B8A6; border-radius: 50%;"`
+- Added inline `@keyframes` animation for the pulsing effect
+- Now the pin is styled correctly with inline CSS that works in dynamic HTML
 
 **Files Modified:**
-- `pages/report/Step3_Location.tsx` (added default location on mount)
+- `pages/report/Step3_Location.tsx` (added default location on mount) - PARTIAL FIX
+- `components/InteractiveMap.tsx` (replaced Tailwind with inline styles in pin icon) - REAL FIX
+
+**Status:** ✅ FIXED (FOR REAL THIS TIME)
+
+---
+
+### 🐛 Bug #7: Onboarding Tour Shows Every Time
+**Location:** Map Page  
+**Symptom:** Onboarding tour appears every time user opens the app, even after completing it  
+**Root Cause:** 
+- `finishOnboarding()` and `skipOnboarding()` called deprecated `setCurrentUser()` which was a no-op
+- The `onboarding_complete: true` flag was only updated in local state
+- Never persisted to the backend database
+- On page refresh, backend returned `onboarding_complete: false` again
+
+**Fix Applied:**
+- Changed `finishOnboarding()` to call `api.updateCurrentUser({ onboarding_complete: true })`
+- Changed `skipOnboarding()` to also persist to backend
+- Both functions now:
+  1. Update local state immediately (instant UI feedback)
+  2. Send `PATCH /api/users/me` to backend (persist to database)
+  3. Add error handling for failed API calls
+- Made both functions `async` to handle the API call properly
+
+**Files Modified:**
+- `contexts/AppContext.tsx` (updated finishOnboarding and skipOnboarding functions)
 
 **Status:** ✅ FIXED
+
+---
+
+### ✨ Feature #1: Replay Tutorial Button
+**Location:** Profile Page > Settings  
+**Feature Request:** Add a button to restart the onboarding tour if user wants to see it again  
+**Implementation:**
+- Added `restartOnboarding()` function to `AppContext` that sets `isOnboardingActive: true`
+- Added "Replay Tutorial" button in Profile > Settings section
+- Button navigates to Map page and starts the tour automatically
+- Added translations in both English and Arabic
+
+**Files Modified:**
+- `contexts/AppContext.tsx` (added restartOnboarding function)
+- `pages/ProfilePage.tsx` (added replay button and handler)
+- `constants.ts` (added replayTutorial translations)
+
+**Status:** ✅ IMPLEMENTED
 
 ---
 

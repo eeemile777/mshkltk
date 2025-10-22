@@ -6,6 +6,14 @@ import L from 'leaflet';
 import 'leaflet.markercluster';
 import 'leaflet.heat';
 
+// Disable default Leaflet icon (we use custom icons everywhere)
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconUrl: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==', // 1x1 transparent gif
+    iconRetinaUrl: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
+    shadowUrl: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
+});
+
 import { AppContext } from '../contexts/AppContext';
 import { Report, Theme, TimeFilter, ReportCategory, ReportSeverity, DynamicCategory } from '../types';
 import { PATHS, TILE_URLS, TILE_ATTRIBUTION, CATEGORIES } from '../constants';
@@ -329,6 +337,12 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         const heatData: [number, number, number][] = [];
         const markers: L.Marker[] = [];
 
+        // CRITICAL FIX: Disable heatmap when draggable pin is visible to prevent crashes
+        if (isDraggablePinVisible) {
+            // Only show report markers, not heatmap
+            heatLayer.setLatLngs([]);
+        }
+
         filteredReports.forEach(report => {
             const icon = createCategoryIcon(report.category, theme, effectiveCategories);
             const marker = L.marker([report.lat, report.lng], {
@@ -358,13 +372,19 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             });
             
             markers.push(marker);
-            heatData.push([report.lat, report.lng, report.confirmations_count]);
+            if (!isDraggablePinVisible) {
+                heatData.push([report.lat, report.lng, report.confirmations_count]);
+            }
         });
         
         (clusterGroup as any).addLayers(markers);
-        heatLayer.setLatLngs(heatData);
+        
+        // Only update heatmap if draggable pin is not visible
+        if (!isDraggablePinVisible) {
+            heatLayer.setLatLngs(heatData);
+        }
 
-    }, [filteredReports, theme, t, navigate, reportPathPrefix, language, effectiveCategories]);
+    }, [filteredReports, theme, t, navigate, reportPathPrefix, language, effectiveCategories, isDraggablePinVisible]);
 
     // Fly-to Controller for subsequent clicks when map is already mounted
     React.useEffect(() => {
@@ -457,23 +477,30 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         }
 
         if (isDraggablePinVisible && !draggableMarkerRef.current && draggablePinPosition) {
-             const pinIconHtml = `
-                <div class="relative flex justify-center items-center">
-                    <div class="absolute w-12 h-12 bg-teal/30 rounded-full animate-pulse-dot"></div>
-                    <div class="w-6 h-6 bg-teal rounded-full ring-4 ring-white dark:ring-surface-dark shadow-lg"></div>
-                </div>`;
-            const pinIcon = L.divIcon({
-                html: pinIconHtml,
-                className: '',
-                iconSize: [48, 48],
-                iconAnchor: [24, 24],
+            console.log('🎯 Creating draggable marker at:', draggablePinPosition);
+            
+            // Create a simple, visible custom icon using divIcon
+            const customIcon = L.divIcon({
+                className: '', // No class to avoid any CSS conflicts
+                html: `<div style="
+                    width: 30px;
+                    height: 30px;
+                    background: #00BFA6;
+                    border: 3px solid white;
+                    border-radius: 50%;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                    cursor: move;
+                "></div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15],
             });
-
+            
             const marker = L.marker(draggablePinPosition, {
                 draggable: true,
-                icon: pinIcon,
-                zIndexOffset: 2000,
+                icon: customIcon,
             }).addTo(map);
+            
+            console.log('✅ Custom draggable marker added to map');
 
             marker.on('dragstart', () => {
                 isPinDraggingRef.current = true;

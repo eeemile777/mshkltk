@@ -36,6 +36,20 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // NEVER cache API requests - always go to network
+  if (url.pathname.startsWith('/api/') || url.origin.includes(':3001')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // NEVER cache chrome-extension or other non-http(s) schemes
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -44,25 +58,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first strategy for all other requests (assets, API calls etc.)
+  // Cache-first strategy for static assets only (CSS, JS, images, fonts)
   event.respondWith(
-    fetch(event.request)
-      .then(networkResponse => {
-        // Check for a valid response to cache
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseToCache);
-          });
+    caches.match(event.request)
+      .then(cachedResponse => {
+        if (cachedResponse) {
+          return cachedResponse;
         }
-        return networkResponse;
-      })
-      .catch(() => {
-        // If network fails, fall back to cache
-        return caches.match(event.request).then(cachedResponse => {
-          // If the request is in the cache, return it. Otherwise, the fetch will fail.
-          return cachedResponse; 
-        });
+        return fetch(event.request)
+          .then(networkResponse => {
+            // Only cache successful responses for static assets
+            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME).then(cache => {
+                cache.put(event.request, responseToCache);
+              }).catch(err => {
+                console.warn('Failed to cache:', err);
+              });
+            }
+            return networkResponse;
+          });
       })
   );
 });

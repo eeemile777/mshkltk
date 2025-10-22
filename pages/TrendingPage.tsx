@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { Report, ReportSeverity } from '../types';
-import * as api from '../services/mockApi';
+import * as api from '../services/api';
 import { Link } from 'react-router-dom';
 import { PATHS } from '../constants';
 import { FaCircleCheck } from 'react-icons/fa6';

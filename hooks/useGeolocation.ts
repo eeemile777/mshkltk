@@ -52,13 +52,11 @@ const useGeolocation = (options: PositionOptions = {}) => {
       }
     };
 
+    // Only get position once, don't watch continuously
     navigator.geolocation.getCurrentPosition(onEvent, onEventError, options);
-
-    const watchId = navigator.geolocation.watchPosition(onEvent, onEventError, options);
 
     return () => {
       isMounted = false;
-      navigator.geolocation.clearWatch(watchId);
     };
   }, [options]);
 

@@ -10,7 +10,7 @@ import ShareModal from '../components/ShareModal';
 import { ReportDetailsSkeleton, Shimmer } from '../components/SkeletonLoader';
 import { createCategoryIcon } from '../utils/mapUtils';
 import Lightbox from '../components/Lightbox';
-import * as api from '../services/mockApi';
+import * as api from '../services/api';
 
 const SeverityIndicator: React.FC<{ severity: ReportSeverity; className?: string }> = ({ severity, className = '' }) => {
     const severityMap = {
@@ -125,7 +125,7 @@ const StatusTimeline: React.FC<{ report: Report }> = ({ report }) => {
     const getStatusIcon = (status: ReportStatus) => {
         switch (status) {
             case ReportStatus.New: return <FaFlag />;
-            case ReportStatus.InProgress: return <FaSpinner className="animate-spin" />;
+            case ReportStatus.InProgress: return <FaSpinner {...({ className: "animate-spin" } as any)} />;
             case ReportStatus.Resolved: return <FaCircleCheck />;
             default: return <FaClockRotateLeft />;
         }
@@ -134,7 +134,7 @@ const StatusTimeline: React.FC<{ report: Report }> = ({ report }) => {
     if (report.isPending) {
         return (
             <div className="bg-muted dark:bg-bg-dark p-6 rounded-2xl h-full flex flex-col items-center justify-center text-center">
-                <FaClockRotateLeft className="text-4xl text-text-secondary dark:text-text-secondary-dark mb-4"/>
+                <FaClockRotateLeft {...({ className: "text-4xl text-text-secondary dark:text-text-secondary-dark mb-4" } as any)} />
                 <h3 className="text-lg font-bold text-navy dark:text-text-primary-dark mb-2">{t.statusTimeline}</h3>
                 <p className="text-sm text-text-secondary dark:text-text-secondary-dark">{t.pending_sync_message}</p>
             </div>
@@ -228,7 +228,7 @@ const CommentsSection: React.FC<{ report: Report }> = ({ report }) => {
                         className="flex-grow p-2 bg-card dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-full resize-none focus:ring-2 focus:ring-teal dark:focus:ring-teal-dark"
                     />
                     <button type="submit" disabled={isPosting || !newComment.trim()} className="p-3 bg-teal text-white rounded-full disabled:bg-gray-400">
-                        {isPosting ? <FaSpinner className="animate-spin" /> : <FaPaperPlane />}
+                        {isPosting ? <FaSpinner {...({ className: "animate-spin" } as any)} /> : <FaPaperPlane />}
                     </button>
                 </form>
             )}
@@ -301,7 +301,7 @@ const CreatorInfo: React.FC<{ report: Report }> = ({ report }) => {
 
     React.useEffect(() => {
         setLoading(true);
-        api.fetchUserById(report.created_by)
+        api.getUserById(report.created_by)
             .then(user => setCreator(user || null))
             .finally(() => setLoading(false));
     }, [report.created_by]);
@@ -438,7 +438,7 @@ const ReportDetailsPage: React.FC = () => {
       </button>
       {report.isPending && (
           <div className="bg-mango/20 dark:bg-mango-dark/20 text-mango-dark dark:text-mango-dark p-4 rounded-xl mb-4 flex items-center gap-3 animate-pulse">
-              <FaClockRotateLeft className="h-5 w-5"/>
+              <FaClockRotateLeft {...({ className: "h-5 w-5" } as any)} />
               <p className="font-semibold">{t.pending_sync_message}</p>
           </div>
       )}
@@ -483,15 +483,15 @@ const ReportDetailsPage: React.FC = () => {
                 <button onClick={handleViewOnMap} className="w-full text-left p-3 bg-muted dark:bg-bg-dark rounded-xl hover:shadow-md transition-shadow space-y-2">
                     <p className="text-text-secondary dark:text-text-secondary-dark">{report.area}</p>
                     <div className="text-sm text-text-secondary dark:text-text-secondary-dark flex items-center gap-2">
-                        <FaCity className="flex-shrink-0 h-4 w-4 text-teal dark:text-teal-dark" />
+                        <FaCity {...({ className: "flex-shrink-0 h-4 w-4 text-teal dark:text-teal-dark" } as any)} />
                         <span className="capitalize">
                             <span className="font-bold text-navy dark:text-text-primary-dark">{t.municipality}: </span>{report.municipality}
                         </span>
                     </div>
                      <div className="text-sm text-text-secondary dark:text-text-secondary-dark flex items-center gap-2">
-                        <FaGlobe className="flex-shrink-0 h-4 w-4 text-teal dark:text-teal-dark" />
+                        <FaGlobe {...({ className: "flex-shrink-0 h-4 w-4 text-teal dark:text-teal-dark" } as any)} />
                         <span className="font-mono">
-                            Lat: {report.lat.toFixed(5)}, Lng: {report.lng.toFixed(5)}
+                            Lat: {parseFloat(report.lat).toFixed(5)}, Lng: {parseFloat(report.lng).toFixed(5)}
                         </span>
                     </div>
                 </button>
@@ -499,7 +499,7 @@ const ReportDetailsPage: React.FC = () => {
                   <MiniMap report={report} />
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <div className="p-4 bg-white/80 dark:bg-black/80 rounded-full text-navy dark:text-white backdrop-blur-sm">
-                      <FaMapLocationDot className="h-8 w-8" />
+                      <FaMapLocationDot {...({ className: "h-8 w-8" } as any)} />
                     </div>
                   </div>
                 </div>

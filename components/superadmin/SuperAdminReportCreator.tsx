@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { AppContext } from '../../contexts/AppContext';
 import ReportFormPage from '../../pages/ReportFormPage';
-import * as api from '../../services/mockApi';
+import * as api from '../../services/api';
 import Spinner from '../Spinner';
 import { PATHS } from '../../constants';
 

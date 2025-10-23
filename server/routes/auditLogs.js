@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db/connection');
+const { query: queryDb } = require('../db/connection');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 
 /**
@@ -54,14 +54,17 @@ router.get('/', authMiddleware, requireRole('super_admin'), async (req, res) => 
 
     let query = `
       SELECT 
-        id,
-        admin_id,
-        action,
-        entity_type,
-        entity_id,
-        details,
-        timestamp
-      FROM audit_logs
+        al.id,
+        al.admin_id,
+        al.action,
+        al.entity_type,
+        al.entity_id,
+        al.details,
+        al.timestamp,
+        u.display_name,
+        u.role
+      FROM audit_logs al
+      LEFT JOIN users u ON al.admin_id = u.id
       WHERE 1=1
     `;
     
@@ -69,23 +72,37 @@ router.get('/', authMiddleware, requireRole('super_admin'), async (req, res) => 
     let paramCount = 1;
 
     if (entity_type) {
-      query += ` AND entity_type = $${paramCount}`;
+      query += ` AND al.entity_type = $${paramCount}`;
       params.push(entity_type);
       paramCount++;
     }
 
     if (actor_id) {
-      query += ` AND admin_id = $${paramCount}`;
+      query += ` AND al.admin_id = $${paramCount}`;
       params.push(actor_id);
       paramCount++;
     }
 
-    query += ` ORDER BY timestamp DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    query += ` ORDER BY al.timestamp DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
     params.push(parseInt(limit), parseInt(offset));
 
-    const result = await pool.query(query, params);
+    const result = await queryDb(query, params);
 
-    res.json(result.rows);
+    // Transform to match frontend expectations
+    const logs = result.rows.map(row => ({
+      id: row.id,
+      actorName: row.display_name || 'Unknown User',
+      actorRole: row.role || 'unknown',
+      message: row.action || 'Action performed',
+      timestamp: row.timestamp,
+      // Include original fields for reference
+      actionType: row.action,
+      entityType: row.entity_type,
+      entityId: row.entity_id,
+      details: row.details
+    }));
+
+    res.json({ logs });
   } catch (error) {
     console.error('Error fetching audit logs:', error);
     res.status(500).json({ error: 'Failed to fetch audit logs' });
@@ -145,7 +162,7 @@ router.get('/entity/:type/:id', authMiddleware, async (req, res) => {
       ORDER BY timestamp DESC
     `;
 
-    const result = await pool.query(query, [type, id]);
+    const result = await queryDb(query, [type, id]);
 
     res.json(result.rows);
   } catch (error) {
@@ -166,7 +183,7 @@ async function createAuditLog(adminId, action, entityType, entityId, details = n
       RETURNING *
     `;
     
-    const result = await pool.query(query, [
+    const result = await queryDb(query, [
       adminId,
       action,
       entityType,

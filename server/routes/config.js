@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db/connection');
+const { query, pool: dbPool } = require('../db/connection');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 
 /**
@@ -27,8 +27,8 @@ const { authMiddleware, requireRole } = require('../middleware/auth');
  */
 router.get('/categories', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM dynamic_categories ORDER BY name_en ASC'
+    const result = await query(
+      'SELECT * FROM dynamic_categories ORDER BY label_en ASC'
     );
     res.json({ categories: result.rows });
   } catch (error) {
@@ -53,15 +53,15 @@ router.get('/categories', async (req, res) => {
  *           schema:
  *             type: object
  *             required:
- *               - name_en
- *               - name_ar
+ *               - label_en
+ *               - label_ar
  *               - icon
  *               - color
  *             properties:
- *               name_en:
+ *               label_en:
  *                 type: string
  *                 example: "Public Transport"
- *               name_ar:
+ *               label_ar:
  *                 type: string
  *                 example: "النقل العام"
  *               icon:
@@ -87,17 +87,17 @@ router.get('/categories', async (req, res) => {
  */
 router.post('/categories', authMiddleware, requireRole('super_admin'), async (req, res) => {
   try {
-    const { name_en, name_ar, icon, color, is_active = true } = req.body;
+    const { label_en, label_ar, icon, color, is_active = true } = req.body;
 
-    if (!name_en || !name_ar || !icon || !color) {
+    if (!label_en || !label_ar || !icon || !color) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO dynamic_categories (name_en, name_ar, icon, color, is_active, created_at)
+    const result = await query(
+      `INSERT INTO dynamic_categories (label_en, label_ar, icon, color, is_active, created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())
        RETURNING *`,
-      [name_en, name_ar, icon, color, is_active]
+      [label_en, label_ar, icon, color, is_active]
     );
 
     res.status(201).json(result.rows[0]);
@@ -129,9 +129,9 @@ router.post('/categories', authMiddleware, requireRole('super_admin'), async (re
  *           schema:
  *             type: object
  *             properties:
- *               name_en:
+ *               label_en:
  *                 type: string
- *               name_ar:
+ *               label_ar:
  *                 type: string
  *               icon:
  *                 type: string
@@ -150,19 +150,19 @@ router.post('/categories', authMiddleware, requireRole('super_admin'), async (re
 router.put('/categories/:id', authMiddleware, requireRole('super_admin'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { name_en, name_ar, icon, color, is_active } = req.body;
+    const { label_en, label_ar, icon, color, is_active } = req.body;
 
     const updates = [];
     const values = [];
     let paramCount = 1;
 
-    if (name_en !== undefined) {
-      updates.push(`name_en = $${paramCount++}`);
-      values.push(name_en);
+    if (label_en !== undefined) {
+      updates.push(`label_en = $${paramCount++}`);
+      values.push(label_en);
     }
-    if (name_ar !== undefined) {
-      updates.push(`name_ar = $${paramCount++}`);
-      values.push(name_ar);
+    if (label_ar !== undefined) {
+      updates.push(`label_ar = $${paramCount++}`);
+      values.push(label_ar);
     }
     if (icon !== undefined) {
       updates.push(`icon = $${paramCount++}`);
@@ -182,7 +182,7 @@ router.put('/categories/:id', authMiddleware, requireRole('super_admin'), async 
     }
 
     values.push(id);
-    const result = await pool.query(
+    const result = await query(
       `UPDATE dynamic_categories SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
       values
     );
@@ -225,7 +225,7 @@ router.delete('/categories/:id', authMiddleware, requireRole('super_admin'), asy
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
+    const result = await query(
       'DELETE FROM dynamic_categories WHERE id = $1 RETURNING *',
       [id]
     );
@@ -265,8 +265,8 @@ router.delete('/categories/:id', authMiddleware, requireRole('super_admin'), asy
  */
 router.get('/badges', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM dynamic_badges ORDER BY condition_value ASC'
+    const result = await query(
+      'SELECT * FROM dynamic_badges ORDER BY requirement_value ASC'
     );
     res.json({ badges: result.rows });
   } catch (error) {
@@ -291,8 +291,8 @@ router.get('/badges', async (req, res) => {
  *           schema:
  *             type: object
  *             required:
- *               - name_en
- *               - name_ar
+ *               - label_en
+ *               - label_ar
  *               - description_en
  *               - description_ar
  *               - icon
@@ -300,10 +300,10 @@ router.get('/badges', async (req, res) => {
  *               - condition_value
  *               - points_reward
  *             properties:
- *               name_en:
+ *               label_en:
  *                 type: string
  *                 example: "Reporter Hero"
- *               name_ar:
+ *               label_ar:
  *                 type: string
  *                 example: "بطل البلاغات"
  *               description_en:
@@ -335,21 +335,21 @@ router.get('/badges', async (req, res) => {
 router.post('/badges', authMiddleware, requireRole('super_admin'), async (req, res) => {
   try {
     const { 
-      name_en, name_ar, description_en, description_ar, 
+      label_en, label_ar, description_en, description_ar, 
       icon, condition_type, condition_value, points_reward, is_active = true 
     } = req.body;
 
-    if (!name_en || !name_ar || !description_en || !description_ar || 
+    if (!label_en || !label_ar || !description_en || !description_ar || 
         !icon || !condition_type || condition_value === undefined || points_reward === undefined) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const result = await pool.query(
+    const result = await query(
       `INSERT INTO dynamic_badges 
-       (name_en, name_ar, description_en, description_ar, icon, condition_type, condition_value, points_reward, is_active, created_at)
+       (label_en, label_ar, description_en, description_ar, icon, condition_type, condition_value, points_reward, is_active, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
        RETURNING *`,
-      [name_en, name_ar, description_en, description_ar, icon, condition_type, condition_value, points_reward, is_active]
+      [label_en, label_ar, description_en, description_ar, icon, condition_type, condition_value, points_reward, is_active]
     );
 
     res.status(201).json(result.rows[0]);
@@ -381,9 +381,9 @@ router.post('/badges', authMiddleware, requireRole('super_admin'), async (req, r
  *           schema:
  *             type: object
  *             properties:
- *               name_en:
+ *               label_en:
  *                 type: string
- *               name_ar:
+ *               label_ar:
  *                 type: string
  *               icon:
  *                 type: string
@@ -402,19 +402,19 @@ router.post('/badges', authMiddleware, requireRole('super_admin'), async (req, r
 router.put('/badges/:id', authMiddleware, requireRole('super_admin'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { name_en, name_ar, description_en, description_ar, icon, condition_value, points_reward, is_active } = req.body;
+    const { label_en, label_ar, description_en, description_ar, icon, condition_value, points_reward, is_active } = req.body;
 
     const updates = [];
     const values = [];
     let paramCount = 1;
 
-    if (name_en !== undefined) {
-      updates.push(`name_en = $${paramCount++}`);
-      values.push(name_en);
+    if (label_en !== undefined) {
+      updates.push(`label_en = $${paramCount++}`);
+      values.push(label_en);
     }
-    if (name_ar !== undefined) {
-      updates.push(`name_ar = $${paramCount++}`);
-      values.push(name_ar);
+    if (label_ar !== undefined) {
+      updates.push(`label_ar = $${paramCount++}`);
+      values.push(label_ar);
     }
     if (description_en !== undefined) {
       updates.push(`description_en = $${paramCount++}`);
@@ -446,7 +446,7 @@ router.put('/badges/:id', authMiddleware, requireRole('super_admin'), async (req
     }
 
     values.push(id);
-    const result = await pool.query(
+    const result = await query(
       `UPDATE dynamic_badges SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
       values
     );
@@ -489,7 +489,7 @@ router.delete('/badges/:id', authMiddleware, requireRole('super_admin'), async (
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
+    const result = await query(
       'DELETE FROM dynamic_badges WHERE id = $1 RETURNING *',
       [id]
     );
@@ -518,27 +518,50 @@ router.delete('/badges/:id', authMiddleware, requireRole('super_admin'), async (
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/GamificationSettings'
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                   example: "default"
+ *                 pointsRules:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "submit_report"
+ *                       points:
+ *                         type: integer
+ *                         example: 10
+ *                       description:
+ *                         type: string
+ *                         example: "For submitting a new report"
  *       500:
  *         description: Server error
  */
 router.get('/gamification', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM gamification_settings ORDER BY id DESC LIMIT 1'
+    const result = await query(
+      'SELECT * FROM gamification_settings WHERE id = $1',
+      ['default']
     );
 
     if (result.rows.length === 0) {
       // Return default settings
       return res.json({
-        points_per_report: 10,
-        points_per_confirmation: 5,
-        points_per_comment: 2,
-        points_per_resolution: 20,
+        rules: [
+          {"id": "submit_report", "points": 10, "description": "For submitting a new report"},
+          {"id": "confirm_report", "points": 3, "description": "For confirming an existing report"},
+          {"id": "earn_badge", "points": 25, "description": "Bonus for earning a new badge"},
+          {"id": "comment", "points": 2, "description": "For adding a comment to a report"}
+        ]
       });
     }
 
-    res.json(result.rows[0]);
+    res.json({
+      rules: result.rows[0].points_rules
+    });
   } catch (error) {
     console.error('Error fetching gamification settings:', error);
     res.status(500).json({ error: 'Failed to fetch settings' });
@@ -559,7 +582,28 @@ router.get('/gamification', async (req, res) => {
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/GamificationSettings'
+ *             type: object
+ *             required:
+ *               - pointsRules
+ *             properties:
+ *               pointsRules:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - id
+ *                     - points
+ *                     - description
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "submit_report"
+ *                     points:
+ *                       type: integer
+ *                       example: 10
+ *                     description:
+ *                       type: string
+ *                       example: "For submitting a new report"
  *     responses:
  *       200:
  *         description: Settings updated successfully
@@ -570,53 +614,38 @@ router.get('/gamification', async (req, res) => {
  */
 router.put('/gamification', authMiddleware, requireRole('super_admin'), async (req, res) => {
   try {
-    const { points_per_report, points_per_confirmation, points_per_comment, points_per_resolution } = req.body;
+    const { pointsRules } = req.body;
 
-    // Check if settings exist
-    const existingResult = await pool.query('SELECT id FROM gamification_settings LIMIT 1');
-
-    let result;
-    if (existingResult.rows.length === 0) {
-      // Insert new settings
-      result = await pool.query(
-        `INSERT INTO gamification_settings 
-         (points_per_report, points_per_confirmation, points_per_comment, points_per_resolution, updated_at)
-         VALUES ($1, $2, $3, $4, NOW())
-         RETURNING *`,
-        [points_per_report, points_per_confirmation, points_per_comment, points_per_resolution]
-      );
-    } else {
-      // Update existing settings
-      const updates = [];
-      const values = [];
-      let paramCount = 1;
-
-      if (points_per_report !== undefined) {
-        updates.push(`points_per_report = $${paramCount++}`);
-        values.push(points_per_report);
-      }
-      if (points_per_confirmation !== undefined) {
-        updates.push(`points_per_confirmation = $${paramCount++}`);
-        values.push(points_per_confirmation);
-      }
-      if (points_per_comment !== undefined) {
-        updates.push(`points_per_comment = $${paramCount++}`);
-        values.push(points_per_comment);
-      }
-      if (points_per_resolution !== undefined) {
-        updates.push(`points_per_resolution = $${paramCount++}`);
-        values.push(points_per_resolution);
-      }
-
-      updates.push(`updated_at = NOW()`);
-
-      result = await pool.query(
-        `UPDATE gamification_settings SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
-        [...values, existingResult.rows[0].id]
-      );
+    if (!pointsRules || !Array.isArray(pointsRules)) {
+      return res.status(400).json({ error: 'pointsRules must be an array' });
     }
 
-    res.json(result.rows[0]);
+    const result = await query(
+      `UPDATE gamification_settings 
+       SET points_rules = $1, updated_at = NOW()
+       WHERE id = 'default'
+       RETURNING *`,
+      [JSON.stringify(pointsRules)]
+    );
+
+    if (result.rows.length === 0) {
+      // Insert if doesn't exist
+      const insertResult = await query(
+        `INSERT INTO gamification_settings (id, points_rules)
+         VALUES ('default', $1)
+         RETURNING *`,
+        [JSON.stringify(pointsRules)]
+      );
+      return res.json({
+        id: insertResult.rows[0].id,
+        pointsRules: insertResult.rows[0].points_rules
+      });
+    }
+
+    res.json({
+      id: result.rows[0].id,
+      pointsRules: result.rows[0].points_rules
+    });
   } catch (error) {
     console.error('Error updating gamification settings:', error);
     res.status(500).json({ error: 'Failed to update settings' });

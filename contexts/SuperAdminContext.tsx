@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { Language, Report, User, ReportStatus, ReportCategory, ReportHistory, DynamicCategory, DynamicBadge, GamificationSettings, AuditLog } from '../types';
 import * as api from '../services/api';
-import { dbService } from '../services/db';
 
 interface SuperAdminContextType {
   currentUser: User | null;
@@ -70,11 +69,12 @@ export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   React.useEffect(() => {
     const checkSession = async () => {
       try {
-        await dbService.init(); // Make sure DB is ready
+        console.log('🔐 Checking SuperAdmin session...');
         const user = await api.getCurrentSuperAdminUser();
+        console.log('✅ SuperAdmin user found:', user);
         setCurrentUser(user);
       } catch (error) {
-        console.error("Failed to get super admin user session", error);
+        console.error("❌ Failed to get super admin user session", error);
       } finally {
         setAuthLoading(false);
       }
@@ -88,15 +88,24 @@ export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const fetchData = async () => {
         setLoading(true);
         try {
+          console.log('🔄 Fetching SuperAdmin data...');
           const [reportsData, usersData, categoriesData, badgesData, gamificationData, auditLogsData, allHistoryData] = await Promise.all([
             api.fetchReports(),
             api.listUsers(),
-            dbService.getAll<DynamicCategory>('dynamic_categories'),
-            dbService.getAll<DynamicBadge>('dynamic_badges'),
-            dbService.get<GamificationSettings>('gamification_settings', 'default'),
+            api.getDynamicCategories(),
+            api.getDynamicBadges(),
+            api.getGamificationSettings(),
             api.fetchAuditLogs(),
             api.fetchAllReportHistory(),
           ]);
+          console.log('✅ Data fetched:', { 
+            reports: reportsData?.length, 
+            users: usersData?.length, 
+            categories: categoriesData?.length,
+            badges: badgesData?.length,
+            auditLogs: auditLogsData?.length,
+            history: allHistoryData?.length 
+          });
           setAllReports(reportsData);
           setAllUsers(usersData);
           setCategories(categoriesData.sort((a, b) => a.name_en.localeCompare(b.name_en)));
@@ -105,7 +114,7 @@ export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           setAuditLogs(auditLogsData);
           setAllReportHistory(allHistoryData);
         } catch (error) {
-          console.error("Failed to fetch super admin data", error);
+          console.error("❌ Failed to fetch super admin data", error);
         } finally {
           setLoading(false);
         }
@@ -115,8 +124,9 @@ export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [currentUser, refreshKey]);
 
   const login = React.useCallback(async (data: Pick<User, 'username'> & {password: string}) => {
+    console.log('🔑 SuperAdmin logging in:', data.username);
     const user = await api.loginUser(data);
-    await api.setCurrentUser(user);
+    console.log('✅ SuperAdmin login successful:', user);
     setCurrentUser(user);
     return user;
   }, []);
@@ -222,7 +232,7 @@ export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   
   const updateGamificationSettings = React.useCallback(async (settings: GamificationSettings) => {
     if (!currentUser) return;
-    await api.updateGamificationSettings(settings, currentUser);
+    await api.updateGamificationSettings(settings);
     setGamificationSettings(settings);
     refreshData();
   }, [currentUser, refreshData]);

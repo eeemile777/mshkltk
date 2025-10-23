@@ -156,6 +156,15 @@ const getAllPortalUsers = async () => {
   return result.rows;
 };
 
+// Get ALL users (including citizens) - for Super Admin
+const getAllUsers = async () => {
+  const result = await query(
+    `SELECT * FROM users 
+     ORDER BY created_at DESC`
+  );
+  return result.rows;
+};
+
 // Delete user (anonymize their content)
 const deleteUser = async (userId) => {
   const client = await getClient();
@@ -194,6 +203,41 @@ const deleteUser = async (userId) => {
   }
 };
 
+// Award points to a user based on action
+const awardPoints = async (userId, action) => {
+  try {
+    // Fetch gamification settings
+    const settingsResult = await query(
+      'SELECT points_rules FROM gamification_settings WHERE id = $1',
+      ['default']
+    );
+
+    if (!settingsResult.rows[0]) {
+      console.log('No gamification settings found');
+      return;
+    }
+
+    const pointsRules = settingsResult.rows[0].points_rules;
+    const rule = pointsRules.find(r => r.id === action);
+
+    if (!rule || rule.points === 0) {
+      console.log(`No points rule found for action: ${action}`);
+      return;
+    }
+
+    // Award points to user
+    await query(
+      'UPDATE users SET points = points + $1 WHERE id = $2',
+      [rule.points, userId]
+    );
+
+    console.log(`✅ Awarded ${rule.points} points to user ${userId} for action: ${action}`);
+  } catch (error) {
+    console.error('Error awarding points:', error);
+    // Don't throw - points are a nice-to-have, shouldn't break main flow
+  }
+};
+
 module.exports = {
   createUser,
   findUserByUsername,
@@ -204,6 +248,8 @@ module.exports = {
   unsubscribeFromReport,
   getLeaderboard,
   awardBadge,
+  awardPoints,
   getAllPortalUsers,
+  getAllUsers,
   deleteUser,
 };

@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const { query: queryDb } = require('../db/connection');
 const {
   findUserById,
   updateUser,
   getLeaderboard,
   getAllPortalUsers,
+  getAllUsers,
   deleteUser,
 } = require('../db/queries/users');
 const { authMiddleware, requireRole } = require('../middleware/auth');
@@ -48,6 +50,124 @@ router.get('/me', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Get user profile error:', error);
     res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/leaderboard:
+ *   get:
+ *     summary: Get user leaderboard
+ *     description: Retrieve the top users by points
+ *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of users to return
+ *     responses:
+ *       200:
+ *         description: Leaderboard retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/leaderboard', async (req, res) => {
+  try {
+    const { limit = 50 } = req.query;
+    const leaderboard = await getLeaderboard(parseInt(limit));
+    res.json(leaderboard);
+  } catch (error) {
+    console.error('Get leaderboard error:', error);
+    res.status(500).json({ error: 'Failed to fetch leaderboard' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/portal/all:
+ *   get:
+ *     summary: Get all portal users
+ *     description: Retrieve all municipality portal users (super admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Portal users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       403:
+ *         description: Forbidden - super admin role required
+ *       500:
+ *         description: Server error
+ */
+router.get('/portal/all', authMiddleware, requireRole('super_admin'), async (req, res) => {
+  try {
+    const users = await getAllPortalUsers();
+
+    // Remove sensitive data
+    const sanitizedUsers = users.map(user => {
+      delete user.password_hash;
+      delete user.salt;
+      return user;
+    });
+
+    res.json(sanitizedUsers);
+  } catch (error) {
+    console.error('Get portal users error:', error);
+    res.status(500).json({ error: 'Failed to fetch portal users' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/all:
+ *   get:
+ *     summary: Get all users including citizens
+ *     description: Retrieve ALL users in the system (super admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized - authentication required
+ *       403:
+ *         description: Forbidden - super admin role required
+ *       500:
+ *         description: Server error
+ */
+router.get('/all', authMiddleware, requireRole('super_admin'), async (req, res) => {
+  try {
+    const users = await getAllUsers();
+
+    // Remove sensitive data
+    const sanitizedUsers = users.map(user => {
+      const userCopy = { ...user };
+      delete userCopy.password_hash;
+      delete userCopy.salt;
+      return userCopy;
+    });
+
+    res.json(sanitizedUsers);
+  } catch (error) {
+    console.error('Get all users error:', error);
+    res.status(500).json({ error: 'Failed to fetch all users' });
   }
 });
 
@@ -188,104 +308,6 @@ router.patch('/me', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Update user error:', error);
     res.status(500).json({ error: 'Failed to update user profile' });
-  }
-});
-
-/**
- * @swagger
- * /api/users/leaderboard:
- *   get:
- *     summary: Get leaderboard
- *     description: Retrieve top users ranked by points (no authentication required)
- *     tags: [Users]
- *     parameters:
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 50
- *         description: Maximum number of users to return
- *         example: 20
- *     responses:
- *       200:
- *         description: Leaderboard retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                   display_name:
- *                     type: string
- *                   avatar_url:
- *                     type: string
- *                   points:
- *                     type: integer
- *                   achievements:
- *                     type: array
- *                     items:
- *                       type: string
- *                   reports_count:
- *                     type: integer
- *                   reports_confirmed:
- *                     type: integer
- *       500:
- *         description: Server error
- */
-router.get('/leaderboard', async (req, res) => {
-  try {
-    const { limit = 50 } = req.query;
-    const leaderboard = await getLeaderboard(parseInt(limit));
-    res.json(leaderboard);
-  } catch (error) {
-    console.error('Get leaderboard error:', error);
-    res.status(500).json({ error: 'Failed to fetch leaderboard' });
-  }
-});
-
-/**
- * @swagger
- * /api/users/portal/all:
- *   get:
- *     summary: Get all portal users
- *     description: Retrieve all municipality portal users (super admin only)
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Portal users retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/User'
- *       401:
- *         description: Unauthorized - authentication required
- *       403:
- *         description: Forbidden - super admin role required
- *       500:
- *         description: Server error
- */
-router.get('/portal/all', authMiddleware, requireRole('super_admin'), async (req, res) => {
-  try {
-    const users = await getAllPortalUsers();
-
-    // Remove sensitive data
-    const sanitizedUsers = users.map(user => {
-      delete user.password_hash;
-      delete user.salt;
-      return user;
-    });
-
-    res.json(sanitizedUsers);
-  } catch (error) {
-    console.error('Get portal users error:', error);
-    res.status(500).json({ error: 'Failed to fetch portal users' });
   }
 });
 
@@ -484,8 +506,8 @@ router.post('/', authMiddleware, requireRole('super_admin'), async (req, res) =>
     }
 
     // Check if username already exists
-    const pool = require('../db/connection');
-    const existingUser = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    
+    const existingUser = await queryDb('SELECT id FROM users WHERE username = $1', [username]);
     if (existingUser.rows.length > 0) {
       return res.status(400).json({ error: 'Username already exists' });
     }
@@ -508,7 +530,7 @@ router.post('/', authMiddleware, requireRole('super_admin'), async (req, res) =>
       RETURNING *
     `;
 
-    const result = await pool.query(query, [
+    const result = await queryDb(query, [
       userId,
       username,
       hash,

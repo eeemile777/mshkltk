@@ -4,7 +4,6 @@ import { Language, Theme, Report, User, Notification, Badge, ReportCategory, Rep
 import { translations, BADGES, PATHS, ICON_MAP } from '../constants';
 import * as api from '../services/api';
 import L from 'leaflet';
-import { dbService } from '../services/db';
 
 
 // --- IndexedDB Helpers for Offline Support ---
@@ -318,9 +317,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             api.fetchReports(),
             api.fetchNotificationsByUserId(user.id),
             getPendingReports(),
-            dbService.getAll<DynamicCategory>('dynamic_categories'),
-            dbService.getAll<DynamicBadge>('dynamic_badges'),
-            dbService.get<GamificationSettings>('gamification_settings', 'default'),
+            api.getDynamicCategories(),
+            api.getDynamicBadges(),
+            api.getGamificationSettings(),
         ]);
         
         const categoriesObject = dynamicCategoriesData.reduce((acc, cat) => {
@@ -401,7 +400,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       try {
         await initDB();
-        await dbService.init();
         navigator.serviceWorker?.addEventListener('message', handleSWMessage);
         const user = await api.getCurrentUser();
         setCurrentUser(user);

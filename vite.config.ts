@@ -16,8 +16,24 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          '@': path.resolve(__dirname, '.'),
+          '@': path.resolve(__dirname, './src'),
         }
+      },
+      optimizeDeps: {
+        include: [
+          'react',
+          'react-dom',
+          'react-router-dom',
+          'leaflet',
+          'leaflet.markercluster', 
+          'leaflet.heat',
+          '@google/genai',
+          'canvas-confetti',
+          'chart.js',
+          'react-chartjs-2',
+          'recharts',
+          'react-icons'
+        ]
       }
     };
 });

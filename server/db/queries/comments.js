@@ -1,4 +1,5 @@
 const { query } = require('../connection');
+const { awardPoints } = require('./users');
 
 /**
  * Comment Query Functions
@@ -15,6 +16,9 @@ const createComment = async (commentData) => {
      RETURNING *`,
     [report_id, user_id, text]
   );
+
+  // Award points for commenting
+  await awardPoints(user_id, 'comment');
 
   return result.rows[0];
 };

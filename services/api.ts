@@ -287,6 +287,11 @@ export const getAllPortalUsers = async (): Promise<any[]> => {
   return users.map(transformUser);
 };
 
+export const getAllUsers = async (): Promise<any[]> => {
+  const users = await apiRequest('/users/all');
+  return users.map(transformUser);
+};
+
 export const deleteUser = async (userId: string): Promise<any> => {
   return apiRequest(`/users/${userId}`, { method: 'DELETE' });
 };
@@ -492,7 +497,7 @@ export const getCurrentPortalUser = async (): Promise<any> => {
  * List all users (Super Admin only)
  */
 export const listUsers = async (): Promise<any[]> => {
-  return await getAllPortalUsers();
+  return await getAllUsers(); // Changed from getAllPortalUsers to get ALL users including citizens
 };
 
 /**
@@ -794,10 +799,7 @@ export const getGamificationSettings = async (): Promise<any> => {
  * Update gamification settings (Super Admin only)
  */
 export const updateGamificationSettings = async (settings: {
-  points_per_report?: number;
-  points_per_confirmation?: number;
-  points_per_comment?: number;
-  points_per_resolution?: number;
+  pointsRules: Array<{ id: string; points: number; description: string }>;
 }): Promise<any> => {
   return apiRequest('/config/gamification', {
     method: 'PUT',

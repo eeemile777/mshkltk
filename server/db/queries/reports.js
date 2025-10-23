@@ -1,4 +1,5 @@
 const { query, getClient } = require('../connection');
+const { awardPoints } = require('./users');
 
 /**
  * Report Query Functions
@@ -44,6 +45,9 @@ const createReport = async (reportData) => {
     'UPDATE users SET reports_count = reports_count + 1 WHERE id = $1',
     [created_by]
   );
+
+  // Award points for submitting a report
+  await awardPoints(created_by, 'submit_report');
 
   return result.rows[0];
 };
@@ -149,6 +153,16 @@ const confirmReport = async (reportId, userId) => {
   try {
     await client.query('BEGIN');
 
+    // Check if user is trying to confirm their own report
+    const reportCheck = await client.query(
+      'SELECT created_by FROM reports WHERE id = $1',
+      [reportId]
+    );
+
+    if (reportCheck.rows[0]?.created_by === userId) {
+      throw new Error('You cannot confirm your own report');
+    }
+
     // Check if user already confirmed this report
     const userCheck = await client.query(
       'SELECT confirmed_report_ids FROM users WHERE id = $1',
@@ -175,6 +189,10 @@ const confirmReport = async (reportId, userId) => {
     );
 
     await client.query('COMMIT');
+    
+    // Award points for confirming a report (outside transaction to not block on error)
+    await awardPoints(userId, 'confirm_report');
+    
     return reportResult.rows[0];
   } catch (error) {
     await client.query('ROLLBACK');

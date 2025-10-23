@@ -1,5 +1,4 @@
 import { Report, User, Notification, Comment, ReportHistory } from '../types';
-import { mockReports, mockNotifications, mockComments, mockReportHistory } from '../data/mockData';
 import { generateSalt, hashPassword } from './crypto';
 import { initialCategories, initialBadges, initialGamificationSettings } from '../data/dynamicConfig';
 
@@ -90,10 +89,10 @@ export const dbService = {
     
     const dataToSeed: { [storeName: string]: any[] } = {
         users: allInitialUsers,
-        reports: mockReports,
-        notifications: mockNotifications,
-        comments: mockComments,
-        reportHistory: mockReportHistory,
+        reports: [], // Using real backend data now
+        notifications: [], // Using real backend data now
+        comments: [], // Using real backend data now
+        reportHistory: [], // Using real backend data now
         dynamic_categories: initialCategories,
         dynamic_badges: initialBadges,
         gamification_settings: [initialGamificationSettings],

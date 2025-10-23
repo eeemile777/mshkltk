@@ -1,57 +1,57 @@
 import * as React from 'react';
 import { HashRouter, MemoryRouter, Routes, Route, Outlet, Navigate, useNavigate } from 'react-router-dom';
-import { AppProvider, AppContext } from './src/contexts/AppContext';
-import { PortalProvider } from './src/contexts/PortalContext';
-import { SuperAdminProvider } from './src/contexts/SuperAdminContext';
+import { AppProvider, AppContext } from './contexts/AppContext';
+import { PortalProvider } from './contexts/PortalContext';
+import { SuperAdminProvider } from './contexts/SuperAdminContext';
 
-import Layout from './src/components/Layout';
-import AuthLayout from './src/components/AuthLayout';
-import AuthGate from './src/components/AuthGate';
-import LandingGate from './src/components/LandingGate';
-import Spinner from './src/components/Spinner';
+import Layout from './components/Layout';
+import AuthLayout from './components/AuthLayout';
+import AuthGate from './components/AuthGate';
+import LandingGate from './components/LandingGate';
+import Spinner from './components/Spinner';
 
-import LandingPage from './src/pages/LandingPage';
-import HomePage from './src/pages/HomePage';
-import MapPage from './src/pages/MapPage';
-import TrendingPage from './src/pages/TrendingPage';
-import ReportFormPage from './src/pages/ReportFormPage';
-import ReportDetailsPage from './src/pages/ReportDetailsPage';
-import NotificationsPage from './src/pages/NotificationsPage';
-import AchievementsPage from './src/pages/AchievementsPage';
-import ProfilePage from './src/pages/ProfilePage';
-import AboutPage from './src/pages/AboutPage';
+import LandingPage from './pages/LandingPage';
+import HomePage from './pages/HomePage';
+import MapPage from './pages/MapPage';
+import TrendingPage from './pages/TrendingPage';
+import ReportFormPage from './pages/ReportFormPage';
+import ReportDetailsPage from './pages/ReportDetailsPage';
+import NotificationsPage from './pages/NotificationsPage';
+import AchievementsPage from './pages/AchievementsPage';
+import ProfilePage from './pages/ProfilePage';
+import AboutPage from './pages/AboutPage';
 
-import LoginPage from './src/pages/auth/LoginPage';
-import SignupPage from './src/pages/auth/SignupPage';
-import AnonymousRedirect from './src/pages/auth/AnonymousRedirect';
-import Logout from './src/pages/auth/Logout';
-import AchievementToast from './src/components/AchievementToast';
+import LoginPage from './pages/auth/LoginPage';
+import SignupPage from './pages/auth/SignupPage';
+import AnonymousRedirect from './pages/auth/AnonymousRedirect';
+import Logout from './pages/auth/Logout';
+import AchievementToast from './components/AchievementToast';
 
 // Portal Imports
-import PortalLayout from './src/components/portal/PortalLayout';
-import PortalAuthGate from './src/components/portal/PortalAuthGate';
-import PortalLoginPage from './src/pages/portal/PortalLoginPage';
-import PortalDashboardPage from './src/pages/portal/PortalDashboardPage';
-import PortalReportsListPage from './src/pages/portal/PortalReportsListPage';
-import PortalMapPage from './src/pages/portal/PortalMapPage';
-import PortalReportDetailsPage from './src/pages/portal/PortalReportDetailsPage';
+import PortalLayout from './components/portal/PortalLayout';
+import PortalAuthGate from './components/portal/PortalAuthGate';
+import PortalLoginPage from './pages/portal/PortalLoginPage';
+import PortalDashboardPage from './pages/portal/PortalDashboardPage';
+import PortalReportsListPage from './pages/portal/PortalReportsListPage';
+import PortalMapPage from './pages/portal/PortalMapPage';
+import PortalReportDetailsPage from './pages/portal/PortalReportDetailsPage';
 
 // Super Admin Imports
-import SuperAdminLayout from './src/components/superadmin/SuperAdminLayout';
-import SuperAdminAuthGate from './src/components/superadmin/SuperAdminAuthGate';
-import SuperAdminLoginPage from './src/pages/superadmin/SuperAdminLoginPage';
-import SuperAdminDashboardPage from './src/pages/superadmin/SuperAdminDashboardPage';
-import SuperAdminReportsPage from './src/pages/superadmin/SuperAdminReportsPage';
-import SuperAdminReportDetailsPage from './src/pages/superadmin/SuperAdminReportDetailsPage';
-import SuperAdminUsersPage from './src/pages/superadmin/SuperAdminUsersPage';
-import SuperAdminAdminAccountsPage from './src/pages/superadmin/SuperAdminAdminAccountsPage';
-import SuperAdminMapPage from './src/pages/superadmin/SuperAdminMapPage';
-import SuperAdminCategoriesPage from './src/pages/superadmin/SuperAdminCategoriesPage';
-import SuperAdminGamificationPage from './src/pages/superadmin/SuperAdminGamificationPage';
-import SuperAdminReportCreator from './src/components/superadmin/SuperAdminReportCreator';
-import SuperAdminAuditTrailPage from './src/pages/superadmin/SuperAdminAuditTrailPage';
+import SuperAdminLayout from './components/superadmin/SuperAdminLayout';
+import SuperAdminAuthGate from './components/superadmin/SuperAdminAuthGate';
+import SuperAdminLoginPage from './pages/superadmin/SuperAdminLoginPage';
+import SuperAdminDashboardPage from './pages/superadmin/SuperAdminDashboardPage';
+import SuperAdminReportsPage from './pages/superadmin/SuperAdminReportsPage';
+import SuperAdminReportDetailsPage from './pages/superadmin/SuperAdminReportDetailsPage';
+import SuperAdminUsersPage from './pages/superadmin/SuperAdminUsersPage';
+import SuperAdminAdminAccountsPage from './pages/superadmin/SuperAdminAdminAccountsPage';
+import SuperAdminMapPage from './pages/superadmin/SuperAdminMapPage';
+import SuperAdminCategoriesPage from './pages/superadmin/SuperAdminCategoriesPage';
+import SuperAdminGamificationPage from './pages/superadmin/SuperAdminGamificationPage';
+import SuperAdminReportCreator from './components/superadmin/SuperAdminReportCreator';
+import SuperAdminAuditTrailPage from './pages/superadmin/SuperAdminAuditTrailPage';
 
-import { PATHS } from './src/constants';
+import { PATHS } from './constants';
 
 const IN_IFRAME = (() => { try { return window.self !== window.top; } catch { return true; } })();
 const Router = IN_IFRAME ? MemoryRouter : HashRouter;

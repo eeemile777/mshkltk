@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { query: queryDb } = require('../db/connection');
 const {
   createReport,
   getReportById,
@@ -277,7 +278,7 @@ router.get('/nearby', async (req, res) => {
  */
 router.get('/trending', async (req, res) => {
   try {
-    const pool = require('../db/connection');
+    
     const { limit = 10, municipality } = req.query;
 
     // Trending algorithm:
@@ -314,7 +315,7 @@ router.get('/trending', async (req, res) => {
     `;
     params.push(parseInt(limit));
 
-    const result = await pool.query(query, params);
+    const result = await queryDb(query, params);
 
     res.json(result.rows);
   } catch (error) {
@@ -724,7 +725,7 @@ router.delete('/:id', authMiddleware, requireRole('super_admin'), async (req, re
  */
 router.get('/:id/history', authMiddleware, async (req, res) => {
   try {
-    const pool = require('../db/connection');
+    
     const { id } = req.params;
 
     // First check if report exists
@@ -734,24 +735,22 @@ router.get('/:id/history', authMiddleware, async (req, res) => {
     }
 
     // Fetch history
-    const query = `
+    const historyQuery = `
       SELECT 
         id,
         report_id,
         changed_by,
-        changed_by_name,
-        changed_by_role,
-        action,
         old_status,
         new_status,
-        comment,
+        notes,
+        proof_urls,
         timestamp
       FROM report_history
       WHERE report_id = $1
       ORDER BY timestamp DESC
     `;
 
-    const result = await pool.query(query, [id]);
+    const result = await queryDb(historyQuery, [id]);
 
     res.json(result.rows);
   } catch (error) {

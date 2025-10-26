@@ -417,12 +417,29 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 router.patch('/:id', authMiddleware, requireRole('super_admin'), async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    let updateData = req.body;
 
     // Check if user exists
     const existingUser = await findUserById(id);
     if (!existingUser) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Handle password update - must hash it with bcrypt
+    if (updateData.password || updateData.newPassword) {
+      const { generateSalt, hashPassword } = require('../utils/crypto');
+      const password = updateData.password || updateData.newPassword;
+      const salt = generateSalt();
+      const hash = await hashPassword(password, salt);
+      
+      updateData.password_hash = hash;
+      updateData.salt = salt;
+      
+      // Remove the plain password fields
+      delete updateData.password;
+      delete updateData.newPassword;
+      
+      console.log('🔐 Password updated for user:', id);
     }
 
     // Update user
@@ -432,9 +449,10 @@ router.patch('/:id', authMiddleware, requireRole('super_admin'), async (req, res
     delete updatedUser.password_hash;
     delete updatedUser.salt;
 
+    console.log('✅ User updated successfully:', id);
     res.json(updatedUser);
   } catch (error) {
-    console.error('Update user error:', error);
+    console.error('❌ Update user error:', error);
     res.status(500).json({ error: 'Failed to update user' });
   }
 });
@@ -458,7 +476,6 @@ router.patch('/:id', authMiddleware, requireRole('super_admin'), async (req, res
  *               - username
  *               - password
  *               - full_name
- *               - email
  *               - role
  *             properties:
  *               username:
@@ -470,9 +487,6 @@ router.patch('/:id', authMiddleware, requireRole('super_admin'), async (req, res
  *               full_name:
  *                 type: string
  *                 example: "Portal User"
- *               email:
- *                 type: string
- *                 example: "portal@example.com"
  *               role:
  *                 type: string
  *                 enum: [citizen, portal_user, super_admin]
@@ -498,10 +512,13 @@ router.patch('/:id', authMiddleware, requireRole('super_admin'), async (req, res
  */
 router.post('/', authMiddleware, requireRole('super_admin'), async (req, res) => {
   try {
-    const { username, password, full_name, email, role, portal_access_level, municipality } = req.body;
+    const { username, password, full_name, role, portal_access_level, municipality } = req.body;
+
+    console.log('📝 Create user request with data:', { username, full_name, role, portal_access_level, municipality });
 
     // Validate required fields
-    if (!username || !password || !full_name || !email || !role) {
+    if (!username || !password || !full_name || !role) {
+      console.error('❌ Missing required fields:', { username, password: !!password, full_name, role });
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -509,24 +526,34 @@ router.post('/', authMiddleware, requireRole('super_admin'), async (req, res) =>
     
     const existingUser = await queryDb('SELECT id FROM users WHERE username = $1', [username]);
     if (existingUser.rows.length > 0) {
+      console.error('❌ Username already exists:', username);
       return res.status(400).json({ error: 'Username already exists' });
     }
 
-    // Hash password
-    const crypto = require('crypto');
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+    // Hash password using bcrypt (same as auth system)
+    const { generateSalt, hashPassword } = require('../utils/crypto');
+    const salt = generateSalt();
+    const hash = await hashPassword(password, salt);
 
-    // Create user ID
-    const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Create user ID - using a proper UUID format
+    const userId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+
+    // Split full_name into first_name and last_name
+    const nameParts = full_name.trim().split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || '';
 
     // Insert new user
     const query = `
       INSERT INTO users (
-        id, username, password_hash, salt, full_name, email, role,
-        portal_access_level, municipality, is_active, points, level, badges
+        id, username, password_hash, salt, display_name, first_name, last_name, role,
+        portal_access_level, municipality_id, is_active
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, 0, 1, '[]'::jsonb)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true)
       RETURNING *
     `;
 
@@ -536,7 +563,8 @@ router.post('/', authMiddleware, requireRole('super_admin'), async (req, res) =>
       hash,
       salt,
       full_name,
-      email,
+      firstName,
+      lastName,
       role,
       portal_access_level || null,
       municipality || null
@@ -548,10 +576,12 @@ router.post('/', authMiddleware, requireRole('super_admin'), async (req, res) =>
     delete newUser.password_hash;
     delete newUser.salt;
 
+    console.log('✅ User created successfully:', newUser.id);
     res.status(201).json(newUser);
   } catch (error) {
-    console.error('Create user error:', error);
-    res.status(500).json({ error: 'Failed to create user' });
+    console.error('❌ Create user error:', error.message);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ error: 'Failed to create user', details: error.message });
   }
 });
 

@@ -108,12 +108,13 @@ const SuperAdminReportsPage: React.FC = () => {
 
     const SortableHeader: React.FC<{ sortKey: SortKey; children: React.ReactNode; }> = ({ sortKey, children }) => {
         const isSorted = sortConfig.key === sortKey;
-        const Icon = isSorted ? (sortConfig.direction === 'ascending' ? FaSortUp : FaSortDown) : FaSort;
         return (
             <th className="p-4 font-bold text-text-secondary dark:text-text-secondary-dark">
                 <button onClick={() => requestSort(sortKey)} className="flex items-center gap-2 hover:text-navy dark:hover:text-text-primary-dark transition-colors">
                     <span>{children}</span>
-                    <Icon className={isSorted ? 'text-coral dark:text-coral-dark' : 'opacity-30'} />
+                    <span className={isSorted ? 'text-coral dark:text-coral-dark' : 'opacity-30'}>
+                        {isSorted ? (sortConfig.direction === 'ascending' ? <FaSortUp /> : <FaSortDown />) : <FaSort />}
+                    </span>
                 </button>
             </th>
         );

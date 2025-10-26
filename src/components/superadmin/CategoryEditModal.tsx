@@ -16,7 +16,6 @@ const CategoryEditModal: React.FC<CategoryEditModalProps> = ({ mode, category, o
         name_ar: category?.name_ar || '',
         icon: category?.icon || 'FaQuestion',
         color_light: category?.color_light || '#4A90E2',
-        color_dark: category?.color_dark || '#5EBFDE',
         is_active: category?.is_active ?? true,
     });
     const [subCategories, setSubCategories] = React.useState<DynamicSubCategory[]>(category?.subCategories || []);
@@ -70,8 +69,7 @@ const CategoryEditModal: React.FC<CategoryEditModalProps> = ({ mode, category, o
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div><label className="block text-sm font-bold">Icon</label><IconSelect value={formData.icon} onChange={val => setFormData({...formData, icon: val})} /></div>
-                        <div><label className="block text-sm font-bold">Light Color</label><input type="color" value={formData.color_light} onChange={e => setFormData({...formData, color_light: e.target.value})} className="w-full h-10 p-1 bg-muted dark:bg-bg-dark border rounded-lg"/></div>
-                        <div><label className="block text-sm font-bold">Dark Color</label><input type="color" value={formData.color_dark} onChange={e => setFormData({...formData, color_dark: e.target.value})} className="w-full h-10 p-1 bg-muted dark:bg-bg-dark border rounded-lg"/></div>
+                        <div><label className="block text-sm font-bold">Color</label><input type="color" value={formData.color_light} onChange={e => setFormData({...formData, color_light: e.target.value})} className="w-full h-10 p-1 bg-muted dark:bg-bg-dark border rounded-lg"/></div>
                     </div>
                      <div className="flex-grow min-h-0 overflow-y-auto pr-2">
                         <h3 className="font-bold my-2">Sub-Categories</h3>

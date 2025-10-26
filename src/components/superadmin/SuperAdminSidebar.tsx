@@ -50,7 +50,7 @@ const SuperAdminSidebar: React.FC = () => {
                                 to={item.path}
                                 className={({ isActive }) => `${navLinkClasses} ${isActive ? activeNavLinkClasses : ''}`}
                             >
-                                <item.icon className="h-5 w-5" />
+                                <span className="h-5 w-5"><item.icon /></span>
                                 <span>{item.label}</span>
                             </NavLink>
                         </li>

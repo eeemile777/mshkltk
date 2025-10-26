@@ -43,12 +43,12 @@ const CategorySelectionModal: React.FC<CategorySelectionModalProps> = ({ onClose
                   className="w-full flex items-center justify-between p-4 text-left"
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className="w-6 h-6" style={{ color: categoryColor }} />
+                    <span className="w-6 h-6"><Icon style={{ color: categoryColor }} /></span>
                     <span className="font-bold text-lg text-navy dark:text-text-primary-dark">
                       {language === 'ar' ? category.name_ar : category.name_en}
                     </span>
                   </div>
-                  <FaChevronDown className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                  <span className={`transition-transform duration-300 inline-block ${isOpen ? 'rotate-180' : ''}`}><FaChevronDown /></span>
                 </button>
                 {isOpen && (
                   <div className="px-4 pb-4 space-y-1">

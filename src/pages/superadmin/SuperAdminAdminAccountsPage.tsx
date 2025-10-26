@@ -3,7 +3,7 @@ import { SuperAdminContext } from '../../contexts/SuperAdminContext';
 import { AppContext } from '../../contexts/AppContext';
 import { User } from '../../types';
 import Spinner from '../../components/Spinner';
-import { FaPenToSquare, FaSpinner, FaSort, FaSortUp, FaSortDown, FaPlus, FaUserSecret } from 'react-icons/fa6';
+import { FaPenToSquare, FaSpinner, FaSort, FaSortUp, FaSortDown, FaPlus, FaUserSecret, FaTrash } from 'react-icons/fa6';
 import AdminAccountEditModal from '../../components/superadmin/AdminAccountEditModal';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,7 +15,7 @@ interface SortConfig {
 }
 
 const SuperAdminAdminAccountsPage: React.FC = () => {
-    const { allUsers, allReports, loading, updateUser, createAdminUser, categories, currentUser: superAdminUser } = React.useContext(SuperAdminContext);
+    const { allUsers, allReports, loading, updateUser, createAdminUser, categories, currentUser: superAdminUser, deleteUser } = React.useContext(SuperAdminContext);
     const { setTempUserOverride } = React.useContext(AppContext);
     const [modalState, setModalState] = React.useState<{ mode: 'add' | 'edit'; user?: AdminUser } | null>(null);
     const [sortConfig, setSortConfig] = React.useState<SortConfig>({ key: 'reportsCount', direction: 'descending' });
@@ -53,22 +53,25 @@ const SuperAdminAdminAccountsPage: React.FC = () => {
     }, [allUsers, allReports, sortConfig]);
     
     const handleSave = async (data: Partial<User> & { newPassword?: string }, mode: 'add' | 'edit', userId?: string) => {
-        if (mode === 'add') {
-            // @ts-ignore
-            await createAdminUser({
-                role: data.role!,
-                display_name: data.display_name!,
-                username: data.username!,
-                password: data.newPassword || 'password123',
-                municipality_id: data.municipality_id,
-                scoped_categories: data.scoped_categories,
-                scoped_municipalities: data.scoped_municipalities,
-                scoped_sub_categories: data.scoped_sub_categories,
-                is_active: data.is_active,
-                portal_access_level: data.portal_access_level,
-            });
-        } else if (mode === 'edit' && userId) {
-            await updateUser(userId, data);
+        try {
+            if (mode === 'add') {
+                // @ts-ignore
+                await createAdminUser({
+                    role: data.role!,
+                    full_name: data.display_name!,  // Backend expects full_name
+                    username: data.username!,
+                    password: data.newPassword || 'password123',
+                    municipality: data.municipality_id,  // Backend expects municipality, not municipality_id
+                    portal_title: data.portal_title,
+                    portal_subtitle: data.portal_subtitle,
+                    portal_access_level: data.portal_access_level,
+                });
+            } else if (mode === 'edit' && userId) {
+                await updateUser(userId, data);
+            }
+        } catch (error: any) {
+            console.error('❌ handleSave error:', error);
+            throw error;  // Re-throw so the modal can catch and display it
         }
     };
     
@@ -82,6 +85,19 @@ const SuperAdminAdminAccountsPage: React.FC = () => {
             setTempUserOverride(userToImpersonate, superAdminUser, '/portal/dashboard');
         }
     };
+
+    const handleDelete = async (e: React.MouseEvent, user: User) => {
+        e.stopPropagation();
+        if (window.confirm(`Are you absolutely sure you want to DELETE ${user.display_name}? This cannot be undone.`)) {
+            try {
+                await deleteUser(user.id);
+                alert(`${user.display_name} has been deleted.`);
+            } catch (error: any) {
+                console.error('❌ Delete error:', error);
+                alert(`Failed to delete user: ${error?.message || 'Unknown error'}`);
+            }
+        }
+    };
     
     const requestSort = (key: SortKey) => {
         let direction: 'ascending' | 'descending' = 'ascending';
@@ -93,12 +109,13 @@ const SuperAdminAdminAccountsPage: React.FC = () => {
 
     const SortableHeader: React.FC<{ sortKey: SortKey; children: React.ReactNode; }> = ({ sortKey, children }) => {
         const isSorted = sortConfig.key === sortKey;
-        const Icon = isSorted ? (sortConfig.direction === 'ascending' ? FaSortUp : FaSortDown) : FaSort;
         return (
             <th className="p-4 font-bold text-text-secondary dark:text-text-secondary-dark">
                 <button onClick={() => requestSort(sortKey)} className="flex items-center gap-2 hover:text-navy dark:hover:text-text-primary-dark transition-colors">
                     <span>{children}</span>
-                    <Icon className={isSorted ? 'text-coral dark:text-coral-dark' : 'opacity-30'} />
+                    <span className={isSorted ? 'text-coral dark:text-coral-dark' : 'opacity-30'}>
+                        {isSorted ? (sortConfig.direction === 'ascending' ? <FaSortUp /> : <FaSortDown />) : <FaSort />}
+                    </span>
                 </button>
             </th>
         );
@@ -183,6 +200,13 @@ const SuperAdminAdminAccountsPage: React.FC = () => {
                                     title={`View as ${user.display_name}`}
                                  >
                                     <FaUserSecret />
+                                 </button>
+                                 <button
+                                    onClick={(e) => handleDelete(e, user)}
+                                    className="p-2 text-coral dark:text-coral-dark hover:bg-coral/10 rounded-full"
+                                    title="Delete Account"
+                                 >
+                                    <FaTrash />
                                  </button>
                               </td>
                            </tr>

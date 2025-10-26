@@ -34,7 +34,7 @@ const BottomNav: React.FC = () => {
               end={true}
               className={({ isActive }) => `${navLinkClasses} ${isActive ? activeNavLinkClasses : ''}`}
             >
-              <MapIcon className="h-6 w-6 mb-1" />
+              <span className="h-6 w-6 mb-1 flex items-center justify-center"><MapIcon /></span>
               <span className="text-xs">{navItems[0].label}</span>
             </NavLink>
 
@@ -55,7 +55,7 @@ const BottomNav: React.FC = () => {
               className={({ isActive }) => `${navLinkClasses} ${isActive ? activeNavLinkClasses : ''}`}
               data-tour-id={navItems[1].tourId}
             >
-              <TrendingIcon className="h-6 w-6 mb-1" />
+              <span className="h-6 w-6 mb-1 flex items-center justify-center"><TrendingIcon /></span>
               <span className="text-xs">{navItems[1].label}</span>
             </NavLink>
         </div>

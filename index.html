@@ -156,6 +156,45 @@
         scroll-padding-top: 4.5rem; /* Account for sticky header */
         scroll-behavior: smooth;
       }
+      /* User Location Marker Styles */
+      .user-location-marker {
+        position: relative;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .user-location-marker .pulse {
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: rgba(0, 191, 166, 0.3);
+        animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      .user-location-marker .dot {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 12px;
+        height: 12px;
+        background: #00BFA6;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 6px rgba(0,191,166,0.5);
+      }
+      @keyframes pulse-ring {
+        0% {
+          transform: scale(0.33);
+          opacity: 0.8;
+        }
+        80%, 100% {
+          transform: scale(2);
+          opacity: 0;
+        }
+      }
       html[lang="ar"] {
         /* Set Cairo as the primary font for Arabic UI, with Inter/Rubik as a fallback for Latin characters */
         font-family: '"Cairo"', '"Inter"', '"Rubik"', 'sans-serif';
@@ -277,6 +316,25 @@
         font-size: 16px;
         transform: rotate(45deg);
         z-index: 1;
+      }
+      /* Overflow Badge for Clusters */
+      .fan-overflow-badge {
+        position: absolute;
+        bottom: -8px;
+        right: -8px;
+        background-color: #FF5A5F;
+        color: white;
+        border: 2px solid white;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 12px;
+        box-shadow: 0 4px 12px rgba(255, 90, 95, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+        z-index: 10;
       }
       /* Core Badge Hover Animation */
       .badge-hover-glow {

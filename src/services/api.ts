@@ -597,6 +597,9 @@ export const updateUser = async (userId: string, updates: any, adminUser?: any):
 export const createAdminUser = async (userData: any, adminUser?: any): Promise<any> => {
   const token = getAuthToken();
   
+  console.log('🔧 api.createAdminUser called with userData:', userData);
+  console.log('🔧 Auth token exists:', !!token);
+  
   // Use the new POST /api/users endpoint (requires super_admin role)
   const response = await fetch(`${API_BASE_URL}/users`, {
     method: 'POST',
@@ -607,12 +610,18 @@ export const createAdminUser = async (userData: any, adminUser?: any): Promise<a
     body: JSON.stringify(userData),
   });
   
+  console.log('🔧 Response status:', response.status);
+  console.log('🔧 Response ok:', response.ok);
+  
   if (!response.ok) {
     const error = await response.json();
+    console.error('❌ Backend error response:', error);
     throw new Error(error.error || 'Failed to create admin user');
   }
   
-  return await response.json();
+  const result = await response.json();
+  console.log('✅ api.createAdminUser success:', result);
+  return result;
 };
 
 /**
@@ -696,22 +705,35 @@ export const getDynamicCategories = async (): Promise<any[]> => {
     throw new Error('Failed to fetch categories');
   }
   const data = await response.json();
-  return data.categories;
+  // Transform backend field names to frontend field names
+  return data.categories.map((cat: any) => ({
+    id: cat.id,
+    name_en: cat.label_en,
+    name_ar: cat.label_ar,
+    icon: cat.icon,
+    color_light: cat.color,
+    color_dark: cat.color, // Same color for both light/dark for now
+    is_active: cat.is_active,
+    subCategories: cat.sub_categories || [],
+  }));
 };
 
 /**
  * Create new category (Super Admin only)
  */
-export const createCategory = async (categoryData: {
-  name_en: string;
-  name_ar: string;
-  icon: string;
-  color: string;
-  is_active?: boolean;
-}): Promise<any> => {
+export const createCategory = async (categoryData: any): Promise<any> => {
+  // Map frontend field names to backend field names
+  const payload = {
+    id: categoryData.id,
+    label_en: categoryData.name_en,
+    label_ar: categoryData.name_ar,
+    icon: categoryData.icon,
+    color: categoryData.color || categoryData.color_light || '#4A90E2',
+    is_active: categoryData.is_active ?? true,
+  };
   return apiRequest('/config/categories', {
     method: 'POST',
-    body: JSON.stringify(categoryData),
+    body: JSON.stringify(payload),
   });
 };
 
@@ -719,9 +741,18 @@ export const createCategory = async (categoryData: {
  * Update category (Super Admin only)
  */
 export const updateCategory = async (categoryId: string, updates: any): Promise<any> => {
+  // Map frontend field names to backend field names
+  const payload: any = {};
+  if (updates.name_en !== undefined) payload.label_en = updates.name_en;
+  if (updates.name_ar !== undefined) payload.label_ar = updates.name_ar;
+  if (updates.icon !== undefined) payload.icon = updates.icon;
+  if (updates.color_light !== undefined) payload.color = updates.color_light;
+  if (updates.color !== undefined) payload.color = updates.color;
+  if (updates.is_active !== undefined) payload.is_active = updates.is_active;
+  
   return apiRequest(`/config/categories/${categoryId}`, {
     method: 'PUT',
-    body: JSON.stringify(updates),
+    body: JSON.stringify(payload),
   });
 };
 

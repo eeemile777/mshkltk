@@ -82,10 +82,9 @@ const SuperAdminCategoriesPage: React.FC = () => {
                                        </div>
                                        <span className="font-bold text-navy dark:text-text-primary-dark">{category.name_en} / {category.name_ar}</span>
                                     </div>
-                                    <div className="flex items-center gap-2">{category.subCategories.length} <FaChevronDown className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} /></div>
+                                    <div className="flex items-center gap-2">{category.subCategories.length} <span className={`transition-transform duration-200 inline-block ${isExpanded ? 'rotate-180' : ''}`}><FaChevronDown /></span></div>
                                     <div className="flex items-center gap-2">
                                        <div className="w-6 h-6 rounded-full border border-border-light dark:border-border-dark" style={{ backgroundColor: category.color_light }}></div>
-                                       <div className="w-6 h-6 rounded-full border border-border-light dark:border-border-dark" style={{ backgroundColor: category.color_dark }}></div>
                                     </div>
                                     <div>
                                        {updatingCategoryId === category.id ? (

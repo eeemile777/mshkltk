@@ -162,9 +162,17 @@ export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   
   const createAdminUser = React.useCallback(async (data: any) => {
     if (!currentUser) return;
-    const newUser = await api.createAdminUser(data, currentUser);
-    setAllUsers(prev => [...prev, newUser]);
-    refreshData();
+    console.log('🔧 SuperAdminContext.createAdminUser called with:', data);
+    try {
+      const newUser = await api.createAdminUser(data, currentUser);
+      console.log('✅ SuperAdminContext: User created:', newUser);
+      setAllUsers(prev => [...prev, newUser]);
+      refreshData();
+    } catch (error: any) {
+      console.error('❌ SuperAdminContext.createAdminUser error:', error);
+      console.error('Error message:', error?.message);
+      throw error;
+    }
   }, [currentUser, refreshData]);
 
   const deleteUser = React.useCallback(async (userId: string) => {

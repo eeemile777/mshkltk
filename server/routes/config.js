@@ -87,17 +87,20 @@ router.get('/categories', async (req, res) => {
  */
 router.post('/categories', authMiddleware, requireRole('super_admin'), async (req, res) => {
   try {
-    const { label_en, label_ar, icon, color, is_active = true } = req.body;
+    const { id, label_en, label_ar, icon, color, is_active = true } = req.body;
 
     if (!label_en || !label_ar || !icon || !color) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Generate ID if not provided (for direct API calls)
+    const categoryId = id || label_en.toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]/g, '');
+
     const result = await query(
-      `INSERT INTO dynamic_categories (label_en, label_ar, icon, color, is_active, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
+      `INSERT INTO dynamic_categories (id, label_en, label_ar, icon, color, is_active, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
        RETURNING *`,
-      [label_en, label_ar, icon, color, is_active]
+      [categoryId, label_en, label_ar, icon, color, is_active]
     );
 
     res.status(201).json(result.rows[0]);

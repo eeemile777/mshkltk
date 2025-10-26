@@ -71,15 +71,14 @@ const IssueEditorCard: React.FC<{
     return (
         <div className="bg-muted dark:bg-surface-dark rounded-xl overflow-hidden">
             <button
-                type="button"
                 onClick={onToggle}
                 className="w-full flex items-center justify-between p-4 text-left"
             >
                 <div className="flex items-center gap-3">
-                    {Icon && <Icon style={{ color: categoryColor }} />}
+                    {Icon && <span className="w-6 h-6"><Icon style={{ color: categoryColor }} /></span>}
                     <span className="font-bold text-navy dark:text-text-primary-dark truncate">{issue.title}</span>
                 </div>
-                <FaChevronDown className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                <span className={`transition-transform duration-200 inline-block ${isOpen ? 'rotate-180' : ''}`}><FaChevronDown /></span>
             </button>
             {isOpen && (
                 <div className="p-4 border-t border-border-light dark:border-border-dark space-y-3 animate-fade-in">

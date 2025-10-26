@@ -88,9 +88,12 @@ const AdminAccountEditModal: React.FC<AdminAccountEditModalProps> = ({ mode, use
             
             await onSave(updates, mode, user?.id);
             onClose();
-        } catch (error) {
-            console.error(error);
-            alert('Failed to save changes.');
+        } catch (error: any) {
+            console.error('❌ AdminAccountEditModal Error:', error);
+            console.error('Error message:', error?.message);
+            console.error('Error details:', error?.details);
+            console.error('Full error:', JSON.stringify(error, null, 2));
+            alert(`Failed to save changes: ${error?.message || 'Unknown error'}`);
         } finally {
             setIsSaving(false);
         }

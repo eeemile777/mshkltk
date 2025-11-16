@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { query, pool: dbPool } = require('../db/connection');
 const { authMiddleware, requireRole } = require('../middleware/auth');
+const { cacheMiddleware, invalidateCache } = require('../middleware/cache');
+
+// SECURITY FIX #14: Cache static configuration data for 10 minutes
+const configCacheMiddleware = cacheMiddleware(600); // 10 minutes
 
 /**
  * @swagger
@@ -25,7 +29,7 @@ const { authMiddleware, requireRole } = require('../middleware/auth');
  *       500:
  *         description: Server error
  */
-router.get('/categories', async (req, res) => {
+router.get('/categories', configCacheMiddleware, async (req, res) => {
   try {
     const result = await query(
       'SELECT * FROM dynamic_categories ORDER BY label_en ASC'

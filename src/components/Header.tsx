@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { Language, SearchSuggestion } from '../types';
 import { NavLink, Link, useNavigate } from 'react-router-dom';

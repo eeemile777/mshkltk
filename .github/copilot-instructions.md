@@ -1,171 +1,248 @@
-# Mshkltk Production-Ready Copilot Instructions
+# Mshkltk AI Coding Assistant Instructions
 
-## 1. Mission Overview
+**Last Updated:** November 15, 2025  
+**Project:** Mshkltk - Civic Reporting PWA (95% complete)
 
-**Your primary mission is to transition the "Mshkltk" application from its current state as a high-fidelity frontend prototype into a secure, scalable, and production-ready application.**
+## 🚨 CRITICAL USER PREFERENCE
 
--   **Current State:** A feature-complete frontend that looks and feels like a real application.
--   **Backend:** The entire backend is currently simulated on the client-side in `services/mockApi.ts` using IndexedDB (`services/db.ts`) for data persistence. This simulation is your **API contract**.
--   **Primary Goal:** Methodically implement a real backend server, secure the application, and establish a production-grade build and deployment pipeline while preserving the application's core features and user experience.
+**DO NOT create new markdown files.** Always update existing documentation files only. Examples of existing docs to update:
+- `TODO.md` - Track new tasks here
+- `docs/gcp-proposal/README.md` - Update deployment docs
+- `docs/api/README.md` - Update API documentation
+- `DEVELOPMENT.md` - Update status and progress
+- `docs/README.md` - Update general docs
+
+This keeps the documentation organized and prevents doc sprawl.
+
+## Architecture Overview
+
+**Mshkltk** is a bilingual (English/Arabic), offline-first Progressive Web App for civic reporting with three distinct portals:
+
+- **Citizen Portal**: Report local issues with photos/videos, AI analysis via Gemini, gamification (badges/points)
+- **Municipality Portal**: Dashboard for staff to manage reports, track resolutions, communicate with citizens
+- **Super Admin Portal**: Global management of users, categories, gamification settings, audit trails
+
+**Tech Stack:**
+- Frontend: React 18 + React Router v6 (HashRouter) + TypeScript + Vite
+- Backend: Node.js + Express 5
+- Database: PostgreSQL 15 + PostGIS extension (Docker)
+- Auth: JWT tokens + bcrypt password hashing
+- AI: Gemini 2.5-flash (document analysis, categorization, municipality detection, title generation)
+- PWA: Service Worker for offline-first support with automatic sync
+- Testing: Playwright (46 E2E tests, 1 currently fixing)
+
+## Key Development Workflows
+
+### Quick Start (5 minutes)
+```bash
+# Install + setup
+git clone <repo>
+cd mshkltk && npm install && cd server && npm install && cd ..
+./setup-database-docker.sh  # Creates PostgreSQL + PostGIS in Docker
+
+# Development (concurrent frontend + backend)
+npm run dev
+# Frontend: http://localhost:3000 | Backend: http://localhost:3001 | API Docs: http://localhost:3001/api-docs
+```
+
+### Running Tests
+```bash
+npm test                    # All 46 E2E tests
+npm run test:citizen        # Citizen portal (45 tests passing)
+npm run test:admin          # Super admin portal
+npm run test:portal         # Municipality portal
+npm run test:headed         # Visible browser execution
+npm run test:ui             # Interactive test UI
+npm run test:report         # Open last report
+```
+
+**Critical:** Tests run sequentially (workers=1) to avoid DB conflicts. HashRouter+hash-based URLs used for E2E compatibility.
+
+### Database Setup
+- **Schema:** `server/db/schema.sql` (PostgreSQL, includes seed data)
+- **Seed Users (35 total):**
+  - Admin: `admin` / `password`
+  - Municipality Portal: `beirut_portal` / `password`
+  - Citizen: `citizen_user` / `password`
+- **PostGIS queries** for geospatial searches (see `server/routes/reports.js`)
+- **100+ realistic seed reports** pre-populated for testing
+
+### Authentication Flow
+1. User submits credentials → `POST /api/auth/login` or `/api/auth/register`
+2. Backend: Hash password with bcrypt, compare, generate JWT token (7-day expiration)
+3. Frontend: Store token in localStorage, attach `Authorization: Bearer {token}` to all API requests
+4. JWT payload includes: `id`, `username`, `role`, `municipality_id`, `portal_access_level`
+5. Role-based access control (RBAC): `citizen`, `portal`, `super_admin`
+
+**Middleware:** `server/middleware/auth.js` validates JWT on protected routes. `AuthGate` + `PortalAuthGate` + `SuperAdminAuthGate` handle frontend route protection.
+
+## Architecture Patterns & File Organization
+
+### Frontend Structure
+```
+src/
+  App.tsx                      # Main router (HashRouter for offline PWA)
+  contexts/
+    AppContext.tsx             # Citizen app state (user, auth, notifications, impersonation)
+    PortalContext.tsx          # Municipality staff state
+    SuperAdminContext.tsx      # Admin app state
+  pages/
+    {HomePage, MapPage, ...}   # Citizen portal pages
+    portal/                    # Municipality portal pages
+    superadmin/                # Admin portal pages
+  components/
+    {Header, Layout, ...}      # Shared components
+    portal/                    # Municipality-specific components
+    superadmin/                # Admin-specific components
+  services/
+    api.ts                     # API service layer (all HTTP requests)
+  constants.ts                 # Routes, colors, categories, badges (764 lines)
+  types.ts                     # TypeScript interfaces (circular dependency FIX: ReportCategory is static union)
+```
+
+**Key Pattern:** Three separate context providers to isolate state per portal. Components conditionally render based on route context.
+
+### Backend Structure
+```
+server/
+  index.js                     # Express app setup, Swagger docs, route mounting
+  routes/
+    {auth, reports, comments, users, media, ai, config, notifications, auditLogs}.js
+  middleware/
+    auth.js                    # JWT verification, token generation
+    upload.js                  # Multer file upload handling
+  db/                          # Database queries (separate files per entity)
+  utils/                       # Helpers (DB connection, etc.)
+  swagger.js                   # Swagger spec generation
+```
+
+**Critical:** All API responses use snake_case (backend convention). Frontend transforms to camelCase via `transformUser()` in `api.ts`.
+
+## Project-Specific Patterns
+
+### State Management
+- **No Redux/Zustand:** Direct Context API usage with reducer patterns
+- **localStorage:** Primary persistence for auth token, language preference, notifications
+- **Service Worker:** Offline queue stored in IndexedDB, synced on reconnect
+
+### Type Safety
+- **Circular Dependency Fix:** `ReportCategory` is a static string union type (not derived from constants) to prevent white-screen-of-death on app load
+- **Backend: snake_case** (database columns, API responses)
+- **Frontend: camelCase** (React conventions, with transformation layer in `api.ts`)
+
+### AI Integration
+- **Model:** Gemini 2.5-flash (may fallback to 1.5-pro if needed)
+- **Routes:** `POST /api/ai/analyze-media`, `/transcribe-audio`, `/detect-municipality`, `/generate-title`
+- **Image Handling:** Base64 encoding for frontend-to-backend (50MB limit in Express middleware)
+- **Error Handling:** Safe JSON parsing with `safeParseJson()` to gracefully handle non-JSON responses
+
+### Bilingual Support (English/Arabic)
+- **Language Toggle:** Globe icon in header, stored in localStorage
+- **RTL Layout:** Tailwind CSS handles direction (no CSS rebuilding needed)
+- **String Keys:** All UI strings use `{title_en, title_ar}` or `{note_en, note_ar}` pattern
+- **Component:** `components/Header.tsx` has language switcher
+- **Constants:** `CATEGORIES` in `constants.ts` has `name_en` + `name_ar` for each category
+
+### Map & Geospatial
+- **Leaflet + PostGIS:** Interactive map with clustering, heatmaps, nearby reports
+- **Real-time Updates:** Marker updates via polling or WebSocket (currently polling)
+- **Default Location:** Playwright tests set to Amman, Jordan (31.9539°N, 35.9106°E)
+
+### Offline-First PWA
+- **Service Worker:** `sw.js` at project root
+- **Manifest:** Declared in `index.html`
+- **Background Sync:** Failed report submissions queued, retry on network reconnect
+- **Permissions:** Camera (photos), geolocation (location detection), notification
+
+## API Documentation & Examples
+
+**Interactive Swagger UI:** `http://localhost:3001/api-docs` (regenerated on server start)
+
+### Core Endpoints
+```
+POST /api/auth/login                  # Login with credentials
+POST /api/auth/register               # New user signup
+POST /api/reports                     # Submit citizen report
+GET  /api/reports                     # Fetch reports (filtered, paginated)
+GET  /api/reports/:id                 # Report details with comments
+PATCH /api/reports/:id                # Update report status (portal/admin)
+POST /api/ai/analyze-media            # AI analyze photo + text
+GET  /api/config/categories           # Fetch dynamic categories
+GET  /api/config/badges               # Fetch dynamic badges
+POST /api/users/:id/confirm-report    # Citizen confirms report
+GET  /api/notifications               # Fetch user notifications
+```
+
+**Authentication Header:** All protected endpoints require `Authorization: Bearer {token}`
+
+## Common Issues & Solutions
+
+### Issue: White screen on app load
+- **Cause:** Circular dependency in type definitions
+- **Fix:** `ReportCategory` is static union type in `types.ts`, not computed from constants
+
+### Issue: Tests fail with DB conflicts
+- **Cause:** Parallel test execution
+- **Fix:** `playwright.config.ts` sets `workers: 1`, tests run sequentially
+
+### Issue: Form validation fails unexpectedly
+- **Cause:** Backend enforces minimum string lengths, character limits
+- **Check:** `docs/api/validation.md` for all validation rules per endpoint
+
+### Issue: Map not rendering on app load
+- **Cause:** Leaflet container needs explicit dimensions
+- **Pattern:** Always wrap `InteractiveMap` in a sized div: `<div className="h-screen">...</div>`
+
+### Issue: AI endpoints return 404
+- **Cause:** Gemini 2.5-flash may not be available in all regions/accounts
+- **Fix:** Test with `gemini-1.5-pro` or `gemini-1.5-pro-vision` (see `TODO.md` Critical #1)
+
+## Commands Reference
+
+```bash
+# Development
+npm run dev                 # Start frontend + backend concurrently
+npm run dev-frontend        # Vite dev server only (port 3000)
+npm run dev-backend         # Backend with nodemon (port 3001)
+
+# Database
+./setup-database-docker.sh  # Full setup with Docker
+./setup-database.sh         # Local PostgreSQL setup (macOS)
+npm run seed-database       # (if available) Populate seed data
+
+# Testing
+npm test                    # Run all E2E tests
+npm run test:headed         # With visible browser
+npm run test:ui             # Interactive mode
+
+# Building
+npm run build               # Vite build to dist/
+
+# Useful Queries
+curl http://localhost:3001/api-docs.json | jq  # Get API spec as JSON
+```
+
+## File References for Key Patterns
+
+- **Authentication:** `server/middleware/auth.js`, `src/contexts/AppContext.tsx`, `src/pages/auth/LoginPage.tsx`
+- **API Communication:** `src/services/api.ts` (all HTTP calls)
+- **Report Submission:** `src/pages/ReportFormPage.tsx` (4-step wizard), `server/routes/reports.js` (backend processing)
+- **AI Integration:** `server/routes/ai.js` (Gemini calls), `server/index.js` (legacy endpoints)
+- **Gamification:** `src/components/AchievementToast.tsx`, `server/routes/config.js` (badge/point rules)
+- **Testing Helpers:** `tests/e2e/helpers.ts` (shared test utilities)
+- **Constants:** `src/constants.ts` (routes, colors, categories, badges - single source of truth)
+
+## CI/CD & Deployment Notes
+
+- **Environment Variables:** `.env` at project root (must define `GEMINI_API_KEY`, `JWT_SECRET`, `DATABASE_URL`)
+- **Production Build:** `npm run build` outputs to `dist/` (static files served via backend in production)
+- **Docker Database:** Persisted data in named volume `mshkltk_db_volume` (survives container restarts)
 
 ---
 
-## 2. Roadmap to Production
-
-This is a phased roadmap. You must follow these steps in order, as each phase builds upon the last.
-
-### Phase 1: Foundational Backend & Build Setup
-
-This is the most critical phase. The goal is to replace the mock environment with a real, working backend and a production-ready frontend build process.
-
-#### A. Backend Implementation
-
-Your first task is to build the server-side application.
-**Recommended Stack:** Node.js with Express.js or Fastify, and a PostgreSQL database (for its robust geospatial capabilities via PostGIS).
-
-1.  **Database Setup:**
-    -   Use the data model documentation in `/docs/data-model/` as the single source of truth for your database schemas.
-    -   Create tables/collections for `User`, `Report`, `Comment`, `Notification`, `ReportHistory`, and the dynamic configuration entities (`DynamicCategory`, `DynamicBadge`, `GamificationSettings`).
-    -   **Crucially, implement the relationships and cascading logic** described in `/docs/data-model/README.md`. For example, deleting a `Report` must also delete its associated `Comments` and `ReportHistory` entries. Deleting a `User` must anonymize their content, not delete it.
-
-2.  **API Endpoint Implementation:**
-    -   Your goal is to create a real API that perfectly matches the contract defined in `/docs/api/`.
-    -   The file `services/mockApi.ts` contains the client-side implementation of all business logic. **You must replicate this logic on the server.** This includes:
-        -   How `confirmReport` prevents a user from confirming their own report.
-        -   How `addComment` creates notifications for all subscribed users.
-        -   The logic inside `updateUser` for adjusting points and setting new passwords.
-        -   The permission checks for all Portal and Super Admin actions (e.g., verifying `portal_access_level === 'read_write'`).
-
-3.  **Handling Media Uploads:**
-    -   The mock API currently accepts base64 data URLs in `photo_urls`. Your backend must be able to handle this.
-    -   **Endpoint Logic (`POST /api/reports`):**
-        1.  Receive the request with an array of base64 strings.
-        2.  For each string, decode it into a binary buffer.
-        3.  Upload this buffer to a cloud file storage service (e.g., AWS S3, Google Cloud Storage).
-        4.  Receive the permanent, public URL for the uploaded file.
-        5.  Replace the base64 string in the `photo_urls` array with this new URL before saving the `Report` object to the database.
-        -   **Never store base64 strings in your database.**
-
-#### B. Production Build Process (Vite)
-
-The current CDN-based `importmap` is for prototyping only.
-
-1.  **Install and Configure Vite:** Set up Vite for a React + TypeScript project. Create a `vite.config.ts` file.
-2.  **Bundle & Minify:** The default `npm run build` command in Vite will handle this. Ensure it's working correctly.
-3.  **Purge Unused CSS:** Your `tailwind.config.js` file must be configured to purge unused utility classes for production builds. This is critical for performance. The `content` array should look like this:
-    ```javascript
-    content: [
-      "./index.html",
-      "./src/**/*.{js,ts,jsx,tsx}",
-    ],
-    ```
-4.  **Implement Route-Based Code Splitting:**
-    -   Refactor `App.tsx` to use `React.lazy()` and `<React.Suspense>` for all page-level components. This will dramatically improve initial load time.
-    -   **Example:**
-        ```tsx
-        // Before
-        import HomePage from './pages/HomePage';
-        // ...
-        <Route path={PATHS.HOME} element={<HomePage />} />
-
-        // After
-        const HomePage = React.lazy(() => import('./pages/HomePage'));
-        // ...
-        <Route
-          path={PATHS.HOME}
-          element={
-            <React.Suspense fallback={<Spinner />}>
-              <HomePage />
-            </React.Suspense>
-          }
-        />
-        ```
-
----
-
-### Phase 2: Critical Security Hardening
-
-The current prototype has major security vulnerabilities that **must** be fixed.
-
-1.  **Proxy ALL Gemini API Calls:**
-    -   **Problem:** The Gemini API key is currently exposed on the client. This is a critical vulnerability.
-    -   **Solution:** Create new endpoints on your backend server that act as a proxy.
-        -   Create `POST /api/ai/analyze-media`, `POST /api/ai/transcribe-audio`, and `POST /api/ai/detect-municipality`.
-        -   Refactor all frontend components that use Gemini (`ReportFormPage.tsx`, `Step3_Location.tsx`) to call these new backend endpoints instead of `ai.models.generateContent`.
-        -   Your backend will receive the request, securely attach the secret Gemini API key (from a server environment variable), and then make the call to the Gemini API.
-    -   **Example Frontend Refactor in `ReportFormPage.tsx`:**
-        ```tsx
-        // Before
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const response = await ai.models.generateContent(...);
-
-        // After
-        const response = await fetch('/api/ai/analyze-media', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ mediaParts, langName, categoryList })
-        });
-        const result = await response.json();
-        ```
-
-2.  **Implement Real Authentication (JWT):**
-    -   **Password Hashing:** On user registration (`POST /api/users`), you must hash the user's password with a unique salt before storing it in the database. Use a strong algorithm like Argon2 or bcrypt. The logic in `services/crypto.ts` can be used as a reference for the hashing process.
-    -   **Login Flow (`POST /api/login`):**
-        1.  Find the user by their username.
-        2.  Re-hash the provided password with the user's stored salt.
-        3.  Compare the result with the stored `password_hash`.
-        4.  If they match, generate a signed JSON Web Token (JWT) containing the `user.id` and `user.role`.
-        5.  Return this token to the client.
-    -   **Authenticated Requests:**
-        -   The frontend will store the JWT (e.g., in a secure cookie or local storage) and send it with every subsequent API request in the `Authorization: Bearer <token>` header.
-        -   Your backend must have middleware that intercepts every protected request, validates the JWT's signature, and extracts the user's ID and role to authorize the action.
-
----
-
-### Phase 3: Scalability & Performance
-
-1.  **API Pagination:**
-    -   All list endpoints (`GET /api/reports`, `GET /api/users`, `GET /api/audit-logs`) **must** support pagination.
-    -   A standard approach is `?page=1&limit=50`.
-    -   Update the frontend pages (`SuperAdminReportsPage.tsx`, `LeaderboardPage.tsx`, etc.) to fetch data in chunks and implement UI for "Load More" buttons or infinite scrolling.
-
-2.  **Database Indexing:**
-    -   Add database indexes to frequently queried columns to ensure fast lookups. Key candidates for indexing include:
-        -   `reports.created_by`
-        -   `reports.municipality`
-        -   `reports.category`
-        -   `reports.status`
-        -   `comments.report_id`
-        -   `users.username`
-
----
-
-### Phase 4: Testing & Deployment
-
-1.  **Implement the Testing Strategy:**
-    -   Refer to `docs/TESTING.md` for the full strategy.
-    -   **Unit Tests (Vitest):** Prioritize testing utility functions and logic-heavy components.
-    -   **Integration Tests (Vitest + React Testing Library):** Test form handling, modal interactions, and components that rely on context.
-    -   **End-to-End Tests (Playwright):** Write E2E tests for the most critical user flows, such as offline report submission, user impersonation, and the full portal report resolution workflow.
-
-2.  **Set Up CI/CD:**
-    -   Create a Continuous Integration/Deployment pipeline using a service like GitHub Actions.
-    -   The pipeline should, on every push to the main branch:
-        1.  Install dependencies (`npm install`).
-        2.  Run all tests (`npm test`).
-        3.  Create a production build of the frontend (`npm run build`).
-        4.  Deploy the static frontend assets to a hosting provider (like Vercel or Netlify) and deploy the backend server (to a service like Heroku or Fly.io).
-
----
-
-## 4. Core Architectural Principles to Maintain
-
-As you refactor and build, you **must** preserve these core architectural pillars:
-
--   **Offline-First Functionality:** The Service Worker (`sw.js`) and its interaction with `AppContext.tsx` for background sync is a non-negotiable feature. Ensure this flow continues to work seamlessly with the new backend. The logic is detailed in `docs/frontend/offline-support.md`.
--   **State Management Isolation:** The strict separation of concerns between `AppContext` (Citizen), `PortalContext` (Portal), and `SuperAdminContext` (Super Admin) is crucial for maintainability. Do not introduce dependencies between them.
--   **UI/UX and Design System:** All new UI must strictly adhere to the color palette, typography, and component styles defined in `docs/STYLE_GUIDE.md`. The application's aesthetic quality is a top priority.
--   **Bilingual (RTL/LTR) Support:** Continue to use the `translations` object in `constants.ts` for all user-facing strings. All new UI must be tested in both English (LTR) and Arabic (RTL) modes.
--   **Component Architecture:** Respect the component structure and logic detailed in `docs/frontend/component-architecture.md`, especially the complex state machine of the Report Wizard.
-
-By following this comprehensive roadmap, you will successfully transform the Mshkltk prototype into a robust, secure, and scalable production application.
+**Next Steps When Taking Over:**
+1. Run `npm run dev` and verify both frontend/backend start without errors
+2. Open `http://localhost:3001/api-docs` to inspect all endpoints
+3. Login with `admin` / `password` and test citizen + portal workflows
+4. Run `npm test` to ensure test suite is healthy
+5. Check `TODO.md` for remaining priority items (esp. Critical #1 & #2)

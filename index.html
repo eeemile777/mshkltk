@@ -195,6 +195,64 @@
           opacity: 0;
         }
       }
+      
+      /* Wrapper classes for Leaflet divIcon markers */
+      .user-location-marker-icon {
+        background: transparent !important;
+        border: none !important;
+      }
+      
+      .draggable-marker-icon {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        z-index: 9999 !important;
+      }
+      
+      .report-marker-icon {
+        background: transparent !important;
+        border: none !important;
+      }
+      
+      /* Draggable pin styles (light + dark) */
+      .draggable-marker {
+        width: 30px;
+        height: 30px;
+        background: #00BFA6;
+        border: 3px solid #ffffff;
+        border-radius: 50%;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.25);
+        cursor: grab;
+        transform: translateZ(0);
+        position: relative;
+        flex-shrink: 0;
+        transition: transform 0.1s ease-out;
+      }
+      
+      .draggable-marker:active {
+        cursor: grabbing;
+        transform: scale(1.1) translateZ(0);
+      }
+      
+      /* Slightly brighter color in dark mode */
+      body.dark .draggable-marker {
+        background: #00D2B5;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12);
+      }
+      
+      /* Ensure marker is visible above all layers */
+      .leaflet-marker-draggable {
+        z-index: 9999 !important;
+      }
+      
+      .fan-cluster-icon {
+        background: transparent !important;
+        border: none !important;
+      }
+      
       html[lang="ar"] {
         /* Set Cairo as the primary font for Arabic UI, with Inter/Rubik as a fallback for Latin characters */
         font-family: '"Cairo"', '"Inter"', '"Rubik"', 'sans-serif';
@@ -252,6 +310,10 @@
         display: none;
       }
       /* Custom Leaflet DivIcon for report markers */
+      .report-marker-icon {
+        background: transparent !important;
+        border: none !important;
+      }
       .report-leaflet-div-icon {
         border-radius: 50% 50% 50% 0;
         transform: rotate(-45deg);
@@ -268,7 +330,7 @@
         justify-content: center;
       }
       /* New styles for Fan Clusters */
-      .fan-cluster {
+      .fan-cluster-icon {
         background: transparent !important;
         border: none !important;
       }

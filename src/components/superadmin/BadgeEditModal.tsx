@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { DynamicBadge, DynamicCategory, BadgeCriteriaType } from '../../types';
 import { FaSpinner, FaXmark } from 'react-icons/fa6';
 import { ICON_MAP } from '../../constants';

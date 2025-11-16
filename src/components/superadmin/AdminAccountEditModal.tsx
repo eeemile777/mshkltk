@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { User, Report, ReportCategory } from '../../types';
 import { FaSpinner, FaXmark } from 'react-icons/fa6';
 

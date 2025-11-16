@@ -1,11 +1,11 @@
 const { Pool } = require('pg');
 require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env'), override: true });
 
-// PostgreSQL connection pool configuration
+// SECURITY FIX #17: Environment-based database pool configuration
 const pool = new Pool({
   // For local development with PostgreSQL
   host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
+  port: parseInt(process.env.DB_PORT) || 5432,
   database: process.env.DB_NAME || 'mshkltk',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD,
@@ -14,10 +14,15 @@ const pool = new Pool({
   // Uncomment and configure when you set up Cloud SQL
   // host: `/cloudsql/${process.env.CLOUD_SQL_CONNECTION_NAME}`,
   
-  // Connection pool settings
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection cannot be established
+  // Connection pool settings with environment overrides
+  max: parseInt(process.env.DB_POOL_MAX) || 20, // Maximum number of clients in the pool
+  min: parseInt(process.env.DB_POOL_MIN) || 5, // Minimum number of clients
+  idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT) || 30000, // Close idle clients after 30 seconds
+  connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT) || 2000, // Return error after 2 seconds if connection cannot be established
+  
+  // Retry configuration
+  maxUses: 7500, // Close and replace client after 7500 queries
+  allowExitOnIdle: process.env.NODE_ENV === 'development', // Allow process to exit with idle clients in dev
 });
 
 // Test the connection
@@ -69,5 +74,5 @@ const getClient = async () => {
 module.exports = {
   query,
   getClient,
-  pool,
+  pool, // Export pool for graceful shutdown
 };

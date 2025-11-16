@@ -205,11 +205,14 @@ const deleteUser = async (userId) => {
   }
 };
 
-// Award points to a user based on action
-const awardPoints = async (userId, action) => {
+// Award points to a user for an action
+// SECURITY FIX #8: Accept optional client for use within transactions
+const awardPoints = async (userId, action, client = null) => {
+  const queryFunc = client ? client.query.bind(client) : query;
+  
   try {
     // Fetch gamification settings
-    const settingsResult = await query(
+    const settingsResult = await queryFunc(
       'SELECT points_rules FROM gamification_settings WHERE id = $1',
       ['default']
     );
@@ -228,7 +231,7 @@ const awardPoints = async (userId, action) => {
     }
 
     // Award points to user
-    await query(
+    await queryFunc(
       'UPDATE users SET points = points + $1 WHERE id = $2',
       [rule.points, userId]
     );
@@ -236,7 +239,9 @@ const awardPoints = async (userId, action) => {
     console.log(`✅ Awarded ${rule.points} points to user ${userId} for action: ${action}`);
   } catch (error) {
     console.error('Error awarding points:', error);
-    // Don't throw - points are a nice-to-have, shouldn't break main flow
+    // If we're in a transaction, rethrow to rollback
+    if (client) throw error;
+    // Otherwise, don't throw - points are a nice-to-have
   }
 };
 

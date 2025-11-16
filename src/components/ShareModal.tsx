@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { AppContext } from '../contexts/AppContext';
 import { Report, Theme } from '../types';

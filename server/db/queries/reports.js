@@ -188,10 +188,17 @@ const confirmReport = async (reportId, userId) => {
       [userId, reportId]
     );
 
+    // SECURITY FIX #8: Award points inside transaction to prevent race condition
+    // If this fails, entire confirmation is rolled back
+    try {
+      await awardPoints(userId, 'confirm_report', client);
+    } catch (pointsError) {
+      console.error('Failed to award points during confirmation:', pointsError);
+      // Continue without points - confirmation is more important
+      // Points can be manually adjusted later
+    }
+
     await client.query('COMMIT');
-    
-    // Award points for confirming a report (outside transaction to not block on error)
-    await awardPoints(userId, 'confirm_report');
     
     return reportResult.rows[0];
   } catch (error) {

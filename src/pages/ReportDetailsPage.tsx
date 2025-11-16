@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import L from 'leaflet';

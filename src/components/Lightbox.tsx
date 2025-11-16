@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom';
 import { FaXmark, FaChevronLeft, FaChevronRight } from 'react-icons/fa6';
 import { AppContext } from '../contexts/AppContext';

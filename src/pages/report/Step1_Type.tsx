@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { AppContext } from '../../contexts/AppContext';
 import useGeolocation from '../../hooks/useGeolocation';
@@ -111,12 +111,12 @@ const Step1Type: React.FC<Step1TypeProps> = ({ onSelect }) => {
                     className="relative group flex flex-col items-center justify-center p-8 bg-card dark:bg-surface-dark rounded-2xl shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border-2 border-transparent hover:border-teal"
                 >
                     <span className="text-6xl text-teal dark:text-teal-dark mb-4 transition-transform duration-300 group-hover:scale-110"><FaCamera/></span>
-                    <h3 className="text-2xl font-bold text-navy dark:text-text-primary-dark flex items-center gap-2">
+                    <div className="text-2xl font-bold text-navy dark:text-text-primary-dark flex items-center gap-2">
                         {t.reportWithMedia}
-                        <button onClick={(e) => { e.stopPropagation(); setIsTutorialOpen('with'); }} className="text-text-secondary/50 dark:text-text-secondary-dark/50 hover:text-teal dark:hover:text-teal-dark">
+                        <div onClick={(e) => { e.stopPropagation(); setIsTutorialOpen('with'); }} className="text-text-secondary/50 dark:text-text-secondary-dark/50 hover:text-teal dark:hover:text-teal-dark cursor-pointer">
                             <FaCircleQuestion />
-                        </button>
-                    </h3>
+                        </div>
+                    </div>
                     <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">{t.reportWithMediaDesc}</p>
                 </button>
 
@@ -125,12 +125,12 @@ const Step1Type: React.FC<Step1TypeProps> = ({ onSelect }) => {
                     className="relative group flex flex-col items-center justify-center p-8 bg-card dark:bg-surface-dark rounded-2xl shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border-2 border-transparent hover:border-teal"
                 >
                     <span className="text-6xl text-sky dark:text-cyan-dark mb-4 transition-transform duration-300 group-hover:scale-110"><FaPen/></span>
-                    <h3 className="text-2xl font-bold text-navy dark:text-text-primary-dark flex items-center gap-2">
+                    <div className="text-2xl font-bold text-navy dark:text-text-primary-dark flex items-center gap-2">
                         {t.reportWithoutMedia}
-                         <button onClick={(e) => { e.stopPropagation(); setIsTutorialOpen('without'); }} className="text-text-secondary/50 dark:text-text-secondary-dark/50 hover:text-teal dark:hover:text-teal-dark">
+                         <div onClick={(e) => { e.stopPropagation(); setIsTutorialOpen('without'); }} className="text-text-secondary/50 dark:text-text-secondary-dark/50 hover:text-teal dark:hover:text-teal-dark cursor-pointer">
                             <FaCircleQuestion />
-                        </button>
-                    </h3>
+                        </div>
+                    </div>
                     <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">{t.reportWithoutMediaDesc}</p>
                 </button>
             </div>

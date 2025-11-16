@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import { SuperAdminContext } from '../../contexts/SuperAdminContext';

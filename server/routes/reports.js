@@ -247,6 +247,70 @@ router.get('/nearby', async (req, res) => {
 
 /**
  * @swagger
+ * /api/reports/{id}/full:
+ *   get:
+ *     summary: Get complete report details
+ *     description: Get report with comments and history in single request (PERFORMANCE FIX - prevents N+1 queries)
+ *     tags: [Reports]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Report ID
+ *     responses:
+ *       200:
+ *         description: Complete report data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 report:
+ *                   $ref: '#/components/schemas/Report'
+ *                 comments:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Comment'
+ *                 history:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ReportHistory'
+ *       404:
+ *         description: Report not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/:id/full', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // PERFORMANCE FIX #20: Fetch all data in parallel to avoid N+1 queries
+    const [report, commentsResult, historyResult] = await Promise.all([
+      getReportById(id),
+      queryDb('SELECT * FROM comments WHERE report_id = $1 ORDER BY created_at ASC', [id]),
+      queryDb('SELECT * FROM report_history WHERE report_id = $1 ORDER BY created_at DESC', [id]),
+    ]);
+
+    if (!report) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    res.json({
+      report,
+      comments: commentsResult.rows,
+      history: historyResult.rows,
+    });
+  } catch (error) {
+    console.error('Get full report error:', error);
+    res.status(500).json({ error: 'Failed to fetch report details' });
+  }
+});
+
+/**
+ * @swagger
  * /api/reports/trending:
  *   get:
  *     summary: Get trending reports

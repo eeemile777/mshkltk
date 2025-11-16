@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { Language, Report, User, ReportStatus, ReportHistory, DynamicCategory } from '../types';
 import * as api from '../services/api';
 import { ICON_MAP } from '../constants';

@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { Report, ReportSeverity } from '../types';
 import * as api from '../services/api';

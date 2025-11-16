@@ -4,7 +4,7 @@ import {
     FaRoadBridge, FaBolt, FaFaucetDrip, FaRecycle, FaTreeCity, FaBriefcaseMedical, FaRulerCombined, FaBus, FaTriangleExclamation, FaFileSignature,
     FaDroplet, FaTrafficLight, FaPersonShelter, FaVirusSlash, FaBuildingUser
 } from 'react-icons/fa6';
-import * as React from 'react';
+import React from 'react';
 
 export const PATHS = {
   HOME: '/home',

@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { Language, Report, User, ReportStatus, ReportCategory, ReportHistory, DynamicCategory, DynamicBadge, GamificationSettings, AuditLog } from '../types';
 import * as api from '../services/api';
 

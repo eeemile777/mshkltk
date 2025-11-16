@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { useState, useEffect } from 'react';
 
 interface GeolocationState {
   loading: boolean;
@@ -13,9 +13,9 @@ interface GeolocationState {
   error: GeolocationPositionError | null;
 }
 
-const useGeolocation = (options: PositionOptions = {}) => {
-  const [state, setState] = React.useState<GeolocationState>({
-    loading: true,
+const useGeolocation = (options: PositionOptions = {}, enabled: boolean = true) => {
+  const [state, setState] = useState<GeolocationState>({
+    loading: enabled,
     accuracy: null,
     altitude: null,
     altitudeAccuracy: null,
@@ -27,8 +27,15 @@ const useGeolocation = (options: PositionOptions = {}) => {
     error: null,
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
+    if (!enabled) {
+      setState(s => ({ ...s, loading: false }));
+      return;
+    }
+
     let isMounted = true;
+    let watchId: number | undefined;
+
     const onEvent = (event: GeolocationPosition) => {
       if (isMounted) {
         setState({
@@ -52,13 +59,18 @@ const useGeolocation = (options: PositionOptions = {}) => {
       }
     };
 
-    // Only get position once, don't watch continuously
-    navigator.geolocation.getCurrentPosition(onEvent, onEventError, options);
+    // Use watchPosition for continuous tracking instead of just getCurrentPosition
+    if (navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(onEvent, onEventError, options);
+    }
 
     return () => {
       isMounted = false;
+      if (watchId !== undefined) {
+        navigator.geolocation.clearWatch(watchId);
+      }
     };
-  }, [options]);
+  }, [enabled, options]);
 
   return state;
 };

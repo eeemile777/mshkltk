@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { FaCamera, FaWandMagicSparkles, FaMapLocationDot, FaCheck, FaSitemap, FaPen, FaXmark, FaChevronLeft, FaChevronRight } from 'react-icons/fa6';
 import { CATEGORIES } from '../constants';

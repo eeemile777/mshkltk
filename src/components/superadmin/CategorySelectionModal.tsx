@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { AppContext } from '../../contexts/AppContext';
 import { SuperAdminContext } from '../../contexts/SuperAdminContext';
 import { DynamicCategory, ReportCategory } from '../../types';

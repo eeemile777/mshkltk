@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { HashRouter, MemoryRouter, Routes, Route, Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { AppProvider, AppContext } from './contexts/AppContext';
 import { PortalProvider } from './contexts/PortalContext';
@@ -90,8 +90,8 @@ const AuthRoutes = () => (
 
 const App: React.FC = () => {
   return (
-    <AppProvider>
-      <Router>
+    <Router>
+      <AppProvider>
         <ImpersonationRedirectHandler />
         <Routes>
             {/* --- Public Landing Page --- */}
@@ -180,8 +180,8 @@ const App: React.FC = () => {
             <Route path={PATHS.AUTH_ANONYMOUS} element={<AnonymousRedirect />} />
             <Route path={PATHS.LOGOUT} element={<Logout />} />
         </Routes>
-      </Router>
-    </AppProvider>
+      </AppProvider>
+    </Router>
   );
 };
 

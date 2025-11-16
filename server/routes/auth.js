@@ -3,6 +3,37 @@ const router = express.Router();
 const { createUser, findUserByUsername } = require('../db/queries/users');
 const { generateSalt, hashPassword, verifyPassword } = require('../utils/crypto');
 const { generateToken } = require('../middleware/auth');
+const { validateRegistration, validateLogin } = require('../middleware/validators');
+const { asyncHandler } = require('../utils/errors');
+const rateLimit = require('express-rate-limit');
+
+// SECURITY FIX #4: Rate limiting for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 requests per window per IP
+  message: 'Too many authentication attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * SECURITY FIX #15: Enhanced password validation
+ */
+const validatePasswordComplexity = (password) => {
+  if (password.length < 8) {
+    return 'Password must be at least 8 characters';
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must contain at least one uppercase letter';
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'Password must contain at least one lowercase letter';
+  }
+  if (!/[0-9]/.test(password)) {
+    return 'Password must contain at least one number';
+  }
+  return null;
+};
 
 /**
  * @swagger
@@ -59,17 +90,13 @@ const { generateToken } = require('../middleware/auth');
  *       500:
  *         description: Server error
  */
-router.post('/register', async (req, res) => {
-  try {
+router.post('/register', authLimiter, validateRegistration, asyncHandler(async (req, res) => {
     const { username, password, first_name, last_name, role = 'citizen' } = req.body;
 
-    // Validation
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    // SECURITY FIX #15: Enhanced password validation
+    const passwordError = validatePasswordComplexity(password);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
     }
 
     // Check if username already exists
@@ -109,11 +136,7 @@ router.post('/register', async (req, res) => {
       user: newUser,
       token,
     });
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed' });
-  }
-});
+}));
 
 /**
  * @swagger
@@ -161,14 +184,8 @@ router.post('/register', async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.post('/login', async (req, res) => {
-  try {
+router.post('/login', authLimiter, validateLogin, asyncHandler(async (req, res) => {
     const { username, password } = req.body;
-
-    // Validation
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
-    }
 
     // Find user
     const user = await findUserByUsername(username);
@@ -198,11 +215,7 @@ router.post('/login', async (req, res) => {
       user,
       token,
     });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
-  }
-});
+}));
 
 /**
  * @swagger

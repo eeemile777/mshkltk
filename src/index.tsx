@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 
@@ -6,6 +6,22 @@ const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
+
+// Suppress leaflet.heat library errors that occur during map initialization
+const originalError = console.error;
+let errorSuppressCount = 0;
+(console as any).error = function(...args: any[]) {
+  const msg = String(args[0]);
+  // Suppress leaflet heat layer errors specifically
+  if (msg.includes('Cannot read properties of null') && msg.includes('getSize')) {
+    errorSuppressCount++;
+    if (errorSuppressCount > 5) {
+      originalError.apply(console, args); // After 5, allow it through
+    }
+    return;
+  }
+  originalError.apply(console, args);
+};
 
 // --- Service Worker Registration ---
 const IN_IFRAME = (() => { try { return window.self !== window.top; } catch { return true; } })();

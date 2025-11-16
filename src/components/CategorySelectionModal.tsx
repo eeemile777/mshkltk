@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { ReportCategory } from '../types';
 import { FaChevronDown, FaXmark } from 'react-icons/fa6';

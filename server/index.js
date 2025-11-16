@@ -5,14 +5,51 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env'), override: t
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
+const helmet = require('helmet');
+const { errorHandler } = require('./utils/errors');
+const { pool } = require('./db/connection');
 
 const app = express();
 const port = 3001;
 
+// SECURITY FIX #2: Add Helmet for security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "http://localhost:3000", "http://127.0.0.1:3000"],
+    }
+  },
+  crossOriginEmbedderPolicy: false, // Allow embedding for Swagger UI
+}));
+
 // --- Middleware ---
-app.use(cors());
-app.use(express.json({ limit: '50mb' })); // To handle large base64 images
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// SECURITY FIX #1: Restrict CORS to allowed origins only
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// SECURITY FIX #10: Default to 1MB limit, override per route
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
 // Serve static files from public directory
 app.use('/test', express.static(path.join(__dirname, 'public')));
@@ -130,7 +167,38 @@ app.post('/api/ai/translate-text', async (req, res) => {
   await handleAiRequest(res, prompt, false);
 });
 
+// SECURITY FIX #13: Global error handler (must be last)
+app.use(errorHandler);
 
-app.listen(port, () => {
+// SECURITY FIX #7: Graceful shutdown handler
+const server = app.listen(port, () => {
   console.log(`Backend server listening on http://localhost:${port}`);
 });
+
+const gracefulShutdown = async (signal) => {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  
+  // Stop accepting new connections
+  server.close(async () => {
+    console.log('HTTP server closed');
+    
+    // Close database pool
+    try {
+      await pool.end();
+      console.log('Database pool closed');
+      process.exit(0);
+    } catch (err) {
+      console.error('Error closing database pool:', err);
+      process.exit(1);
+    }
+  });
+  
+  // Force shutdown after 30 seconds
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 30000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

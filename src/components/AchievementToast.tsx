@@ -1,6 +1,6 @@
 
 
-import * as React from 'react';
+import React from 'react';
 import confetti from 'canvas-confetti';
 import { AppContext } from '../contexts/AppContext';
 import { Badge } from '../types';

@@ -1,10 +1,10 @@
-import * as React from 'react';
+import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { useNavigate } from 'react-router-dom';
 import { createRoot } from 'react-dom/client';
 import L from 'leaflet';
 import 'leaflet.markercluster';
-import 'leaflet.heat';
+// import 'leaflet.heat'; // TEMPORARILY DISABLED - causing blank page issues
 
 // Disable default Leaflet icon (we use custom icons everywhere)
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -129,7 +129,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     
     const effectiveCategories = categoriesOverride || categories;
     
-    const geolocation = useGeolocation({ enableHighAccuracy: true });
+    const geolocation = useGeolocation({ enableHighAccuracy: true }, !hideUserLocationMarker);
     const navigate = useNavigate();
     const mapContainer = React.useRef<HTMLDivElement>(null);
     const mapRef = React.useRef<L.Map | null>(null);
@@ -250,7 +250,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
             return L.divIcon({
                 html: finalHtml,
-                className: 'fan-cluster',
+                className: 'fan-cluster-icon',
                 iconSize: [60, 60],
                 iconAnchor: [30, 60]
             });
@@ -261,19 +261,24 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             iconCreateFunction: iconCreateFunction,
         }).addTo(map);
         
-        const heatGradient = {
-            0.4: 'rgba(75, 163, 195, 0.4)',
-            0.6: 'rgba(0, 191, 166, 0.5)',
-            0.8: 'rgba(255, 166, 43, 0.6)',
-            1.0: 'rgba(255, 90, 95, 0.7)'
-        };
-        
-        heatLayerRef.current = (L as any).heatLayer([], {
-            radius: 35,
-            blur: 25,
-            max: 60,
-            gradient: heatGradient,
-        }).addTo(map);
+        // TEMPORARILY DISABLED - heatmap causing blank page issues
+        // const heatGradient = {
+        //     0.4: 'rgba(75, 163, 195, 0.4)',
+        //     0.6: 'rgba(0, 191, 166, 0.5)',
+        //     0.8: 'rgba(255, 166, 43, 0.6)',
+        //     1.0: 'rgba(255, 90, 95, 0.7)'
+        // };
+        // 
+        // try {
+        //     heatLayerRef.current = (L as any).heatLayer([], {
+        //         radius: 35,
+        //         blur: 25,
+        //         max: 60,
+        //         gradient: heatGradient,
+        //     }).addTo(map);
+        // } catch (error) {
+        //     console.warn('Failed to create heat layer:', error);
+        // }
 
         map.on('moveend', () => {
             // FIX: Check the ref here. If the draggable pin is visible, we are in a report creation
@@ -326,9 +331,9 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         if (!map || !map.getSize()?.y) return;
 
         const clusterGroup = clusterGroupRef.current;
-        const heatLayer = heatLayerRef.current;
+        // const heatLayer = heatLayerRef.current; // TEMPORARILY DISABLED
 
-        if (!clusterGroup || !heatLayer) {
+        if (!clusterGroup) {
             return;
         }
         
@@ -337,11 +342,17 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         const heatData: [number, number, number][] = [];
         const markers: L.Marker[] = [];
 
-        // CRITICAL FIX: Disable heatmap when draggable pin is visible to prevent crashes
-        if (isDraggablePinVisible) {
-            // Only show report markers, not heatmap
-            heatLayer.setLatLngs([]);
-        }
+        // TEMPORARILY DISABLED - heatmap causing blank page issues
+        // const heatLayer = heatLayerRef.current;
+        // if (!isDraggablePinVisible && heatLayer) {
+        //     // Only manage heatmap when NOT in draggable pin mode
+        //     if (map.hasLayer(heatLayer)) {
+        //         // Heatmap is active, will update data below
+        //     } else {
+        //         // Re-add heatmap if it was removed
+        //         map.addLayer(heatLayer);
+        //     }
+        // }
 
         filteredReports.forEach(report => {
             const icon = createCategoryIcon(report.category, theme, effectiveCategories);
@@ -379,10 +390,15 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         
         (clusterGroup as any).addLayers(markers);
         
-        // Only update heatmap if draggable pin is not visible
-        if (!isDraggablePinVisible) {
-            heatLayer.setLatLngs(heatData);
-        }
+        // TEMPORARILY DISABLED - heatmap causing blank page issues
+        // const heatLayer = heatLayerRef.current;
+        // if (!isDraggablePinVisible && heatLayer && map.getContainer()) {
+        //     try {
+        //         heatLayer.setLatLngs(heatData);
+        //     } catch (error) {
+        //         console.warn('Heat layer update failed:', error);
+        //     }
+        // }
 
     }, [filteredReports, theme, t, navigate, reportPathPrefix, language, effectiveCategories, isDraggablePinVisible]);
 
@@ -443,7 +459,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 const iconHtml = `<div class="user-location-marker"><div class="pulse"></div><div class="dot"></div></div>`;
                 const userIcon = L.divIcon({
                     html: iconHtml,
-                    className: '',
+                    className: 'user-location-marker-icon',
                     iconSize: [24, 24],
                     iconAnchor: [12, 12],
                 });
@@ -479,18 +495,10 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         if (isDraggablePinVisible && !draggableMarkerRef.current && draggablePinPosition) {
             console.log('🎯 Creating draggable marker at:', draggablePinPosition);
             
-            // Create a simple, visible custom icon using divIcon
+            // Create a simple, visible custom icon using divIcon (use classes so CSS can style light/dark)
             const customIcon = L.divIcon({
-                className: '', // No class to avoid any CSS conflicts
-                html: `<div style="
-                    width: 30px;
-                    height: 30px;
-                    background: #00BFA6;
-                    border: 3px solid white;
-                    border-radius: 50%;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-                    cursor: move;
-                "></div>`,
+                className: 'draggable-marker-icon',
+                html: `<div class="draggable-marker"></div>`,
                 iconSize: [30, 30],
                 iconAnchor: [15, 15],
             });
@@ -498,6 +506,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             const marker = L.marker(draggablePinPosition, {
                 draggable: true,
                 icon: customIcon,
+                zIndexOffset: 10000,
             }).addTo(map);
             
             console.log('✅ Custom draggable marker added to map');

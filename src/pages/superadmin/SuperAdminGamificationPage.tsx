@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { SuperAdminContext } from '../../contexts/SuperAdminContext';
 import { AppContext } from '../../contexts/AppContext';
 import { DynamicBadge, GamificationSettings } from '../../types';

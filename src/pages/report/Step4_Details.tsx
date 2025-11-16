@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { AppContext } from '../../contexts/AppContext';
 import { ReportData, ReportCategory, Theme, ReportSeverity, AIssue } from '../../types';
 import { FaSpinner, FaCheck, FaWandMagicSparkles, FaArrowLeft, FaArrowRight, FaPhotoFilm, FaMicrophone, FaStop, FaCircleInfo, FaChevronDown, FaPen } from 'react-icons/fa6';

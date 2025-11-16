@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { DynamicCategory, DynamicSubCategory } from '../../types';
 import { FaSpinner, FaXmark, FaPlus, FaTrash } from 'react-icons/fa6';
 import { ICON_MAP } from '../../constants';

@@ -57,7 +57,7 @@ export const createCategoryIcon = (category: ReportCategory, theme: Theme, categ
 
   return L.divIcon({
     html: iconHtml,
-    className: '', // We apply classes directly in the HTML for more control
+    className: 'report-marker-icon', // Add className so Leaflet applies proper styling context
     iconSize: [ICON_SIZE, ICON_SIZE],
     iconAnchor: [ICON_SIZE / 2, ICON_SIZE],
     popupAnchor: [0, -ICON_SIZE],

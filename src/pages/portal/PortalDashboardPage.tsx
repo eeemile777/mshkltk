@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { PortalContext } from '../../contexts/PortalContext';
 import { AppContext } from '../../contexts/AppContext';

@@ -38,15 +38,35 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // NEVER cache API requests - always go to network
+  // NEVER cache API requests - always go to network, but handle offline gracefully
   if (url.pathname.startsWith('/api/') || url.origin.includes(':3001')) {
-    event.respondWith(fetch(event.request));
+    event.respondWith(
+      fetch(event.request)
+        .then(response => response)
+        .catch(err => {
+          console.warn('API request failed (offline?):', event.request.url, err);
+          // For API requests, return a proper error response that the app can parse
+          return new Response(
+            JSON.stringify({ error: 'Network error. Please check your connection.' }),
+            { 
+              status: 503, 
+              statusText: 'Service Unavailable', 
+              headers: { 'Content-Type': 'application/json' } 
+            }
+          );
+        })
+    );
     return;
   }
 
   // NEVER cache chrome-extension or other non-http(s) schemes
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    event.respondWith(fetch(event.request));
+    event.respondWith(
+      fetch(event.request).catch(err => {
+        console.warn('Fetch failed for non-http(s):', event.request.url);
+        return new Response('Network error', { status: 503 });
+      })
+    );
     return;
   }
 
@@ -81,6 +101,9 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+// SECURITY FIX #11: Prevent duplicate event listener registration
+let syncHandlerRegistered = false;
 
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-new-reports') {

@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from './Header';
 import BottomNav from './BottomNav';

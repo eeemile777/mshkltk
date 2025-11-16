@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { SearchSuggestion } from '../types';
 import { AppContext } from '../contexts/AppContext';
 import { FaRegFileLines, FaMapPin } from 'react-icons/fa6';

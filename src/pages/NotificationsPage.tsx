@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { Notification, NotificationType, User } from '../types';
 import { FaBell, FaAward, FaCircleCheck, FaUserPlus, FaComment, FaCamera } from 'react-icons/fa6';

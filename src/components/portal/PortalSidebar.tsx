@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { PortalContext } from '../../contexts/PortalContext';
 import { FaChartPie, FaListCheck, FaMapLocationDot, FaArrowRightFromBracket, FaMoon, FaSun, FaGlobe } from 'react-icons/fa6';

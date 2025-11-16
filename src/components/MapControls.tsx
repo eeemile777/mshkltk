@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
 import { ReportCategory, ReportStatus, TimeFilter } from '../types';

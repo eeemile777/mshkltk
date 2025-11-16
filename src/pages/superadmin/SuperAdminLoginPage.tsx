@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { FaSpinner, FaArrowLeft } from 'react-icons/fa6';
 import { AppContext } from '../../contexts/AppContext';

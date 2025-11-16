@@ -6,10 +6,10 @@
 ## 🚨 CRITICAL USER PREFERENCE
 
 **DO NOT create new markdown files.** Always update existing documentation files only. Examples of existing docs to update:
-- `TODO.md` - Track new tasks here
+- `docs/project-management/TODO.md` - Track new tasks here
 - `docs/gcp-proposal/README.md` - Update deployment docs
 - `docs/api/README.md` - Update API documentation
-- `DEVELOPMENT.md` - Update status and progress
+- `docs/development/DEVELOPMENT.md` - Update status and progress
 - `docs/README.md` - Update general docs
 
 This keeps the documentation organized and prevents doc sprawl.
@@ -195,7 +195,7 @@ GET  /api/notifications               # Fetch user notifications
 
 ### Issue: AI endpoints return 404
 - **Cause:** Gemini 2.5-flash may not be available in all regions/accounts
-- **Fix:** Test with `gemini-1.5-pro` or `gemini-1.5-pro-vision` (see `TODO.md` Critical #1)
+- **Fix:** Test with `gemini-1.5-pro` or `gemini-1.5-pro-vision` (see `docs/project-management/TODO.md` Critical #1)
 
 ## Commands Reference
 
@@ -245,4 +245,4 @@ curl http://localhost:3001/api-docs.json | jq  # Get API spec as JSON
 2. Open `http://localhost:3001/api-docs` to inspect all endpoints
 3. Login with `admin` / `password` and test citizen + portal workflows
 4. Run `npm test` to ensure test suite is healthy
-5. Check `TODO.md` for remaining priority items (esp. Critical #1 & #2)
+5. Check `docs/project-management/TODO.md` for remaining priority items (esp. Critical #1 & #2)

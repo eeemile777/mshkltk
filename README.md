@@ -107,17 +107,20 @@ Regular Citizen:
 
 ## 📖 Documentation
 
+**Comprehensive documentation hub:** [docs/README.md](./docs/README.md)
+
 | Document | Purpose |
 |----------|---------|
-| **[CURRENT_STATUS.md](./CURRENT_STATUS.md)** | 📊 Real-time status, progress, and critical TODOs |
-| **[QUICKSTART.md](./QUICKSTART.md)** | 🎯 Database setup guide |
-| **[TODO.md](./TODO.md)** | ✅ Complete task breakdown (34 items) |
-| **[docs/api/](./docs/api/)** | 📚 Detailed endpoint documentation |
-| **[docs/data-model/](./docs/data-model/)** | 🗄️ Database schema & relationships |
-| **[docs/TESTING.md](./docs/TESTING.md)** | 🧪 Testing strategy & coverage |
-| **[docs/STYLE_GUIDE.md](./docs/STYLE_GUIDE.md)** | 🎨 Design system & UI guidelines |
-
-| **[docs/STYLE_GUIDE.md](./docs/STYLE_GUIDE.md)** | 🎨 Design system & UI guidelines |
+| **[Quick Start](./docs/getting-started/QUICKSTART.md)** | 🎯 Get up and running in 5 minutes |
+| **[Development Guide](./docs/development/DEVELOPMENT.md)** | 📊 Development workflow and status |
+| **[TODO List](./docs/project-management/TODO.md)** | ✅ Current tasks and priorities |
+| **[API Documentation](./docs/api/)** | 📚 RESTful API endpoints reference |
+| **[Data Model](./docs/data-model/)** | 🗄️ Database schemas (PostgreSQL + PostGIS) |
+| **[Testing Guide](./docs/TESTING.md)** | 🧪 E2E testing with Playwright |
+| **[Style Guide](./docs/STYLE_GUIDE.md)** | 🎨 Design system & UI conventions |
+| **[Security Fixes](./docs/security/SECURITY_FIXES_TRACKING.md)** | 🔒 Security improvements & audit |
+| **[Contributing](./CONTRIBUTING.md)** | 🤝 Contribution guidelines |
+| **[Changelog](./CHANGELOG.md)** | 📝 Version history & changes |
 
 ---
 
@@ -412,10 +415,12 @@ MIT License - See LICENSE file for details
 ## 💬 Questions?
 
 Refer to:
-- **Technical:** See [docs/](./docs/) for detailed documentation
-- **Status:** Check [CURRENT_STATUS.md](./CURRENT_STATUS.md)
-- **Tasks:** Review [TODO.md](./TODO.md) for breakdowns
-- **API:** Browse [Swagger UI](http://localhost:3001/api-docs) when running
+- **Documentation:** See [docs/README.md](./docs/README.md) for comprehensive navigation
+- **Getting Started:** [Quick Start Guide](./docs/getting-started/QUICKSTART.md)
+- **Development:** [Development Guide](./docs/development/DEVELOPMENT.md)
+- **Tasks:** [TODO List](./docs/project-management/TODO.md)
+- **API Reference:** [Swagger UI](http://localhost:3001/api-docs) (when running)
+- **Contributing:** [Contributing Guidelines](./CONTRIBUTING.md)
 
 ---
 

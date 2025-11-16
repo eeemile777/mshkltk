@@ -1,19 +1,122 @@
-# Mshkltk Application Documentation
+# 📚 Mshkltk Documentation Hub
 
-Welcome to the official documentation for the Mshkltk application. This collection of documents is designed to assist backend developers in understanding the application's architecture, data models, and API requirements to transition the project from a mock-data prototype to a production-ready application.
+Welcome to the Mshkltk documentation! This page helps you navigate all project documentation.
 
-This documentation is structured into several key areas:
+---
 
--   **[Data Model](./data-model/README.md):** The single source of truth for database schemas. This section provides detailed field descriptions for all major entities like `User`, `Report`, `Notification`, etc.
+## 🚀 Getting Started
 
--   **[API Endpoints](./api/README.md):** A comprehensive guide to the required RESTful API endpoints. This serves as the contract for the backend, detailing request/response formats for everything from authentication to report management.
+**New to Mshkltk? Start here:**
 
--   **[Frontend Architecture](./frontend/README.md):** An overview of the client-side application, including state management, key components, and offline support mechanisms. This provides context for how the API will be consumed.
+- **[Quick Start Guide](getting-started/QUICKSTART.md)** - Get up and running in 5 minutes
+- **[Quick Reference](getting-started/QUICK_REFERENCE.md)** - Command cheat sheet
 
-## How to Use This Documentation
+**Next steps:**
+1. Read the [Main README](../README.md) for project overview
+2. Follow the [Quick Start](getting-started/QUICKSTART.md) to run locally
+3. Check [Development Guide](development/DEVELOPMENT.md) for contribution workflow
 
-1.  Start with the **[Data Model](./data-model/README.md)** to understand the core database schemas you will need to create.
-2.  Use the **[API Endpoints](./api/README.md)** section as a specification for building the backend services. The mock API in the frontend (`services/mockApi.ts`) serves as a client-side reference implementation of this contract.
-3.  Refer to the **[Frontend Architecture](./frontend/README.md)** section for context on how the client-side application consumes the API and manages its state.
+---
 
-This documentation will be updated as the application evolves.
+## 🏗️ Architecture
+
+Understanding how Mshkltk works:
+
+- **[API Documentation](api/README.md)** - RESTful API reference
+  - [Authentication](api/authentication.md)
+  - [Reports](api/reports.md)
+  - [Users](api/users.md)
+  - [Comments](api/comments.md)
+  - [Gamification](api/gamification.md)
+  - [Super Admin](api/superadmin.md)
+  - [Categories](api/categories.md)
+  - [Validation Rules](api/validation.md)
+- **[Data Model](data-model/README.md)** - Database schemas (PostgreSQL + PostGIS)
+- **[Frontend Architecture](frontend/README.md)** - React, TypeScript, PWA
+- **[GCP Proposal](gcp-proposal/README.md)** - Cloud deployment plan
+
+---
+
+## 💻 Development
+
+**For contributors and developers:**
+
+- **[Development Guide](development/DEVELOPMENT.md)** - Full development workflow
+- **[Testing Guide](TESTING.md)** - How to run and write tests
+- **[Style Guide](STYLE_GUIDE.md)** - Code conventions
+- **[Feature Testing](development/FEATURE_TEST_REFERENCE.md)** - Testing checklist
+
+**Development Resources:**
+- [Admin Login Flow](ADMIN_LOGIN_FLOW.md)
+- [Admin Auto Redirect](ADMIN_AUTO_REDIRECT.md)
+
+---
+
+## 🚢 Deployment
+
+**Production deployment guides:**
+
+- **[Migration Guide](deployment/MIGRATION_GUIDE.md)** - Deployment instructions
+- **[GCP Deployment](gcp-proposal/README.md)** - Google Cloud Platform setup
+- **[GCP Readiness](GCP_READINESS.md)** - Production checklist
+
+---
+
+## 🔒 Security
+
+**Security documentation and fixes:**
+
+- **[Security Fixes Tracking](security/SECURITY_FIXES_TRACKING.md)** - All 18 security fixes
+- **[Implementation Summary](security/IMPLEMENTATION_SUMMARY.md)** - Executive summary
+- **Best Practices** - Covered in security tracking docs
+
+---
+
+## 📋 Project Management
+
+**Tracking and planning:**
+
+- **[TODO List](project-management/TODO.md)** - Current tasks
+- **[Features Tracking](project-management/FEATURES_TRACKING_GUIDE.md)** - Feature status
+- **Changelog** - See Git commit history
+- **Roadmap** - Check TODO and features tracking
+
+---
+
+## 📖 Reference
+
+### Quick Links
+
+| What | Where |
+|------|-------|
+| Run locally | [Quick Start](getting-started/QUICKSTART.md) |
+| API docs | [API README](api/README.md) |
+| Deploy to production | [Migration Guide](deployment/MIGRATION_GUIDE.md) |
+| Run tests | [Testing](TESTING.md) |
+| Contribute code | [Development](development/DEVELOPMENT.md) |
+| Security fixes | [Security](security/SECURITY_FIXES_TRACKING.md) |
+
+### Archive
+
+Older documentation moved to [archive/](archive/) for reference.
+
+---
+
+## 🤝 Contributing
+
+1. Read the [Development Guide](development/DEVELOPMENT.md)
+2. Check the [Style Guide](STYLE_GUIDE.md)
+3. Review the [TODO list](project-management/TODO.md) for open tasks
+
+---
+
+## 📞 Need Help?
+
+- **Bug reports:** Open an issue on GitHub
+- **Questions:** Check existing docs first
+- **Security issues:** Follow responsible disclosure
+
+---
+
+**Last Updated:** November 16, 2025  
+**Documentation Structure:** Reorganized for better navigation and discoverability

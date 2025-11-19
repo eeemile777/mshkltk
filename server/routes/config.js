@@ -138,18 +138,43 @@ router.get('/categories', configCacheMiddleware, async (req, res) => {
  *               - icon
  *               - color
  *             properties:
+ *               id:
+ *                 type: string
+ *                 description: Category ID (auto-generated from label_en if not provided)
+ *                 example: "public_transport"
  *               label_en:
  *                 type: string
+ *                 description: English label (also sets name_en)
  *                 example: "Public Transport"
  *               label_ar:
  *                 type: string
+ *                 description: Arabic label (also sets name_ar)
+ *                 example: "النقل العام"
+ *               name_en:
+ *                 type: string
+ *                 description: English name (alternative to label_en)
+ *                 example: "Public Transport"
+ *               name_ar:
+ *                 type: string
+ *                 description: Arabic name (alternative to label_ar)
  *                 example: "النقل العام"
  *               icon:
  *                 type: string
  *                 example: "🚌"
  *               color:
  *                 type: string
+ *                 description: Light theme color
  *                 example: "#2196F3"
+ *               color_dark:
+ *                 type: string
+ *                 description: Dark theme color (defaults to color if not provided)
+ *                 example: "#1976D2"
+ *               sub_categories:
+ *                 type: array
+ *                 description: Array of sub-category names
+ *                 items:
+ *                   type: string
+ *                 example: ["Bus", "Metro", "Tram"]
  *               is_active:
  *                 type: boolean
  *                 example: true
@@ -241,14 +266,40 @@ router.post('/categories', authMiddleware, requireRole('super_admin'), async (re
  *             properties:
  *               label_en:
  *                 type: string
+ *                 description: English label (also updates name_en)
+ *                 example: "Public Transport"
  *               label_ar:
  *                 type: string
+ *                 description: Arabic label (also updates name_ar)
+ *                 example: "النقل العام"
+ *               name_en:
+ *                 type: string
+ *                 description: English name (alternative to label_en)
+ *                 example: "Public Transport"
+ *               name_ar:
+ *                 type: string
+ *                 description: Arabic name (alternative to label_ar)
+ *                 example: "النقل العام"
  *               icon:
  *                 type: string
+ *                 example: "🚌"
  *               color:
  *                 type: string
+ *                 description: Light theme color
+ *                 example: "#2196F3"
+ *               color_dark:
+ *                 type: string
+ *                 description: Dark theme color
+ *                 example: "#1976D2"
+ *               sub_categories:
+ *                 type: array
+ *                 description: Array of sub-category names
+ *                 items:
+ *                   type: string
+ *                 example: ["Bus", "Metro", "Tram"]
  *               is_active:
  *                 type: boolean
+ *                 example: true
  *     responses:
  *       200:
  *         description: Category updated successfully

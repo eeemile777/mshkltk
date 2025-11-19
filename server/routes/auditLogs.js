@@ -40,9 +40,45 @@ const { authMiddleware, requireRole } = require('../middleware/auth');
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
+ *               type: object
+ *               properties:
+ *                 logs:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "audit-123"
+ *                       actorId:
+ *                         type: string
+ *                         example: "user-456"
+ *                       actorName:
+ *                         type: string
+ *                         example: "John Admin"
+ *                       actorRole:
+ *                         type: string
+ *                         enum: [citizen, municipality, utility, union_of_municipalities, super_admin]
+ *                         example: "super_admin"
+ *                       message:
+ *                         type: string
+ *                         example: "create_category"
+ *                       timestamp:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-11-19T10:30:00Z"
+ *                       actionType:
+ *                         type: string
+ *                         example: "create_category"
+ *                       entityType:
+ *                         type: string
+ *                         example: "category"
+ *                       entityId:
+ *                         type: string
+ *                         example: "lighting"
+ *                       details:
+ *                         type: object
+ *                         example: {"category": {"id": "lighting", "name_en": "Lighting"}}
  *       401:
  *         description: Unauthorized
  *       403:

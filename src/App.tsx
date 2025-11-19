@@ -9,6 +9,7 @@ import AuthLayout from './components/AuthLayout';
 import AuthGate from './components/AuthGate';
 import LandingGate from './components/LandingGate';
 import Spinner from './components/Spinner';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import LandingPage from './pages/LandingPage';
 import HomePage from './pages/HomePage';
@@ -90,10 +91,11 @@ const AuthRoutes = () => (
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <AppProvider>
-        <ImpersonationRedirectHandler />
-        <Routes>
+    <ErrorBoundary>
+      <Router>
+        <AppProvider>
+          <ImpersonationRedirectHandler />
+          <Routes>
             {/* --- Public Landing Page --- */}
             <Route 
               path="/" 
@@ -182,6 +184,7 @@ const App: React.FC = () => {
         </Routes>
       </AppProvider>
     </Router>
+    </ErrorBoundary>
   );
 };
 

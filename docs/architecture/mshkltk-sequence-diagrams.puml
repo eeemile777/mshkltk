@@ -1,0 +1,348 @@
+@startuml Mshkltk Sequence Diagrams
+!theme plain
+
+title Mshkltk - Key User Flow Sequence Diagrams
+
+== User Authentication Flow ==
+
+actor Citizen
+participant "React App" as App
+participant "ApiService" as API
+participant "AuthRoutes" as Auth
+participant "AuthMiddleware" as Middleware
+participant "UsersQueries" as UserDB
+database "PostgreSQL" as DB
+
+Citizen -> App: Enter credentials
+App -> API: register(username, password, ...)
+API -> Auth: POST /api/auth/register
+Auth -> Auth: validatePasswordComplexity()
+Auth -> Auth: rate limit check (5 req/15min)
+Auth -> UserDB: findUserByUsername()
+UserDB -> DB: SELECT * FROM users WHERE username = ?
+DB -> UserDB: null (user doesn't exist)
+Auth -> Auth: generateSalt()
+Auth -> Auth: hashPassword(password, salt)
+Auth -> UserDB: createUser(userData)
+UserDB -> DB: INSERT INTO users VALUES (...)
+DB -> UserDB: new user record
+Auth -> Middleware: generateToken(user)
+Middleware -> Auth: JWT token (7-day expiration)
+Auth -> API: {user, token}
+API -> App: Store token in localStorage
+App -> Citizen: Redirect to /home
+
+note right of Middleware
+  JWT Payload includes:
+  - id
+  - username
+  - role
+  - municipality_id
+  - portal_access_level
+end note
+
+== Submit Report Flow (with AI Analysis) ==
+
+actor Citizen
+participant "ReportFormPage" as Form
+participant "AppContext" as Context
+participant "ApiService" as API
+participant "AIRoutes" as AI
+participant "GeminiAI" as Gemini
+participant "ReportsRoutes" as Reports
+participant "ReportsQueries" as ReportDB
+participant "NotificationsQueries" as NotifDB
+database "PostgreSQL" as DB
+participant "ServiceWorker" as SW
+participant "IndexedDB" as IDB
+
+Citizen -> Form: Upload photo & select location
+Form -> Context: submitReport()
+Context -> API: analyzeMedia(base64Image, description)
+API -> AI: POST /api/ai/analyze-media
+AI -> AI: authMiddleware - verify JWT
+AI -> Gemini: generateContent(prompt, image)
+Gemini -> AI: {category, severity, municipality, suggestions}
+AI -> API: analysis results
+API -> Context: AI suggestions
+Context -> Form: Display suggested category/severity
+Citizen -> Form: Confirm & submit
+
+alt Online
+  Form -> Context: submitReport(reportData)
+  Context -> API: submitReport()
+  API -> Reports: POST /api/reports
+  Reports -> Reports: authMiddleware - verify JWT
+  Reports -> ReportDB: createReport(reportData)
+  ReportDB -> DB: INSERT INTO reports VALUES (...)
+  DB -> ReportDB: new report
+  Reports -> ReportDB: updateUserPoints(userId, +10)
+  ReportDB -> DB: UPDATE users SET points = points + 10
+  Reports -> NotifDB: createNotification(userId, 'report_confirmed')
+  NotifDB -> DB: INSERT INTO notifications VALUES (...)
+  Reports -> API: new report
+  API -> Context: report created
+  Context -> Form: Success message
+  Form -> Citizen: Show achievement toast
+else Offline
+  Form -> Context: submitReport(reportData)
+  Context -> SW: Network request fails
+  SW -> IDB: addPendingReport(reportData)
+  IDB -> SW: stored
+  SW -> Context: Report queued for sync
+  Context -> Form: "Report saved, will sync when online"
+  
+  ... Network reconnects ...
+  
+  SW -> IDB: getPendingReports()
+  IDB -> SW: [pendingReports]
+  SW -> Reports: POST /api/reports (background sync)
+  Reports -> ReportDB: createReport()
+  ReportDB -> DB: INSERT INTO reports VALUES (...)
+  SW -> IDB: deletePendingReport(timestamp)
+  SW -> Context: Sync complete
+end
+
+note right of Gemini
+  **AI Analysis Features:**
+  - Category detection (12 categories)
+  - Severity assessment (high/medium/low)
+  - Municipality detection via coordinates
+  - Bilingual title generation (EN/AR)
+  - Multi-report detection in single image
+end note
+
+== Municipality Portal - Update Report Status ==
+
+actor MunicipalityStaff as Staff
+participant "PortalReportDetailsPage" as Page
+participant "PortalContext" as Context
+participant "ApiService" as API
+participant "ReportsRoutes" as Reports
+participant "ReportsQueries" as ReportDB
+participant "NotificationsQueries" as NotifDB
+participant "AuditLogs" as Audit
+database "PostgreSQL" as DB
+
+Staff -> Page: Change status to "resolved"
+Staff -> Page: Upload proof photos
+Page -> Context: updateReportStatus(reportId, 'resolved', proofUrls)
+Context -> API: updateReport(reportId, statusData)
+API -> Reports: PATCH /api/reports/:id
+Reports -> Reports: authMiddleware - verify JWT
+Reports -> Reports: requireWriteAccess - check portal_access_level
+Reports -> ReportDB: updateReport(reportId, statusData)
+ReportDB -> DB: UPDATE reports SET status = 'resolved'
+ReportDB -> DB: INSERT INTO report_history VALUES (...)
+Reports -> ReportDB: getReportById(reportId)
+ReportDB -> DB: SELECT * FROM reports WHERE id = ?
+DB -> ReportDB: updated report
+Reports -> NotifDB: createNotification(citizenId, 'status_change', reportId)
+NotifDB -> DB: INSERT INTO notifications VALUES (...)
+Reports -> Audit: logAction('update_report_status', reportId, staffId)
+Audit -> DB: INSERT INTO audit_logs VALUES (...)
+Reports -> API: updated report
+API -> Context: report updated
+Context -> Page: Refresh report details
+Page -> Staff: Status updated confirmation
+
+note right of Reports
+  **Access Control:**
+  - Citizens: Cannot update status
+  - Municipality: Can update if read_write access
+  - Super Admin: Full access always
+  - Utility: Only scoped categories
+end note
+
+== Super Admin - Impersonate User ==
+
+actor SuperAdmin as Admin
+participant "SuperAdminUsersPage" as Page
+participant "SuperAdminContext" as AdminContext
+participant "ApiService" as API
+participant "UsersRoutes" as Users
+participant "UsersQueries" as UserDB
+participant "AppContext" as CitizenContext
+participant "HomePage" as CitizenHome
+database "PostgreSQL" as DB
+
+Admin -> Page: Click "Impersonate" on citizen user
+Page -> AdminContext: impersonateUser(citizenId)
+AdminContext -> API: impersonateUser(citizenId)
+API -> Users: POST /api/users/impersonate
+Users -> Users: authMiddleware - verify JWT
+Users -> Users: requireRole('super_admin')
+Users -> UserDB: findUserById(citizenId)
+UserDB -> DB: SELECT * FROM users WHERE id = ?
+DB -> UserDB: citizen user data
+Users -> API: {impersonatedUser, token}
+API -> AdminContext: Store impersonation state
+AdminContext -> CitizenContext: setTempUserOverride(impersonatedUser, adminUser)
+CitizenContext -> CitizenHome: Navigate to /home
+CitizenHome -> Admin: Show citizen view with "Exit Impersonation" banner
+
+Admin -> CitizenHome: Click "Exit Impersonation"
+CitizenHome -> CitizenContext: exitImpersonation()
+CitizenContext -> API: exitImpersonation()
+API -> Users: POST /api/users/exit-impersonation
+Users -> Users: authMiddleware - verify original admin token
+Users -> API: {originalUser, token}
+API -> AdminContext: Restore admin state
+AdminContext -> Page: Navigate back to /superadmin/users
+Page -> Admin: Admin view restored
+
+note right of AdminContext
+  **Impersonation State:**
+  - overrideUser: The impersonated citizen
+  - realUser: The actual super admin
+  - isImpersonating: true
+  - impersonationRedirectPath: Return path
+  
+  Allows admin to test citizen workflows
+  without creating test accounts.
+end note
+
+== Gamification - Badge Award Flow ==
+
+participant "ReportsRoutes" as Reports
+participant "ReportsQueries" as ReportDB
+participant "UsersQueries" as UserDB
+participant "ConfigQueries" as ConfigDB
+participant "NotificationsQueries" as NotifDB
+database "PostgreSQL" as DB
+participant "AppContext" as Context
+participant "AchievementToast" as Toast
+
+Reports -> ReportDB: createReport(reportData)
+ReportDB -> DB: INSERT INTO reports VALUES (...)
+Reports -> UserDB: updateUserPoints(userId, +10)
+UserDB -> DB: UPDATE users SET points = points + 10
+UserDB -> DB: UPDATE users SET reports_count = reports_count + 1
+Reports -> UserDB: getUserReports(userId)
+UserDB -> DB: SELECT * FROM reports WHERE created_by = ?
+DB -> UserDB: [user's reports]
+Reports -> ConfigDB: getBadges()
+ConfigDB -> DB: SELECT * FROM dynamic_badges WHERE is_active = true
+DB -> ConfigDB: [active badges]
+
+Reports -> Reports: checkBadgeCriteria(user, badges)
+alt New Badge Earned: "pioneer" (first report)
+  Reports -> UserDB: addAchievement(userId, 'pioneer')
+  UserDB -> DB: UPDATE users SET achievements = array_append(achievements, 'pioneer')
+  Reports -> UserDB: updateUserPoints(userId, +25)
+  UserDB -> DB: UPDATE users SET points = points + 25
+  Reports -> NotifDB: createNotification(userId, 'badge_earned', 'pioneer')
+  NotifDB -> DB: INSERT INTO notifications VALUES (...)
+  Reports -> Context: Badge awarded event
+  Context -> Toast: showAchievementToast('pioneer')
+  Toast -> Toast: Display confetti animation
+end
+
+note right of Reports
+  **Badge Criteria Types:**
+  - report_count: Total reports submitted
+  - confirmation_count: Reports confirmed
+  - point_threshold: Total points reached
+  - category_filter: Reports in specific category
+  
+  **Points System:**
+  - Submit report: +10 points
+  - Confirm report: +3 points
+  - Earn badge: +25 bonus points
+  - Add comment: +2 points
+end note
+
+== Offline-First PWA - Background Sync ==
+
+actor Citizen
+participant "ServiceWorker" as SW
+participant "IndexedDB" as IDB
+participant "ApiService" as API
+participant "ReportsRoutes" as Reports
+database "PostgreSQL" as DB
+
+Citizen -> SW: Submit report while offline
+SW -> SW: fetch() fails - no network
+SW -> IDB: addPendingReport(reportData)
+IDB -> SW: stored with timestamp key
+SW -> Citizen: "Report saved, will sync when online"
+
+... Network reconnects ...
+
+SW -> SW: online event triggered
+SW -> IDB: getPendingReports()
+IDB -> SW: [pendingReport1, pendingReport2]
+
+loop For each pending report
+  SW -> API: POST /api/reports
+  API -> Reports: Create report
+  Reports -> DB: INSERT INTO reports
+  DB -> Reports: new report
+  Reports -> API: {id, created_at, ...}
+  API -> SW: Report synced
+  SW -> IDB: deletePendingReport(timestamp)
+end
+
+SW -> Citizen: Show notification "2 reports synced"
+
+note right of IDB
+  **IndexedDB Structure:**
+  - DB Name: mshkltk-db
+  - Store: pending-reports
+  - Key: timestamp
+  - Value: PendingReportData
+  
+  **Quota Management:**
+  - Auto-clears oldest 5 reports if quota exceeded
+  - Typical quota: ~50MB per origin
+end note
+
+== Real-Time Map Updates ==
+
+participant "MapPage" as Map
+participant "AppContext" as Context
+participant "ApiService" as API
+participant "ReportsRoutes" as Reports
+participant "ReportsQueries" as ReportDB
+database "PostgreSQL" as DB
+
+Map -> Map: componentDidMount()
+Map -> Context: loadReports()
+Context -> API: getReports(filters)
+API -> Reports: GET /api/reports?status=new,received,in_progress
+Reports -> ReportDB: getReports(filters)
+ReportDB -> DB: SELECT * FROM reports WHERE status IN (...)
+DB -> ReportDB: [reports]
+Reports -> API: {reports: [...]}
+API -> Context: reports data
+Context -> Map: Update markers
+
+Map -> Map: setInterval(30000) - poll every 30s
+Map -> Context: loadReports()
+Context -> API: getReports(filters)
+... Same as above ...
+Context -> Map: New reports appear
+
+alt User clicks cluster/marker
+  Map -> Context: selectReport(reportId)
+  Context -> API: getReportById(reportId)
+  API -> Reports: GET /api/reports/:id/full
+  Reports -> ReportDB: getReportById(reportId)
+  ReportDB -> DB: SELECT r.*, u.display_name, u.avatar_url FROM reports r LEFT JOIN users u...
+  DB -> ReportDB: full report with creator info
+  Reports -> API: report details
+  API -> Context: report
+  Context -> Map: Open report details modal
+end
+
+note right of Map
+  **Map Features:**
+  - Leaflet + OpenStreetMap tiles
+  - Marker clustering for performance
+  - Heatmap layer for density visualization
+  - PostGIS nearby queries (ST_DWithin)
+  - Category-based marker colors
+  - Status-based filtering
+end note
+
+@enduml

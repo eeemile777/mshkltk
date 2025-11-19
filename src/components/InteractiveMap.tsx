@@ -129,7 +129,11 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     
     const effectiveCategories = categoriesOverride || categories;
     
-    const geolocation = useGeolocation({ enableHighAccuracy: true }, !hideUserLocationMarker);
+    const geolocation = useGeolocation({ 
+        enableHighAccuracy: true,
+        maximumAge: 10000, // Cache position for 10 seconds
+        timeout: 27000 // 27 second timeout
+    }, !hideUserLocationMarker);
     const navigate = useNavigate();
     const mapContainer = React.useRef<HTMLDivElement>(null);
     const mapRef = React.useRef<L.Map | null>(null);

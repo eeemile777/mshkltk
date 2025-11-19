@@ -3,6 +3,7 @@ import { SuperAdminContext } from '../../contexts/SuperAdminContext';
 import { AppContext } from '../../contexts/AppContext';
 import InteractiveMap from '../../components/InteractiveMap';
 import Spinner from '../../components/Spinner';
+import ErrorBoundary from '../../components/ErrorBoundary';
 import { ICON_MAP, CATEGORIES } from '../../constants';
 import { ReportCategory } from '../../types';
 
@@ -40,12 +41,31 @@ const SuperAdminMapPage: React.FC = () => {
 
   return (
     <div className="h-full w-full rounded-2xl overflow-hidden shadow-lg -m-6">
-      <InteractiveMap
-        reports={allReports}
-        reportPathPrefix="/superadmin/reports/:id"
-        hideUserLocationMarker={true}
-        categoriesOverride={categoriesObject}
-      />
+      <ErrorBoundary fallback={
+        <div className="h-full flex items-center justify-center bg-muted dark:bg-bg-dark">
+          <div className="text-center p-8">
+            <p className="text-xl font-bold text-navy dark:text-text-primary-dark mb-4">
+              Map Loading Error
+            </p>
+            <p className="text-text-secondary dark:text-text-secondary-dark mb-4">
+              Please refresh the page (Cmd+Shift+R)
+            </p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-teal text-white rounded-xl font-semibold hover:bg-teal-dark transition-colors"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      }>
+        <InteractiveMap
+          reports={allReports}
+          reportPathPrefix="/superadmin/reports/:id"
+          hideUserLocationMarker={true}
+          categoriesOverride={categoriesObject}
+        />
+      </ErrorBoundary>
     </div>
   );
 };

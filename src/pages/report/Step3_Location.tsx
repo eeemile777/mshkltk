@@ -185,17 +185,24 @@ const Step3Location: React.FC<{
   // AI Municipality Detection
   React.useEffect(() => {
     const address = reportData.address;
-    if (!address || reportData.municipality || address === t.addressNotFound || address === t.fetchError || !process.env.API_KEY || isReverseGeocoding) {
+    // SECURITY FIX: Removed direct Gemini API call from frontend
+    // Municipality detection should use backend proxy at /api/ai/detect-municipality
+    if (!address || reportData.municipality || address === t.addressNotFound || address === t.fetchError || isReverseGeocoding) {
         return;
     }
     const detectMunicipality = async () => {
       setIsDetectingMunicipality(true);
       try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `You are a Lebanese geography expert. Given the address: "${address}", identify the official municipality. Respond with ONLY the municipality name in lowercase English. Your response must be a single, valid JSON object with one key: "municipality".`;
-        const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { municipality: { type: Type.STRING } }, required: ["municipality"] } } });
-        const result = JSON.parse(response.text);
-        if (result.municipality) updateReportData({ municipality: result.municipality });
+        // TODO: Use backend API endpoint instead of direct Gemini call
+        // const response = await fetch('/api/ai/detect-municipality', {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        //   body: JSON.stringify({ address })
+        // });
+        // const result = await response.json();
+        // if (result.municipality) updateReportData({ municipality: result.municipality });
+        
+        console.warn('Municipality detection disabled - use backend API endpoint');
       } catch (error) {
         console.error("Municipality detection error:", error);
         updateReportData({ municipality: 'unknown' });

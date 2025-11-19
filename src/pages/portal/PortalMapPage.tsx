@@ -3,6 +3,7 @@ import L from 'leaflet';
 import { PortalContext } from '../../contexts/PortalContext';
 import InteractiveMap from '../../components/InteractiveMap';
 import Spinner from '../../components/Spinner';
+import ErrorBoundary from '../../components/ErrorBoundary';
 
 const MUNICIPALITY_COORDS: { [key: string]: { center: L.LatLngTuple, zoom: number, bounds: L.LatLngBoundsExpression, minZoom: number } } = {
     beirut: { center: [33.8938, 35.5018], zoom: 13, bounds: [[33.85, 35.45], [33.93, 35.56]], minZoom: 12 },
@@ -79,13 +80,32 @@ const PortalMapPage: React.FC = () => {
 
     return (
         <div className="h-full w-full rounded-2xl overflow-hidden shadow-lg -m-6">
-            <InteractiveMap
-                reports={reports}
-                reportPathPrefix="/portal/reports/:id"
-                hideUserLocationMarker={true}
-                categoriesOverride={categories}
-                {...mapProps}
-            />
+            <ErrorBoundary fallback={
+                <div className="h-full flex items-center justify-center bg-muted dark:bg-bg-dark">
+                    <div className="text-center p-8">
+                        <p className="text-xl font-bold text-navy dark:text-text-primary-dark mb-4">
+                            Map Loading Error
+                        </p>
+                        <p className="text-text-secondary dark:text-text-secondary-dark mb-4">
+                            Please refresh the page (Cmd+Shift+R)
+                        </p>
+                        <button 
+                            onClick={() => window.location.reload()}
+                            className="px-6 py-3 bg-teal text-white rounded-xl font-semibold hover:bg-teal-dark transition-colors"
+                        >
+                            Reload Page
+                        </button>
+                    </div>
+                </div>
+            }>
+                <InteractiveMap
+                    reports={reports}
+                    reportPathPrefix="/portal/reports/:id"
+                    hideUserLocationMarker={true}
+                    categoriesOverride={categories}
+                    {...mapProps}
+                />
+            </ErrorBoundary>
         </div>
     );
 };

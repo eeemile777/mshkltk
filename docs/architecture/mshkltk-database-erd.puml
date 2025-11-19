@@ -1,0 +1,365 @@
+@startuml Mshkltk Database Schema (ERD)
+!theme plain
+
+title Mshkltk - Database Entity Relationship Diagram (PostgreSQL + PostGIS)
+
+' Entity definitions
+entity "users" as users {
+  * **id** : UUID <<PK>>
+  --
+  * username : VARCHAR(255) <<UNIQUE>>
+  * password_hash : TEXT
+  salt : TEXT
+  * first_name : VARCHAR(255)
+  * last_name : VARCHAR(255)
+  * display_name : VARCHAR(255)
+  * is_anonymous : BOOLEAN = false
+  * points : INTEGER = 0
+  * achievements : TEXT[] = '{}'
+  * reports_count : INTEGER = 0
+  * reports_confirmed : INTEGER = 0
+  confirmed_report_ids : TEXT[] = '{}'
+  subscribed_report_ids : TEXT[] = '{}'
+  * created_at : TIMESTAMP WITH TIME ZONE
+  avatar_url : TEXT
+  * onboarding_complete : BOOLEAN = false
+  * **role** : user_role = 'citizen'
+  portal_access_level : portal_access_level
+  municipality_id : VARCHAR(100)
+  scoped_categories : report_category[]
+  scoped_municipalities : TEXT[]
+  scoped_sub_categories : TEXT[]
+  * is_active : BOOLEAN = true
+  portal_title : VARCHAR(255)
+  portal_subtitle : VARCHAR(255)
+}
+
+entity "reports" as reports {
+  * **id** : UUID <<PK>>
+  --
+  * title_en : TEXT
+  * title_ar : TEXT
+  photo_urls : TEXT[] = '{}'
+  * **location** : GEOGRAPHY(POINT, 4326)
+  * lat : DECIMAL(10, 8)
+  * lng : DECIMAL(11, 8)
+  area : VARCHAR(500)
+  * municipality : VARCHAR(100)
+  * **category** : report_category
+  sub_category : VARCHAR(100)
+  * note_en : TEXT
+  * note_ar : TEXT
+  * status : report_status = 'new'
+  * severity : report_severity = 'medium'
+  * confirmations_count : INTEGER = 0
+  * created_at : TIMESTAMP WITH TIME ZONE
+  **created_by** : UUID <<FK>>
+  subscribed_user_ids : TEXT[] = '{}'
+}
+
+entity "comments" as comments {
+  * **id** : UUID <<PK>>
+  --
+  * **report_id** : UUID <<FK>>
+  **user_id** : UUID <<FK>>
+  * text : TEXT
+  * created_at : TIMESTAMP WITH TIME ZONE
+}
+
+entity "notifications" as notifications {
+  * **id** : UUID <<PK>>
+  --
+  * **user_id** : UUID <<FK>>
+  * **type** : notification_type
+  * title_en : VARCHAR(255)
+  * title_ar : VARCHAR(255)
+  body_en : TEXT
+  body_ar : TEXT
+  **report_id** : UUID <<FK>>
+  * is_read : BOOLEAN = false
+  * created_at : TIMESTAMP WITH TIME ZONE
+}
+
+entity "report_history" as history {
+  * **id** : UUID <<PK>>
+  --
+  * **report_id** : UUID <<FK>>
+  old_status : report_status
+  * new_status : report_status
+  **changed_by** : UUID <<FK>>
+  notes : TEXT
+  proof_urls : TEXT[] = '{}'
+  * timestamp : TIMESTAMP WITH TIME ZONE
+}
+
+entity "dynamic_categories" as categories {
+  * **id** : VARCHAR(100) <<PK>>
+  --
+  * label_en : VARCHAR(255)
+  * label_ar : VARCHAR(255)
+  icon : VARCHAR(100)
+  color : VARCHAR(50)
+  sub_categories : JSONB = '{}'
+  * is_active : BOOLEAN = true
+  * created_at : TIMESTAMP WITH TIME ZONE
+  * updated_at : TIMESTAMP WITH TIME ZONE
+}
+
+entity "dynamic_badges" as badges {
+  * **id** : VARCHAR(100) <<PK>>
+  --
+  * name_en : VARCHAR(255)
+  * name_ar : VARCHAR(255)
+  description_en : TEXT
+  description_ar : TEXT
+  icon : VARCHAR(100)
+  color : VARCHAR(50)
+  requirement_type : VARCHAR(100)
+  requirement_value : INTEGER
+  * is_active : BOOLEAN = true
+  * created_at : TIMESTAMP WITH TIME ZONE
+  * updated_at : TIMESTAMP WITH TIME ZONE
+}
+
+entity "gamification_settings" as gamification {
+  * **id** : VARCHAR(100) <<PK>>
+  --
+  * points_rules : JSONB
+  * updated_at : TIMESTAMP WITH TIME ZONE
+}
+
+entity "audit_logs" as audit {
+  * **id** : UUID <<PK>>
+  --
+  **admin_id** : UUID <<FK>>
+  * action : VARCHAR(255)
+  entity_type : VARCHAR(100)
+  entity_id : VARCHAR(255)
+  details : JSONB
+  * timestamp : TIMESTAMP WITH TIME ZONE
+}
+
+' Enums
+enum user_role {
+  citizen
+  municipality
+  utility
+  union_of_municipalities
+  super_admin
+}
+
+enum portal_access_level {
+  read_only
+  read_write
+}
+
+enum report_category {
+  infrastructure
+  electricity_energy
+  water_sanitation
+  waste_environment
+  public_safety
+  public_spaces
+  public_health
+  urban_planning
+  transportation
+  emergencies
+  transparency_services
+  other_unknown
+}
+
+enum report_status {
+  new
+  received
+  in_progress
+  resolved
+}
+
+enum report_severity {
+  high
+  medium
+  low
+}
+
+enum notification_type {
+  status_change
+  new_comment
+  report_confirmed
+  badge_earned
+  report_resolved
+}
+
+' Relationships
+users ||--o{ reports : creates
+users ||--o{ comments : writes
+users ||--o{ notifications : receives
+users ||--o{ history : "changes status"
+users ||--o{ audit : "performs actions"
+
+reports ||--o{ comments : "has"
+reports ||--o{ notifications : "about"
+reports ||--o{ history : "status changes"
+
+reports }o--|| user_role : "scoped by role"
+reports }o--|| report_category : "categorized as"
+reports }o--|| report_status : "has status"
+reports }o--|| report_severity : "has severity"
+
+users }o--|| user_role : "has role"
+users }o--o| portal_access_level : "has access level"
+
+notifications }o--|| notification_type : "has type"
+
+' Indexes
+note right of users
+  **Indexes:**
+  - idx_users_username (username)
+  - idx_users_role (role)
+  - idx_users_municipality_id (municipality_id)
+  
+  **Constraints:**
+  - username UNIQUE
+  - password_hash required for non-anonymous
+end note
+
+note right of reports
+  **Indexes:**
+  - idx_reports_municipality (municipality)
+  - idx_reports_category (category)
+  - idx_reports_status (status)
+  - idx_reports_created_by (created_by)
+  - idx_reports_created_at (created_at DESC)
+  - **idx_reports_location (GIST spatial index)**
+  
+  **PostGIS Features:**
+  - location stores lat/lng as GEOGRAPHY(POINT, 4326)
+  - Enables ST_DWithin() for nearby queries
+  - ST_Distance() for distance calculations
+end note
+
+note right of comments
+  **Indexes:**
+  - idx_comments_report_id (report_id)
+  - idx_comments_user_id (user_id)
+  - idx_comments_created_at (created_at DESC)
+  
+  **Cascade Behavior:**
+  - ON DELETE CASCADE for report_id
+  - ON DELETE SET NULL for user_id
+end note
+
+note right of notifications
+  **Indexes:**
+  - idx_notifications_user_id (user_id)
+  - idx_notifications_report_id (report_id)
+  - idx_notifications_is_read (is_read)
+  - idx_notifications_created_at (created_at DESC)
+  
+  **Types:**
+  - status_change: Report status updated
+  - new_comment: Comment added to subscribed report
+  - report_confirmed: Another user confirmed report
+  - badge_earned: New achievement unlocked
+  - report_resolved: Subscribed report marked resolved
+end note
+
+note right of history
+  **Indexes:**
+  - idx_report_history_report_id (report_id)
+  - idx_report_history_timestamp (timestamp DESC)
+  
+  **Purpose:**
+  - Audit trail of status changes
+  - Proof of resolution storage
+  - Municipality accountability
+end note
+
+note right of audit
+  **Indexes:**
+  - idx_audit_logs_admin_id (admin_id)
+  - idx_audit_logs_timestamp (timestamp DESC)
+  - idx_audit_logs_action (action)
+  
+  **Common Actions:**
+  - update_report_status
+  - impersonate_user
+  - update_category
+  - update_gamification
+  - create_admin_account
+  - suspend_user
+end note
+
+note right of categories
+  **JSONB sub_categories structure:**
+  {
+    "unpaved_roads": {
+      "name_en": "Unpaved roads",
+      "name_ar": "طرق غير معبدة"
+    },
+    ...
+  }
+  
+  **Super Admin Management:**
+  - Can add/edit/deactivate categories
+  - Icons mapped to React Icons
+  - Colors for light/dark themes
+end note
+
+note right of badges
+  **requirement_type values:**
+  - report_count: Total reports submitted
+  - confirmation_count: Reports confirmed
+  - point_threshold: Total points reached
+  
+  **requirement_value examples:**
+  - pioneer: report_count >= 1
+  - civic_leader: point_threshold >= 100
+  - community_helper: confirmation_count >= 5
+end note
+
+note right of gamification
+  **Default points_rules (JSONB):**
+  [
+    {
+      "id": "submit_report",
+      "points": 10,
+      "description": "For submitting a new report"
+    },
+    {
+      "id": "confirm_report",
+      "points": 3,
+      "description": "For confirming an existing report"
+    },
+    {
+      "id": "earn_badge",
+      "points": 25,
+      "description": "Bonus for earning a new badge"
+    }
+  ]
+  
+  **Super Admin can modify points values**
+end note
+
+legend right
+  **Database Information**
+  - **DBMS**: PostgreSQL 15
+  - **Extensions**: PostGIS, uuid-ossp
+  - **Character Set**: UTF-8 (for bilingual support)
+  - **Time Zone**: UTC (all timestamps)
+  
+  **Seeded Data:**
+  - 35 users (admin, portal users, citizens)
+  - 100+ realistic reports
+  - 12 report categories
+  - 14 badges
+  - Gamification settings
+  
+  **Docker Setup:**
+  - Container: mshkltk_db_postgres
+  - Volume: mshkltk_db_volume (persistent)
+  - Port: 5432 (exposed)
+  - Database: mshkltk_db
+  - User: mshkltk_user
+endlegend
+
+@enduml

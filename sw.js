@@ -1,9 +1,10 @@
 
-const CACHE_NAME = 'mshkltk-cache-v3';
+const CACHE_NAME = 'mshkltk-cache-v4';
 const APP_SHELL_URLS = [
   '/',
   '/index.html',
-  'https://cdn.tailwindcss.com',
+  '/src/index.tsx',
+  '/src/App.tsx'
 ];
 
 self.addEventListener('install', (event) => {

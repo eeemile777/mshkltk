@@ -1,0 +1,460 @@
+@startuml Mshkltk System Architecture Overview
+!theme plain
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F8F9FA
+skinparam classBorderColor #495057
+skinparam packageBackgroundColor #E9ECEF
+skinparam packageBorderColor #6C757D
+
+title Mshkltk - Civic Reporting PWA System Architecture
+
+package "Frontend - React 18 + TypeScript" {
+  
+  package "Contexts (State Management)" {
+    class AppContext <<Context>> {
+      +language: Language
+      +theme: Theme
+      +currentUser: User
+      +reports: Report[]
+      +notifications: Notification[]
+      +isImpersonating: boolean
+      --
+      +login()
+      +logout()
+      +submitReport()
+      +confirmReport()
+      +subscribeToReport()
+    }
+    
+    class PortalContext <<Context>> {
+      +portalUser: User
+      +municipalityReports: Report[]
+      +statistics: Stats
+      --
+      +updateReportStatus()
+      +addProofOfResolution()
+      +filterByCategory()
+    }
+    
+    class SuperAdminContext <<Context>> {
+      +adminUser: User
+      +allUsers: User[]
+      +allReports: Report[]
+      +auditLogs: AuditLog[]
+      --
+      +impersonateUser()
+      +manageCategories()
+      +manageGamification()
+      +viewAuditTrail()
+    }
+  }
+  
+  package "Pages" {
+    package "Citizen Portal" {
+      class HomePage
+      class MapPage
+      class ReportFormPage
+      class ReportDetailsPage
+      class NotificationsPage
+      class AchievementsPage
+      class ProfilePage
+    }
+    
+    package "Municipality Portal" {
+      class PortalDashboardPage
+      class PortalReportsListPage
+      class PortalMapPage
+      class PortalReportDetailsPage
+    }
+    
+    package "Super Admin Portal" {
+      class SuperAdminDashboardPage
+      class SuperAdminReportsPage
+      class SuperAdminUsersPage
+      class SuperAdminCategoriesPage
+      class SuperAdminGamificationPage
+      class SuperAdminAuditTrailPage
+    }
+  }
+  
+  package "Services" {
+    class ApiService <<Service>> {
+      -API_BASE_URL: string
+      --
+      +register()
+      +login()
+      +getReports()
+      +submitReport()
+      +analyzeMedia()
+      +getCategories()
+      +transformUser()
+    }
+  }
+  
+  package "PWA Features" {
+    class ServiceWorker <<Worker>> {
+      +offline cache
+      +background sync
+      +push notifications
+      --
+      +cacheFirst()
+      +networkFirst()
+      +syncPendingReports()
+    }
+    
+    class IndexedDB <<Storage>> {
+      +pendingReports
+      --
+      +addPendingReport()
+      +getPendingReports()
+      +deletePendingReport()
+    }
+  }
+}
+
+package "Backend - Node.js + Express 5" {
+  
+  package "Routes (API Endpoints)" {
+    class AuthRoutes {
+      +POST /register
+      +POST /login
+      +POST /anonymous
+    }
+    
+    class ReportsRoutes {
+      +POST /
+      +GET /
+      +GET /:id
+      +PATCH /:id
+      +POST /:id/confirm
+      +POST /:id/subscribe
+      +GET /nearby
+      +GET /trending
+      +GET /stats
+      +DELETE /:id
+    }
+    
+    class CommentsRoutes {
+      +POST /
+      +GET /report/:reportId
+      +DELETE /:id
+    }
+    
+    class UsersRoutes {
+      +GET /:id
+      +PATCH /:id
+      +GET /:id/reports
+      +GET /leaderboard
+      +POST /impersonate
+      +POST /exit-impersonation
+    }
+    
+    class AIRoutes {
+      +POST /analyze-media
+      +POST /transcribe-audio
+      +POST /detect-municipality
+      +POST /generate-title
+    }
+    
+    class ConfigRoutes {
+      +GET /categories
+      +POST /categories
+      +PATCH /categories/:id
+      +GET /badges
+      +POST /badges
+      +GET /gamification
+      +PATCH /gamification
+    }
+    
+    class NotificationsRoutes {
+      +GET /
+      +GET /unread-count
+      +PATCH /:id/read
+      +POST /mark-all-read
+      +DELETE /:id
+    }
+    
+    class AuditLogsRoutes {
+      +GET /
+      +POST /
+    }
+  }
+  
+  package "Middleware" {
+    class AuthMiddleware {
+      -JWT_SECRET: string
+      --
+      +generateToken()
+      +verifyToken()
+      +authMiddleware()
+      +requireRole()
+      +requireWriteAccess()
+    }
+    
+    class Validators {
+      +validateRegistration()
+      +validateLogin()
+      +validateReport()
+      +sanitizeInput()
+    }
+    
+    class UploadMiddleware {
+      +multer storage
+      +file size limits
+      +file type validation
+    }
+    
+    class SecurityMiddleware {
+      +helmet() - CSP headers
+      +cors() - origin validation
+      +rateLimit() - auth throttle
+    }
+  }
+  
+  package "AI Integration" {
+    class GeminiAI <<External>> {
+      +model: gemini-2.5-flash
+      --
+      +analyzeImage()
+      +generateText()
+      +categorizeReport()
+      +detectMunicipality()
+    }
+  }
+  
+  package "Database Queries" {
+    class UsersQueries {
+      +createUser()
+      +findUserById()
+      +findUserByUsername()
+      +updateUser()
+      +getUserReports()
+      +getLeaderboard()
+    }
+    
+    class ReportsQueries {
+      +createReport()
+      +getReportById()
+      +getReports()
+      +getNearbyReports()
+      +updateReport()
+      +confirmReport()
+      +deleteReport()
+      +getReportStats()
+    }
+    
+    class CommentsQueries {
+      +createComment()
+      +getCommentsByReportId()
+      +deleteComment()
+    }
+    
+    class NotificationsQueries {
+      +createNotification()
+      +getUserNotifications()
+      +markAsRead()
+      +deleteNotification()
+    }
+    
+    class ConfigQueries {
+      +getCategories()
+      +updateCategory()
+      +getBadges()
+      +updateBadge()
+      +getGamificationSettings()
+      +updateGamificationSettings()
+    }
+  }
+}
+
+package "Database - PostgreSQL 15 + PostGIS" {
+  
+  class Users {
+    +id: UUID (PK)
+    +username: VARCHAR
+    +password_hash: TEXT
+    +first_name: VARCHAR
+    +last_name: VARCHAR
+    +display_name: VARCHAR
+    +role: user_role
+    +municipality_id: VARCHAR
+    +portal_access_level: portal_access_level
+    +points: INTEGER
+    +achievements: TEXT[]
+    +is_active: BOOLEAN
+    +created_at: TIMESTAMP
+  }
+  
+  class Reports {
+    +id: UUID (PK)
+    +title_en: TEXT
+    +title_ar: TEXT
+    +category: report_category
+    +sub_category: VARCHAR
+    +location: GEOGRAPHY(POINT)
+    +lat: DECIMAL
+    +lng: DECIMAL
+    +municipality: VARCHAR
+    +status: report_status
+    +severity: report_severity
+    +photo_urls: TEXT[]
+    +created_by: UUID (FK)
+    +confirmations_count: INTEGER
+    +created_at: TIMESTAMP
+  }
+  
+  class Comments {
+    +id: UUID (PK)
+    +report_id: UUID (FK)
+    +user_id: UUID (FK)
+    +text: TEXT
+    +created_at: TIMESTAMP
+  }
+  
+  class Notifications {
+    +id: UUID (PK)
+    +user_id: UUID (FK)
+    +type: notification_type
+    +title_en: VARCHAR
+    +title_ar: VARCHAR
+    +report_id: UUID (FK)
+    +is_read: BOOLEAN
+    +created_at: TIMESTAMP
+  }
+  
+  class ReportHistory {
+    +id: UUID (PK)
+    +report_id: UUID (FK)
+    +old_status: report_status
+    +new_status: report_status
+    +changed_by: UUID (FK)
+    +proof_urls: TEXT[]
+    +timestamp: TIMESTAMP
+  }
+  
+  class DynamicCategories {
+    +id: VARCHAR (PK)
+    +label_en: VARCHAR
+    +label_ar: VARCHAR
+    +icon: VARCHAR
+    +color: VARCHAR
+    +sub_categories: JSONB
+    +is_active: BOOLEAN
+  }
+  
+  class DynamicBadges {
+    +id: VARCHAR (PK)
+    +name_en: VARCHAR
+    +name_ar: VARCHAR
+    +icon: VARCHAR
+    +requirement_type: VARCHAR
+    +requirement_value: INTEGER
+    +is_active: BOOLEAN
+  }
+  
+  class GamificationSettings {
+    +id: VARCHAR (PK)
+    +points_rules: JSONB
+    +updated_at: TIMESTAMP
+  }
+  
+  class AuditLogs {
+    +id: UUID (PK)
+    +admin_id: UUID (FK)
+    +action: VARCHAR
+    +entity_type: VARCHAR
+    +entity_id: VARCHAR
+    +details: JSONB
+    +timestamp: TIMESTAMP
+  }
+}
+
+' Relationships - Frontend
+AppContext --> ApiService : uses
+PortalContext --> ApiService : uses
+SuperAdminContext --> ApiService : uses
+HomePage --> AppContext : consumes
+MapPage --> AppContext : consumes
+ReportFormPage --> AppContext : consumes
+ServiceWorker --> IndexedDB : stores offline data
+ApiService --> ServiceWorker : intercepts requests
+
+' Relationships - Backend to Database
+AuthRoutes --> UsersQueries : queries
+ReportsRoutes --> ReportsQueries : queries
+ReportsRoutes --> NotificationsQueries : creates notifications
+CommentsRoutes --> CommentsQueries : queries
+UsersRoutes --> UsersQueries : queries
+AIRoutes --> GeminiAI : analyzes
+ConfigRoutes --> ConfigQueries : queries
+NotificationsRoutes --> NotificationsQueries : queries
+AuditLogsRoutes --> AuditLogs : logs actions
+
+' Relationships - Database Tables
+Reports "*" -- "1" Users : created_by
+Comments "*" -- "1" Reports : report_id
+Comments "*" -- "1" Users : user_id
+Notifications "*" -- "1" Users : user_id
+Notifications "*" -- "0..1" Reports : report_id
+ReportHistory "*" -- "1" Reports : report_id
+ReportHistory "*" -- "0..1" Users : changed_by
+AuditLogs "*" -- "0..1" Users : admin_id
+
+' Middleware Flow
+AuthRoutes ..> AuthMiddleware : protected by
+ReportsRoutes ..> AuthMiddleware : protected by
+UsersRoutes ..> AuthMiddleware : protected by
+AuthRoutes ..> Validators : validates
+AuthRoutes ..> SecurityMiddleware : rate limited
+
+' API Communication
+ApiService --> AuthRoutes : HTTP POST
+ApiService --> ReportsRoutes : HTTP GET/POST/PATCH
+ApiService --> CommentsRoutes : HTTP GET/POST
+ApiService --> AIRoutes : HTTP POST
+ApiService --> ConfigRoutes : HTTP GET
+
+note right of AppContext
+  **Citizen Portal State**
+  - User authentication
+  - Report management
+  - Notifications
+  - Offline support with IndexedDB
+  - Impersonation support
+end note
+
+note right of PortalContext
+  **Municipality Portal State**
+  - Municipal staff dashboard
+  - Report status updates
+  - Proof of resolution upload
+  - Filtered report views
+end note
+
+note right of SuperAdminContext
+  **Super Admin State**
+  - Global user management
+  - Category configuration
+  - Gamification rules
+  - Audit trail monitoring
+  - User impersonation
+end note
+
+note bottom of GeminiAI
+  **AI Features**
+  - Image analysis & categorization
+  - Audio transcription
+  - Municipality detection via coordinates
+  - Multi-language title generation
+  - Severity assessment
+end note
+
+note bottom of Reports
+  **PostGIS Geospatial**
+  - location: GEOGRAPHY(POINT, 4326)
+  - Spatial indexes for nearby searches
+  - Distance calculations
+end note
+
+@enduml

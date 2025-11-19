@@ -14,7 +14,7 @@ const {
   getReportsByMunicipality,
   getReportStats,
 } = require('../db/queries/reports');
-const { authMiddleware, requireRole, requireWriteAccess } = require('../middleware/auth');
+const { authMiddleware, requireRole, requireWriteAccess, checkUserSuspended } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -83,7 +83,7 @@ const { authMiddleware, requireRole, requireWriteAccess } = require('../middlewa
  *       500:
  *         description: Server error
  */
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', authMiddleware, checkUserSuspended, async (req, res) => {
   try {
     console.log('📝 Creating report with data:', JSON.stringify(req.body, null, 2).substring(0, 500));
     const reportData = {
@@ -474,6 +474,55 @@ router.get('/:id', async (req, res) => {
 
 /**
  * @swagger
+ * /api/reports/{id}/history:
+ *   get:
+ *     summary: Get report status history
+ *     description: Retrieve the history of status changes for a report
+ *     tags: [Reports]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Report ID
+ *     responses:
+ *       200:
+ *         description: Report history retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 history:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       404:
+ *         description: Report not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/:id/history', async (req, res) => {
+  try {
+    const result = await queryDb(
+      `SELECT h.*, u.username as changed_by_username, u.display_name as changed_by_display_name
+       FROM report_history h
+       LEFT JOIN users u ON h.changed_by = u.id
+       WHERE h.report_id = $1
+       ORDER BY h.timestamp DESC`,
+      [req.params.id]
+    );
+
+    res.json({ history: result.rows });
+  } catch (error) {
+    console.error('Get report history error:', error);
+    res.status(500).json({ error: 'Failed to fetch report history' });
+  }
+});
+
+/**
+ * @swagger
  * /api/reports/{id}:
  *   patch:
  *     summary: Update a report
@@ -528,7 +577,7 @@ router.get('/:id', async (req, res) => {
  */
 router.patch('/:id', authMiddleware, requireWriteAccess, async (req, res) => {
   try {
-    const updatedReport = await updateReport(req.params.id, req.body);
+    const updatedReport = await updateReport(req.params.id, req.body, req.user.id);
     
     if (!updatedReport) {
       return res.status(404).json({ error: 'Report not found' });
@@ -574,7 +623,7 @@ router.patch('/:id', authMiddleware, requireWriteAccess, async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.post('/:id/confirm', authMiddleware, async (req, res) => {
+router.post('/:id/confirm', authMiddleware, checkUserSuspended, async (req, res) => {
   try {
     const report = await getReportById(req.params.id);
     

@@ -3,9 +3,85 @@ const router = express.Router();
 const { query, pool: dbPool } = require('../db/connection');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { cacheMiddleware, invalidateCache } = require('../middleware/cache');
+const { reevaluateAllBadges, batchEvaluateBadges } = require('../services/badgeEvaluator');
+const { logAuditEvent } = require('../db/queries/auditLogs');
 
 // SECURITY FIX #14: Cache static configuration data for 10 minutes
 const configCacheMiddleware = cacheMiddleware(600); // 10 minutes
+
+/**
+ * @swagger
+ * /api/config/dashboard-stats:
+ *   get:
+ *     summary: Get dashboard statistics
+ *     description: Retrieve summary statistics for Super Admin dashboard
+ *     tags: [Configuration]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard stats
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalReports:
+ *                   type: integer
+ *                 totalUsers:
+ *                   type: integer
+ *                 totalCategories:
+ *                   type: integer
+ *                 totalBadges:
+ *                   type: integer
+ *                 reportsByStatus:
+ *                   type: object
+ *                 recentActivity:
+ *                   type: array
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Super Admin only
+ *       500:
+ *         description: Server error
+ */
+router.get('/dashboard-stats', authMiddleware, requireRole('super_admin'), async (req, res) => {
+  try {
+    const stats = await query(`
+      SELECT 
+        (SELECT COUNT(*) FROM reports) as total_reports,
+        (SELECT COUNT(*) FROM users WHERE role != 'super_admin') as total_users,
+        (SELECT COUNT(*) FROM dynamic_categories WHERE is_active = true) as total_categories,
+        (SELECT COUNT(*) FROM dynamic_badges WHERE is_active = true) as total_badges,
+        (SELECT COUNT(*) FROM reports WHERE status = 'new') as reports_new,
+        (SELECT COUNT(*) FROM reports WHERE status = 'in_progress') as reports_in_progress,
+        (SELECT COUNT(*) FROM reports WHERE status = 'resolved') as reports_resolved
+    `);
+
+    const recentActivity = await query(`
+      SELECT id, action, entity_type, entity_id, timestamp, admin_id
+      FROM audit_logs
+      ORDER BY timestamp DESC
+      LIMIT 20
+    `);
+
+    res.json({
+      totalReports: parseInt(stats.rows[0].total_reports),
+      totalUsers: parseInt(stats.rows[0].total_users),
+      totalCategories: parseInt(stats.rows[0].total_categories),
+      totalBadges: parseInt(stats.rows[0].total_badges),
+      reportsByStatus: {
+        new: parseInt(stats.rows[0].reports_new),
+        in_progress: parseInt(stats.rows[0].reports_in_progress),
+        resolved: parseInt(stats.rows[0].reports_resolved)
+      },
+      recentActivity: recentActivity.rows
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+  }
+});
 
 /**
  * @swagger
@@ -91,21 +167,48 @@ router.get('/categories', configCacheMiddleware, async (req, res) => {
  */
 router.post('/categories', authMiddleware, requireRole('super_admin'), async (req, res) => {
   try {
-    const { id, label_en, label_ar, icon, color, is_active = true } = req.body;
+    const { 
+      id, 
+      label_en, 
+      label_ar, 
+      name_en, 
+      name_ar, 
+      icon, 
+      color, 
+      color_dark,
+      sub_categories = [],
+      is_active = true 
+    } = req.body;
 
-    if (!label_en || !label_ar || !icon || !color) {
+    // Accept either label or name fields
+    const finalLabelEn = label_en || name_en;
+    const finalLabelAr = label_ar || name_ar;
+    const finalNameEn = name_en || label_en;
+    const finalNameAr = name_ar || label_ar;
+    const finalColorDark = color_dark || color;
+
+    if (!finalLabelEn || !finalLabelAr || !icon || !color) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     // Generate ID if not provided (for direct API calls)
-    const categoryId = id || label_en.toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]/g, '');
+    const categoryId = id || finalLabelEn.toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]/g, '');
 
     const result = await query(
-      `INSERT INTO dynamic_categories (id, label_en, label_ar, icon, color, is_active, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      `INSERT INTO dynamic_categories (id, label_en, label_ar, name_en, name_ar, icon, color, color_dark, sub_categories, is_active, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
        RETURNING *`,
-      [categoryId, label_en, label_ar, icon, color, is_active]
+      [categoryId, finalLabelEn, finalLabelAr, finalNameEn, finalNameAr, icon, color, finalColorDark, JSON.stringify(sub_categories), is_active]
     );
+
+    // Audit log
+    await logAuditEvent({
+      admin_id: req.user.id,
+      action: 'create_category',
+      entity_type: 'category',
+      entity_id: categoryId,
+      details: { category: result.rows[0] }
+    });
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -157,19 +260,23 @@ router.post('/categories', authMiddleware, requireRole('super_admin'), async (re
 router.put('/categories/:id', authMiddleware, requireRole('super_admin'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { label_en, label_ar, icon, color, is_active } = req.body;
+    const { label_en, label_ar, name_en, name_ar, icon, color, color_dark, sub_categories, is_active } = req.body;
 
     const updates = [];
     const values = [];
     let paramCount = 1;
 
-    if (label_en !== undefined) {
-      updates.push(`label_en = $${paramCount++}`);
-      values.push(label_en);
+    if (label_en !== undefined || name_en !== undefined) {
+      const value = label_en || name_en;
+      updates.push(`label_en = $${paramCount}`, `name_en = $${paramCount}`);
+      values.push(value);
+      paramCount++;
     }
-    if (label_ar !== undefined) {
-      updates.push(`label_ar = $${paramCount++}`);
-      values.push(label_ar);
+    if (label_ar !== undefined || name_ar !== undefined) {
+      const value = label_ar || name_ar;
+      updates.push(`label_ar = $${paramCount}`, `name_ar = $${paramCount}`);
+      values.push(value);
+      paramCount++;
     }
     if (icon !== undefined) {
       updates.push(`icon = $${paramCount++}`);
@@ -178,6 +285,14 @@ router.put('/categories/:id', authMiddleware, requireRole('super_admin'), async 
     if (color !== undefined) {
       updates.push(`color = $${paramCount++}`);
       values.push(color);
+    }
+    if (color_dark !== undefined) {
+      updates.push(`color_dark = $${paramCount++}`);
+      values.push(color_dark);
+    }
+    if (sub_categories !== undefined) {
+      updates.push(`sub_categories = $${paramCount++}`);
+      values.push(JSON.stringify(sub_categories));
     }
     if (is_active !== undefined) {
       updates.push(`is_active = $${paramCount++}`);
@@ -190,13 +305,25 @@ router.put('/categories/:id', authMiddleware, requireRole('super_admin'), async 
 
     values.push(id);
     const result = await query(
-      `UPDATE dynamic_categories SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
+      `UPDATE dynamic_categories
+       SET ${updates.join(', ')}, updated_at = NOW()
+       WHERE id = $${paramCount}
+       RETURNING *`,
       values
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Category not found' });
     }
+
+    // Audit log
+    await logAuditEvent({
+      admin_id: req.user.id,
+      action: 'update_category',
+      entity_type: 'category',
+      entity_id: id,
+      details: { updates: req.body, updated_category: result.rows[0] }
+    });
 
     res.json(result.rows[0]);
   } catch (error) {
@@ -232,14 +359,24 @@ router.delete('/categories/:id', authMiddleware, requireRole('super_admin'), asy
   try {
     const { id } = req.params;
 
+    // Soft delete: mark as inactive instead of hard delete
     const result = await query(
-      'DELETE FROM dynamic_categories WHERE id = $1 RETURNING *',
+      'UPDATE dynamic_categories SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING *',
       [id]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Category not found' });
     }
+
+    // Audit log
+    await logAuditEvent({
+      admin_id: req.user.id,
+      action: 'soft_delete_category',
+      entity_type: 'category',
+      entity_id: id,
+      details: { deleted_category: result.rows[0] }
+    });
 
     res.json({ message: 'Category deleted successfully' });
   } catch (error) {
@@ -656,6 +793,75 @@ router.put('/gamification', authMiddleware, requireRole('super_admin'), async (r
   } catch (error) {
     console.error('Error updating gamification settings:', error);
     res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/config/badges/reevaluate:
+ *   post:
+ *     summary: Re-evaluate badges for all users
+ *     description: Triggers badge evaluation for all users (Super Admin only)
+ *     tags: [Configuration]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Optional array of user IDs to re-evaluate (omit to evaluate all)
+ *     responses:
+ *       200:
+ *         description: Badge re-evaluation completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 summary:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     processed:
+ *                       type: integer
+ *                     failed:
+ *                       type: integer
+ *                     newBadgesAwarded:
+ *                       type: integer
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Super Admin only
+ *       500:
+ *         description: Server error
+ */
+router.post('/badges/reevaluate', authMiddleware, requireRole('super_admin'), async (req, res) => {
+  try {
+    const { userIds } = req.body;
+
+    let summary;
+    if (userIds && Array.isArray(userIds)) {
+      summary = await batchEvaluateBadges(userIds);
+    } else {
+      summary = await reevaluateAllBadges();
+    }
+
+    res.json({
+      message: 'Badge re-evaluation completed',
+      summary
+    });
+  } catch (error) {
+    console.error('Error re-evaluating badges:', error);
+    res.status(500).json({ error: 'Failed to re-evaluate badges' });
   }
 });
 

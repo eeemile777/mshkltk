@@ -1,0 +1,502 @@
+@startuml Mshkltk Project Structure
+!theme plain
+
+title Mshkltk - Complete Project File Structure & Relationships
+
+package "Root Directory" {
+  artifact "package.json" as rootPkg {
+    **Frontend Dependencies**
+    - react 18.3.1
+    - react-router-dom 6.23.1
+    - leaflet 1.9.4
+    - chart.js 4.4.3
+    
+    **Dev Dependencies**
+    - vite 6.2.0
+    - typescript 5.8.2
+    - playwright 1.56.1
+    
+    **Scripts**
+    - dev: Frontend + Backend
+    - test: Playwright tests
+  }
+  
+  artifact "vite.config.ts" as viteConfig
+  artifact "playwright.config.ts" as playwrightConfig
+  artifact "tsconfig.json" as tsConfig
+  
+  artifact "setup-database-docker.sh" as dockerSetup {
+    Creates PostgreSQL container
+    Runs schema.sql
+    Seeds database
+  }
+  
+  artifact "index.html" as indexHTML {
+    PWA entry point
+    Links to manifest.json
+    Registers service worker
+  }
+  
+  artifact "sw.js" as serviceWorker {
+    Service Worker
+    Offline caching
+    Background sync
+  }
+}
+
+package "src/ (Frontend)" {
+  artifact "index.tsx" as indexTsx {
+    React entry point
+    Renders App.tsx
+  }
+  
+  artifact "App.tsx" as appTsx {
+    HashRouter
+    Route configuration
+    Context providers
+    Auth gates
+  }
+  
+  artifact "constants.ts" as constants {
+    **764 Lines**
+    - PATHS (routes)
+    - CATEGORIES (12)
+    - BADGES (14)
+    - STATUS_COLORS
+    - ICON_MAP
+    - translations (EN/AR)
+  }
+  
+  artifact "types.ts" as types {
+    **268 Lines**
+    TypeScript interfaces:
+    - User, Report, Notification
+    - Badge, Comment
+    - DynamicCategory
+    - ReportData
+  }
+  
+  package "contexts/" {
+    artifact "AppContext.tsx" as appContext {
+      **812 Lines**
+      Citizen portal state
+      + login/logout
+      + submitReport
+      + loadReports
+      + notifications
+      + impersonation
+    }
+    
+    artifact "PortalContext.tsx" as portalContext {
+      Municipality portal state
+      + updateReportStatus
+      + addProofOfResolution
+      + loadMunicipalityReports
+    }
+    
+    artifact "SuperAdminContext.tsx" as adminContext {
+      Super admin state
+      + impersonateUser
+      + manageCategories
+      + manageGamification
+      + viewAuditTrail
+    }
+  }
+  
+  package "services/" {
+    artifact "api.ts" as apiService {
+      **889 Lines**
+      HTTP client
+      + register/login
+      + getReports/submitReport
+      + analyzeMedia
+      + getCategories/getBadges
+      + transformUser (snake_case → camelCase)
+    }
+  }
+  
+  package "pages/" {
+    artifact "HomePage.tsx"
+    artifact "MapPage.tsx"
+    artifact "ReportFormPage.tsx"
+    artifact "ReportDetailsPage.tsx"
+    artifact "NotificationsPage.tsx"
+    artifact "AchievementsPage.tsx"
+    artifact "ProfilePage.tsx"
+    
+    package "portal/" {
+      artifact "PortalDashboardPage.tsx"
+      artifact "PortalReportsListPage.tsx"
+      artifact "PortalMapPage.tsx"
+      artifact "PortalReportDetailsPage.tsx"
+    }
+    
+    package "superadmin/" {
+      artifact "SuperAdminDashboardPage.tsx"
+      artifact "SuperAdminReportsPage.tsx"
+      artifact "SuperAdminUsersPage.tsx"
+      artifact "SuperAdminCategoriesPage.tsx"
+      artifact "SuperAdminGamificationPage.tsx"
+      artifact "SuperAdminAuditTrailPage.tsx"
+    }
+  }
+  
+  package "components/" {
+    artifact "Layout.tsx"
+    artifact "Header.tsx"
+    artifact "InteractiveMap.tsx"
+    artifact "AchievementToast.tsx"
+    artifact "ReportCard.tsx"
+    artifact "Spinner.tsx"
+    
+    package "portal/" {
+      artifact "PortalLayout.tsx"
+      artifact "PortalStatsCards.tsx"
+    }
+    
+    package "superadmin/" {
+      artifact "SuperAdminLayout.tsx"
+      artifact "CategoryEditor.tsx"
+      artifact "BadgeEditor.tsx"
+      artifact "UserTable.tsx"
+    }
+  }
+}
+
+package "server/ (Backend)" {
+  artifact "package.json" as serverPkg {
+    **Backend Dependencies**
+    - express 5.1.0
+    - pg 8.16.3
+    - jsonwebtoken 9.0.2
+    - bcrypt 6.0.0
+    - @google/generative-ai 0.24.1
+    - swagger-jsdoc 6.2.8
+    
+    **Scripts**
+    - start: nodemon index.js
+  }
+  
+  artifact "index.js" as serverIndex {
+    **205 Lines**
+    Express app setup
+    Middleware pipeline
+    Route mounting
+    Swagger setup
+    Gemini AI init
+  }
+  
+  artifact "swagger.js" as swaggerJS {
+    Swagger spec generation
+    OpenAPI 3.0 config
+    Component schemas
+  }
+  
+  package "routes/" {
+    artifact "auth.js" as authRoutes {
+      POST /register
+      POST /login
+      Rate limiting (5/15min)
+      Password validation
+    }
+    
+    artifact "reports.js" as reportsRoutes {
+      **827 Lines**
+      GET/POST/PATCH/DELETE
+      Confirm, subscribe
+      Nearby, trending, stats
+    }
+    
+    artifact "users.js" as usersRoutes {
+      GET /leaderboard
+      POST /impersonate
+      GET /:id/reports
+    }
+    
+    artifact "ai.js" as aiRoutes {
+      POST /analyze-media
+      POST /transcribe-audio
+      POST /detect-municipality
+      POST /generate-title
+    }
+    
+    artifact "config.js" as configRoutes {
+      GET/POST/PATCH /categories
+      GET/POST /badges
+      GET/PATCH /gamification
+    }
+    
+    artifact "comments.js" as commentsRoutes
+    artifact "notifications.js" as notificationsRoutes
+    artifact "media.js" as mediaRoutes
+    artifact "auditLogs.js" as auditLogsRoutes
+  }
+  
+  package "middleware/" {
+    artifact "auth.js" as authMiddleware {
+      **200 Lines**
+      + generateToken()
+      + verifyToken()
+      + authMiddleware()
+      + requireRole()
+      + requireWriteAccess()
+    }
+    
+    artifact "validators.js" as validators {
+      express-validator
+      + validateRegistration
+      + validateLogin
+      + validateReport
+    }
+    
+    artifact "upload.js" as uploadMiddleware {
+      Multer config
+      File size/type limits
+    }
+  }
+  
+  package "db/" {
+    artifact "schema.sql" as schema {
+      **262 Lines**
+      9 tables
+      Enums, indexes
+      PostGIS setup
+      Seed data
+    }
+    
+    artifact "connection.js" as dbConnection {
+      pg pool config
+      Query helper
+    }
+    
+    package "queries/" {
+      artifact "users.js" as usersQueries {
+        createUser()
+        findUserById()
+        updateUser()
+        getLeaderboard()
+      }
+      
+      artifact "reports.js" as reportsQueries {
+        createReport()
+        getReports()
+        getNearbyReports()
+        updateReport()
+        confirmReport()
+      }
+      
+      artifact "comments.js" as commentsQueries
+      artifact "notifications.js" as notificationsQueries
+      artifact "config.js" as configQueries
+    }
+  }
+  
+  package "utils/" {
+    artifact "crypto.js" as crypto {
+      generateSalt()
+      hashPassword()
+      verifyPassword()
+    }
+    
+    artifact "errors.js" as errors {
+      asyncHandler()
+      errorHandler()
+    }
+  }
+}
+
+package "Database (PostgreSQL)" {
+  database "mshkltk_db" as db {
+    **Tables:**
+    - users
+    - reports
+    - comments
+    - notifications
+    - report_history
+    - dynamic_categories
+    - dynamic_badges
+    - gamification_settings
+    - audit_logs
+  }
+}
+
+package "docs/" {
+  package "architecture/" {
+    artifact "mshkltk-system-architecture.puml"
+    artifact "mshkltk-sequence-diagrams.puml"
+    artifact "mshkltk-database-erd.puml"
+    artifact "mshkltk-frontend-components.puml"
+    artifact "mshkltk-deployment.puml"
+    artifact "mshkltk-use-cases.puml"
+    artifact "mshkltk-state-machines.puml"
+    artifact "README.md" as archREADME
+    artifact "ARCHITECTURE_OVERVIEW.md"
+  }
+  
+  package "api/" {
+    artifact "README.md" as apiREADME
+    artifact "authentication.md"
+    artifact "reports.md"
+    artifact "users.md"
+    artifact "gamification.md"
+  }
+  
+  package "project-management/" {
+    artifact "TODO.md" {
+      Current status
+      Remaining tasks
+      Critical priorities
+    }
+  }
+}
+
+package "tests/" {
+  artifact "playwright.config.ts"
+  
+  package "e2e/" {
+    artifact "01-citizen-app.spec.ts" {
+      45 tests
+      Login, signup, report submission
+      Map interaction, notifications
+    }
+    
+    artifact "02-superadmin.spec.ts" {
+      User management
+      Impersonation
+      Categories
+    }
+    
+    artifact "03-portal.spec.ts" {
+      Dashboard
+      Report updates
+      Filtering
+    }
+    
+    artifact "helpers.ts" {
+      Shared test utilities
+      Login helpers
+      Cleanup functions
+    }
+  }
+}
+
+' Relationships - Build Process
+rootPkg --> viteConfig : configures
+viteConfig --> indexHTML : entry point
+indexHTML --> indexTsx : loads
+indexTsx --> appTsx : renders
+
+' Relationships - Frontend Architecture
+appTsx --> appContext : provides
+appTsx --> portalContext : provides
+appTsx --> adminContext : provides
+appContext --> apiService : uses
+portalContext --> apiService : uses
+adminContext --> apiService : uses
+appTsx --> constants : imports
+appTsx --> types : imports
+HomePage.tsx --> appContext : consumes
+MapPage.tsx --> InteractiveMap.tsx : uses
+
+' Relationships - Backend Architecture
+serverIndex --> authRoutes : mounts
+serverIndex --> reportsRoutes : mounts
+serverIndex --> aiRoutes : mounts
+serverIndex --> configRoutes : mounts
+authRoutes --> authMiddleware : uses
+authRoutes --> validators : uses
+reportsRoutes --> reportsQueries : calls
+usersRoutes --> usersQueries : calls
+reportsQueries --> dbConnection : queries
+dbConnection --> db : SQL
+
+' Relationships - API Communication
+apiService --> serverIndex : HTTP requests
+serviceWorker --> apiService : intercepts
+
+' Relationships - Database Setup
+dockerSetup --> schema : executes
+schema --> db : creates tables
+
+' Relationships - Testing
+playwrightConfig --> "01-citizen-app.spec.ts" : configures
+"01-citizen-app.spec.ts" --> helpers.ts : imports
+"01-citizen-app.spec.ts" --> apiService : tests
+
+' Relationships - Documentation
+archREADME --> "mshkltk-system-architecture.puml" : references
+ARCHITECTURE_OVERVIEW.md --> archREADME : summarizes
+
+note right of constants
+  **Single Source of Truth**
+  All app-wide constants centralized:
+  - 12 report categories
+  - 14 achievement badges
+  - Status color mappings
+  - Full EN/AR translations
+  - React Icons mapping
+end note
+
+note right of apiService
+  **API Client Layer**
+  - Base URL: localhost:3001/api
+  - JWT token management
+  - Snake_case → camelCase transform
+  - Error handling with retries
+end note
+
+note right of schema
+  **Database Schema**
+  - PostgreSQL 15 + PostGIS
+  - 9 core tables
+  - 25+ indexes
+  - Seed data (35 users, 100+ reports)
+end note
+
+note right of serverIndex
+  **Express Pipeline**
+  1. Helmet (security headers)
+  2. CORS (origin validation)
+  3. Body parser (JSON, URL-encoded)
+  4. Routes (with auth middleware)
+  5. Error handler
+  6. Swagger UI (/api-docs)
+end note
+
+legend right
+  **File Structure Summary**
+  
+  **Frontend (src/):**
+  - 3 contexts (AppContext, PortalContext, SuperAdminContext)
+  - 25+ pages (Citizen, Portal, Admin)
+  - 15+ shared components
+  - 1 API service layer
+  - 764-line constants file
+  
+  **Backend (server/):**
+  - 10 route files (50+ endpoints)
+  - 3 middleware files (auth, validation, upload)
+  - 5 DB query modules
+  - Swagger auto-generated docs
+  
+  **Database:**
+  - 9 tables with PostGIS
+  - 25+ optimized indexes
+  - Docker container setup
+  
+  **Documentation:**
+  - 7 UML diagrams (PlantUML)
+  - API docs (Swagger + Markdown)
+  - Architecture overview
+  
+  **Testing:**
+  - 46 E2E tests (Playwright)
+  - 98% pass rate
+  - Sequential execution
+  
+  **Total LOC:** ~23,000
+  - Frontend: ~15,000
+  - Backend: ~8,000
+endlegend
+
+@enduml

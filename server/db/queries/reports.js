@@ -1,5 +1,7 @@
 const { query, getClient } = require('../connection');
 const { awardPoints } = require('./users');
+const { evaluateBadges } = require('../services/badgeEvaluator');
+const { createNotification } = require('./notifications');
 
 /**
  * Report Query Functions
@@ -48,6 +50,9 @@ const createReport = async (reportData) => {
 
   // Award points for submitting a report
   await awardPoints(created_by, 'submit_report');
+
+  // Check for newly earned badges
+  await evaluateBadges(created_by);
 
   return result.rows[0];
 };
@@ -115,35 +120,116 @@ const getNearbyReports = async (lat, lng, radiusKm = 5, limit = 50) => {
 };
 
 // Update report
-const updateReport = async (reportId, updates) => {
-  const allowedFields = [
-    'title_en', 'title_ar', 'photo_urls', 'note_en', 'note_ar',
-    'status', 'severity', 'category', 'sub_category'
-  ];
+const updateReport = async (reportId, updates, userId = null) => {
+  const client = await getClient();
 
-  const fields = [];
-  const values = [];
-  let paramCount = 1;
+  try {
+    await client.query('BEGIN');
 
-  Object.keys(updates).forEach(key => {
-    if (allowedFields.includes(key)) {
-      fields.push(`${key} = $${paramCount}`);
-      values.push(updates[key]);
-      paramCount++;
+    // Get current report state for history tracking
+    const currentReport = await client.query(
+      'SELECT * FROM reports WHERE id = $1',
+      [reportId]
+    );
+
+    if (!currentReport.rows[0]) {
+      await client.query('ROLLBACK');
+      return null;
     }
-  });
 
-  if (fields.length === 0) {
-    throw new Error('No valid fields to update');
+    const oldReport = currentReport.rows[0];
+
+    const allowedFields = [
+      'title_en', 'title_ar', 'photo_urls', 'note_en', 'note_ar',
+      'status', 'severity', 'category', 'sub_category', 'assigned_to'
+    ];
+
+    const fields = [];
+    const values = [];
+    let paramCount = 1;
+
+    Object.keys(updates).forEach(key => {
+      if (allowedFields.includes(key)) {
+        fields.push(`${key} = $${paramCount}`);
+        values.push(updates[key]);
+        paramCount++;
+      }
+    });
+
+    if (fields.length === 0) {
+      await client.query('ROLLBACK');
+      throw new Error('No valid fields to update');
+    }
+
+    // Add updated_at timestamp
+    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+    values.push(reportId);
+    const result = await client.query(
+      `UPDATE reports SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`,
+      values
+    );
+
+    const updatedReport = result.rows[0];
+
+    // Track status changes in report_history
+    if (updates.status && updates.status !== oldReport.status) {
+      await client.query(
+        `INSERT INTO report_history (report_id, old_status, new_status, changed_by, notes)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          reportId,
+          oldReport.status,
+          updates.status,
+          userId,
+          `Status changed from ${oldReport.status} to ${updates.status}`
+        ]
+      );
+      console.log(`📝 Tracked status change for report ${reportId}: ${oldReport.status} → ${updates.status}`);
+
+      // Notify report creator and subscribers about status change
+      const notifyUserIds = [oldReport.created_by, ...(oldReport.subscribed_user_ids || [])];
+      const uniqueUserIds = [...new Set(notifyUserIds)].filter(id => id !== userId); // Don't notify the person who made the change
+
+      const statusMessages = {
+        new: { en: 'New', ar: 'جديد' },
+        in_progress: { en: 'In Progress', ar: 'قيد المعالجة' },
+        resolved: { en: 'Resolved', ar: 'تم الحل' }
+      };
+
+      for (const notifyUserId of uniqueUserIds) {
+        try {
+          await client.query(
+            `INSERT INTO notifications (user_id, type, title_en, title_ar, body_en, body_ar, report_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [
+              notifyUserId,
+              'report_update',
+              'Report Status Updated',
+              'تم تحديث حالة البلاغ',
+              `Your report status changed to ${statusMessages[updates.status].en}`,
+              `تم تغيير حالة بلاغك إلى ${statusMessages[updates.status].ar}`,
+              reportId
+            ]
+          );
+        } catch (notifError) {
+          console.error(`Failed to create notification for user ${notifyUserId}:`, notifError);
+          // Continue processing - notifications are nice-to-have
+        }
+      }
+
+      console.log(`📬 Sent ${uniqueUserIds.length} notifications for report ${reportId} status change`);
+    }
+
+    await client.query('COMMIT');
+    return updatedReport;
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-
-  values.push(reportId);
-  const result = await query(
-    `UPDATE reports SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`,
-    values
-  );
-
-  return result.rows[0];
 };
 
 // Confirm a report (increment confirmations)
@@ -192,8 +278,10 @@ const confirmReport = async (reportId, userId) => {
     // If this fails, entire confirmation is rolled back
     try {
       await awardPoints(userId, 'confirm_report', client);
+      // Check for newly earned badges after confirmation
+      await evaluateBadges(userId, client);
     } catch (pointsError) {
-      console.error('Failed to award points during confirmation:', pointsError);
+      console.error('Failed to award points/badges during confirmation:', pointsError);
       // Continue without points - confirmation is more important
       // Points can be manually adjusted later
     }

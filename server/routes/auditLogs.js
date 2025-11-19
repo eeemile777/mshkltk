@@ -91,6 +91,7 @@ router.get('/', authMiddleware, requireRole('super_admin'), async (req, res) => 
     // Transform to match frontend expectations
     const logs = result.rows.map(row => ({
       id: row.id,
+      actorId: row.admin_id,
       actorName: row.display_name || 'Unknown User',
       actorRole: row.role || 'unknown',
       message: row.action || 'Action performed',

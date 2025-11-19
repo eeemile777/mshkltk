@@ -9,7 +9,7 @@ const {
   getAllUsers,
   deleteUser,
 } = require('../db/queries/users');
-const { authMiddleware, requireRole } = require('../middleware/auth');
+const { authMiddleware, requireRole, generateToken } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -582,6 +582,78 @@ router.post('/', authMiddleware, requireRole('super_admin'), async (req, res) =>
     console.error('❌ Create user error:', error.message);
     console.error('Stack:', error.stack);
     res.status(500).json({ error: 'Failed to create user', details: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/{id}/impersonate:
+ *   post:
+ *     summary: Impersonate a user
+ *     description: Generate a token to impersonate another user (Super Admin only, for debugging)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to impersonate
+ *     responses:
+ *       200:
+ *         description: Impersonation token generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *                 warning:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Super Admin only
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/:id/impersonate', authMiddleware, requireRole('super_admin'), async (req, res) => {
+  try {
+    const targetUser = await findUserById(req.params.id);
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent impersonating another super admin (security measure)
+    if (targetUser.role === 'super_admin' && targetUser.id !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot impersonate other super admins' });
+    }
+
+    // Generate token for target user
+    const impersonationToken = generateToken(targetUser);
+
+    // Remove sensitive data
+    delete targetUser.password_hash;
+    delete targetUser.salt;
+
+    console.log(`🎭 Admin ${req.user.username} is impersonating user ${targetUser.username}`);
+
+    res.json({
+      token: impersonationToken,
+      user: targetUser,
+      warning: 'This is an impersonation session. All actions will be performed as the target user.'
+    });
+  } catch (error) {
+    console.error('Impersonation error:', error);
+    res.status(500).json({ error: 'Failed to impersonate user' });
   }
 });
 

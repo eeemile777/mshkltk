@@ -1,0 +1,319 @@
+@startuml Mshkltk Deployment Architecture
+!theme plain
+
+title Mshkltk - Deployment & Infrastructure Architecture
+
+!define DEPLOYMENT_COLOR #E3F2FD
+!define NODE_COLOR #BBDEFB
+!define ARTIFACT_COLOR #90CAF9
+
+skinparam node {
+  BackgroundColor NODE_COLOR
+  BorderColor #1976D2
+}
+
+skinparam artifact {
+  BackgroundColor ARTIFACT_COLOR
+  BorderColor #1565C0
+}
+
+skinparam component {
+  BackgroundColor #FFF9C4
+  BorderColor #F57F17
+}
+
+' Development Environment
+node "Developer Machine" as dev <<workstation>> {
+  
+  node "Frontend Dev Server\n(Vite)" as viteDev {
+    artifact "React App" as reactDev {
+      component "Hot Module Replacement" as hmr
+      component "Source Maps" as sourceMaps
+      component "TypeScript Compiler" as tsc
+    }
+    note right
+      **Port:** 3000
+      **Command:** npm run dev-frontend
+      **Auto-reload:** Yes
+    end note
+  }
+  
+  node "Backend Dev Server\n(Nodemon)" as backendDev {
+    artifact "Express Server" as expressDev {
+      component "Auto-restart on file change" as nodemon
+      component "Swagger UI" as swaggerDev
+    }
+    note right
+      **Port:** 3001
+      **Command:** npm run dev-backend
+      **Swagger:** /api-docs
+    end note
+  }
+  
+  node "Docker Desktop" as docker {
+    node "PostgreSQL 15 Container" as pgDev {
+      database "mshkltk_db" as dbDev {
+        component "PostGIS Extension" as postgis
+        component "Seed Data" as seeds
+      }
+      note right
+        **Container:** mshkltk_db_postgres
+        **Port:** 5432
+        **Volume:** mshkltk_db_volume
+        **Setup:** ./setup-database-docker.sh
+      end note
+    }
+  }
+}
+
+' CI/CD Pipeline (Future)
+node "GitHub Actions\n(Future CI/CD)" as github <<cloud>> {
+  artifact "Test Runner" as tests {
+    component "Playwright Tests" as playwright
+    component "ESLint" as eslint
+    component "TypeScript Check" as tsCheck
+  }
+  
+  artifact "Build Pipeline" as build {
+    component "Vite Build" as viteBuild
+    component "Backend Build" as backendBuild
+  }
+}
+
+' Production Environment (GCP - Proposed)
+cloud "Google Cloud Platform" as gcp {
+  
+  node "Firebase Hosting" as firebase {
+    artifact "Static Files" as staticFiles {
+      component "index.html" as indexHTML
+      component "JS Bundles" as jsBundles
+      component "CSS Files" as cssFiles
+      component "Service Worker" as swProd
+      component "manifest.json" as manifestProd
+    }
+    note right
+      **CDN:** Global edge locations
+      **SSL:** Auto-provisioned
+      **Custom Domain:** mshkltk.app
+      **Cache:** Aggressive for assets
+    end note
+  }
+  
+  node "Cloud Run" as cloudRun {
+    artifact "Backend Container" as backendContainer {
+      component "Express Server" as expressProd
+      component "API Routes" as apiRoutes
+      component "Swagger Docs" as swaggerProd
+    }
+    note right
+      **Auto-scaling:** 0-100 instances
+      **CPU:** 1 vCPU
+      **Memory:** 512 MB
+      **Concurrency:** 80 requests/instance
+      **Cold Start:** < 2s
+    end note
+  }
+  
+  node "Cloud SQL (PostgreSQL)" as cloudSQL {
+    database "Production DB" as prodDB {
+      component "PostGIS Extension" as postgisCloud
+      component "Automatic Backups" as backups
+      component "High Availability" as ha
+    }
+    note right
+      **Instance:** db-f1-micro (pilot)
+      **Storage:** 10 GB SSD
+      **Backups:** Daily at 3 AM UTC
+      **Point-in-time Recovery:** 7 days
+    end note
+  }
+  
+  node "Cloud Storage" as cloudStorage {
+    artifact "Media Bucket" as mediaBucket {
+      component "Report Photos" as photos
+      component "Proof of Resolution" as proofPhotos
+      component "User Avatars" as avatars
+    }
+    note right
+      **Bucket:** mshkltk-media
+      **Region:** us-central1
+      **Public Access:** Via signed URLs
+      **Lifecycle:** Delete after 2 years
+    end note
+  }
+  
+  node "Secret Manager" as secretManager {
+    artifact "Secrets" as secrets {
+      component "JWT_SECRET" as jwtSecret
+      component "DATABASE_URL" as dbUrl
+      component "GEMINI_API_KEY" as geminiKey
+    }
+    note right
+      **Version Control:** Yes
+      **Rotation:** Manual/scheduled
+      **Access:** Service account only
+    end note
+  }
+  
+  node "Cloud Logging" as logging {
+    artifact "Application Logs" as appLogs
+    artifact "Access Logs" as accessLogs
+    artifact "Error Logs" as errorLogs
+    note right
+      **Retention:** 30 days
+      **Alerts:** On error rate > 5%
+      **Export:** BigQuery for analysis
+    end note
+  }
+  
+  node "Gemini AI API" as gemini {
+    component "gemini-2.5-flash" as geminiModel
+    note right
+      **Features:**
+      - Image analysis
+      - Text generation
+      - Municipality detection
+      - Bilingual title generation
+    end note
+  }
+}
+
+' User Devices
+node "User Devices" as users {
+  artifact "Progressive Web App" as pwa {
+    component "Browser" as browser
+    component "Installed PWA" as installedPWA
+    component "Offline Cache" as offlineCache
+    component "IndexedDB" as indexedDB
+  }
+  note right
+    **Platforms:**
+    - iOS Safari
+    - Android Chrome
+    - Desktop browsers
+    
+    **Offline:** Full support
+    **Push:** Yes (via Service Worker)
+  end note
+}
+
+' Load Balancer (GCP)
+node "Cloud Load Balancer" as lb <<load balancer>> {
+  component "HTTPS Termination" as https
+  component "SSL Certificate" as ssl
+  note right
+    **Type:** HTTP(S) Load Balancer
+    **Health Checks:** /health endpoint
+    **Timeout:** 30 seconds
+  end note
+}
+
+' Connections - Development
+viteDev -down-> backendDev : "API Requests\n(localhost:3001/api)"
+backendDev -down-> pgDev : "SQL Queries\n(Port 5432)"
+dev ..> docker : "Docker Compose"
+
+' Connections - CI/CD
+dev ..> github : "git push"
+github ..> gcp : "Deploy on merge to main"
+
+' Connections - Production
+users -down-> lb : "HTTPS (Port 443)"
+lb -down-> firebase : "Static Assets"
+lb -down-> cloudRun : "API Requests\n(/api/*)"
+firebase ..> cloudRun : "Fetch data"
+cloudRun -down-> cloudSQL : "SQL Queries\n(Private IP)"
+cloudRun -right-> cloudStorage : "Upload/Download Media"
+cloudRun -up-> secretManager : "Load Secrets"
+cloudRun -up-> gemini : "AI Analysis"
+cloudRun -right-> logging : "Send Logs"
+cloudStorage -up-> users : "Signed URLs for media"
+
+' PWA Flow
+pwa -down-> offlineCache : "Cache API responses"
+pwa -down-> indexedDB : "Queue pending reports"
+browser -down-> swProd : "Install Service Worker"
+
+' Monitoring & Observability
+node "Monitoring (Future)" as monitoring {
+  component "Cloud Monitoring" as cloudMonitoring {
+    artifact "Uptime Checks" as uptime
+    artifact "Performance Metrics" as metrics
+    artifact "Custom Dashboards" as dashboards
+  }
+  
+  component "Cloud Trace" as trace {
+    artifact "Request Tracing" as tracing
+    artifact "Latency Analysis" as latency
+  }
+  
+  component "Error Reporting" as errorReporting {
+    artifact "Exception Tracking" as exceptions
+    artifact "Alerting" as alerting
+  }
+}
+
+cloudRun ..> monitoring : "Telemetry data"
+
+legend right
+  **Deployment Environments**
+  
+  **Development:**
+  - Local: Vite (3000) + Express (3001) + Docker PostgreSQL
+  - Hot reload for frontend & backend
+  - Seed data for testing (35 users, 100+ reports)
+  
+  **Production (Proposed - GCP):**
+  - Firebase Hosting: Static files, global CDN
+  - Cloud Run: Serverless backend, auto-scaling
+  - Cloud SQL: Managed PostgreSQL with PostGIS
+  - Cloud Storage: Media files (photos, avatars)
+  - Secret Manager: Environment variables
+  - Cloud Logging: Centralized logs
+  
+  **Estimated Costs (Pilot - 1000 users):**
+  - Firebase Hosting: Free tier
+  - Cloud Run: $5-15/month (300K requests)
+  - Cloud SQL: $7-10/month (db-f1-micro)
+  - Cloud Storage: $1-2/month (10 GB)
+  - Gemini API: $0-10/month (1000 requests)
+  **Total:** ~$15-40/month
+  
+  **Scalability:**
+  - Cloud Run: 0 to 1000 instances
+  - Cloud SQL: Vertical scaling to 64 vCPUs
+  - Firebase: Unlimited global CDN
+  - 99.95% SLA for all services
+  
+  **Current Status:**
+  - ✅ Development environment fully operational
+  - ✅ Docker setup automated
+  - ✅ 46 E2E tests passing (Playwright)
+  - 🟡 GCP deployment plan ready (see docs/gcp-proposal/)
+  - 🟡 CI/CD pipeline to be implemented
+endlegend
+
+note as N1
+  **Quick Start Commands:**
+  
+  Development:
+  ```
+  npm install
+  cd server && npm install && cd ..
+  ./setup-database-docker.sh
+  npm run dev
+  ```
+  
+  Testing:
+  ```
+  npm test           # All 46 tests
+  npm run test:ui    # Interactive mode
+  ```
+  
+  Production Build:
+  ```
+  npm run build      # Creates dist/
+  ```
+end note
+
+@enduml

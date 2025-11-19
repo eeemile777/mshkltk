@@ -31,13 +31,17 @@ const clearAuthToken = (): void => {
 /**
  * Make an authenticated API request
  */
-const apiRequest = async (endpoint: string, options: RequestInit = {}): Promise<any> => {
-  const token = getAuthToken();
-  
-  const headers: HeadersInit = {
+const apiRequest = async <T>(endpoint: string, options: RequestInit = {}, requireAuth: boolean = true): Promise<T> => {
+  const token = localStorage.getItem('mshkltk-token');
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
+
+  // Only require auth if explicitly requested and no token exists
+  if (requireAuth && !token) {
+    throw new Error('No token provided');
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -131,22 +135,17 @@ export const createReport = async (reportData: any): Promise<any> => {
   });
 };
 
-export const getReports = async (filters?: {
-  municipality?: string;
-  category?: string;
-  status?: string;
-  limit?: number;
-  offset?: number;
-}): Promise<any[]> => {
+export const fetchReports = (filters?: ReportFilters) => {
   const params = new URLSearchParams();
-  if (filters) {
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined) params.append(key, value.toString());
-    });
-  }
-
+  if (filters?.status) params.append('status', filters.status);
+  if (filters?.category) params.append('category', filters.category);
+  if (filters?.municipalityId) params.append('municipality_id', filters.municipalityId);
+  if (filters?.limit) params.append('limit', filters.limit.toString());
+  if (filters?.offset) params.append('offset', filters.offset.toString());
+  
   const queryString = params.toString();
-  return apiRequest(`/reports${queryString ? `?${queryString}` : ''}`);
+  // Allow guests to fetch reports without authentication
+  return apiRequest<Report[]>(`/reports${queryString ? `?${queryString}` : ''}`, {}, false);
 };
 
 export const getReportById = async (reportId: string): Promise<any> => {
@@ -366,13 +365,6 @@ export const upgradeAnonymousUser = async (currentUser: any, userData: any): Pro
 export const loginUser = async (credentials: any): Promise<any> => {
   const response = await login(credentials.username, credentials.password);
   return response.user;
-};
-
-/**
- * @deprecated Use getReports() instead
- */
-export const fetchReports = async (): Promise<any[]> => {
-  return await getReports();
 };
 
 /**
@@ -699,36 +691,23 @@ export const fetchLeaderboardUsers = async (): Promise<any[]> => {
 /**
  * Get all dynamic categories
  */
-export const getDynamicCategories = async (): Promise<any[]> => {
-  const response = await fetch(`${API_BASE_URL}/config/categories`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch categories');
-  }
-  const data = await response.json();
-  // Transform backend field names to frontend field names
-  return data.categories.map((cat: any) => ({
-    id: cat.id,
-    name_en: cat.label_en,
-    name_ar: cat.label_ar,
-    icon: cat.icon,
-    color_light: cat.color,
-    color_dark: cat.color, // Same color for both light/dark for now
-    is_active: cat.is_active,
-    subCategories: cat.sub_categories || [],
-  }));
-};
+export const getDynamicCategories = () => apiRequest<DynamicCategory[]>('/config/categories', {}, false);
 
 /**
  * Create new category (Super Admin only)
  */
 export const createCategory = async (categoryData: any): Promise<any> => {
-  // Map frontend field names to backend field names
+  // Map frontend field names to backend (supports both label and name)
   const payload = {
     id: categoryData.id,
-    label_en: categoryData.name_en,
+    name_en: categoryData.name_en,
+    name_ar: categoryData.name_ar,
+    label_en: categoryData.name_en, // Backend accepts both
     label_ar: categoryData.name_ar,
     icon: categoryData.icon,
     color: categoryData.color || categoryData.color_light || '#4A90E2',
+    color_dark: categoryData.color_dark || categoryData.color || '#4A90E2',
+    sub_categories: categoryData.subCategories || categoryData.sub_categories || [],
     is_active: categoryData.is_active ?? true,
   };
   return apiRequest('/config/categories', {
@@ -741,13 +720,25 @@ export const createCategory = async (categoryData: any): Promise<any> => {
  * Update category (Super Admin only)
  */
 export const updateCategory = async (categoryId: string, updates: any): Promise<any> => {
-  // Map frontend field names to backend field names
+  // Map frontend field names to backend (supports both label and name)
   const payload: any = {};
-  if (updates.name_en !== undefined) payload.label_en = updates.name_en;
-  if (updates.name_ar !== undefined) payload.label_ar = updates.name_ar;
+  if (updates.name_en !== undefined) {
+    payload.name_en = updates.name_en;
+    payload.label_en = updates.name_en; // Sync both fields
+  }
+  if (updates.name_ar !== undefined) {
+    payload.name_ar = updates.name_ar;
+    payload.label_ar = updates.name_ar; // Sync both fields
+  }
   if (updates.icon !== undefined) payload.icon = updates.icon;
-  if (updates.color_light !== undefined) payload.color = updates.color_light;
+  if (updates.color_light !== undefined) {
+    payload.color = updates.color_light;
+    payload.color_dark = updates.color_dark || updates.color_light;
+  }
   if (updates.color !== undefined) payload.color = updates.color;
+  if (updates.color_dark !== undefined) payload.color_dark = updates.color_dark;
+  if (updates.subCategories !== undefined) payload.sub_categories = updates.subCategories;
+  if (updates.sub_categories !== undefined) payload.sub_categories = updates.sub_categories;
   if (updates.is_active !== undefined) payload.is_active = updates.is_active;
   
   return apiRequest(`/config/categories/${categoryId}`, {

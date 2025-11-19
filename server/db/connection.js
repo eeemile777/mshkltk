@@ -41,8 +41,8 @@ const query = async (text, params) => {
   try {
     const res = await pool.query(text, params);
     const duration = Date.now() - start;
-    // Only log slow queries (over 100ms) or in verbose mode
-    if (duration > 100 || process.env.DEBUG_QUERIES === 'true') {
+    // Only log slow queries (over 500ms) or in verbose mode
+    if (duration > 500 || process.env.DEBUG_QUERIES === 'true') {
       console.log('Executed query', { text, duration, rows: res.rowCount });
     }
     return res;

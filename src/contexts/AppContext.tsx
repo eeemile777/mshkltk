@@ -348,16 +348,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const fetchAllData = useCallback(async (user: User) => {
     setLoading(true);
     try {
-        const [reportsData, notificationsData, pendingReportsData, dynamicCategoriesData, dynamicBadgesData, gamificationSettingsData] = await Promise.all([
+        // For guest users, only fetch public data
+        const isGuest = user.is_anonymous;
+        
+        const promises = [
             api.fetchReports(),
-            api.fetchNotificationsByUserId(user.id),
-            getPendingReports(),
+            isGuest ? Promise.resolve([]) : api.fetchNotificationsByUserId(user.id),
+            isGuest ? Promise.resolve([]) : getPendingReports(),
             api.getDynamicCategories(),
             api.getDynamicBadges(),
             api.getGamificationSettings(),
-        ]);
+        ];
         
-        const categoriesObject = (dynamicCategoriesData || []).reduce((acc, cat) => {
+        const [reportsData, notificationsData, pendingReportsData, dynamicCategoriesData, dynamicBadgesData, gamificationSettingsData] = await Promise.all(promises);
+        
+        // Ensure dynamicCategoriesData is actually an array
+        const categoriesArray = Array.isArray(dynamicCategoriesData) ? dynamicCategoriesData : [];
+        const categoriesObject = categoriesArray.reduce((acc, cat) => {
             (acc as any)[cat.id] = {
                 icon: ICON_MAP[cat.icon] || ICON_MAP['FaQuestion'],
                 color: { light: cat.color_light, dark: cat.color_dark },

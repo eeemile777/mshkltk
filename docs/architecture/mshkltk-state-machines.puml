@@ -1,0 +1,387 @@
+@startuml Mshkltk State Machine Diagrams
+!theme plain
+
+title Mshkltk - State Machine Diagrams
+
+' === REPORT LIFECYCLE STATE MACHINE ===
+state "Report Lifecycle" as ReportLifecycle {
+  [*] --> Draft : Citizen starts report creation
+  
+  Draft : **Draft State**
+  Draft : - Photos uploaded
+  Draft : - Location selected
+  Draft : - AI analysis completed
+  Draft : - Not yet submitted
+  
+  Draft --> Queued : Submit while offline
+  Draft --> New : Submit while online
+  
+  Queued : **Queued State (Offline)**
+  Queued : - Stored in IndexedDB
+  Queued : - Waiting for network
+  Queued : - Not in database yet
+  
+  Queued --> New : Network reconnects\n(Background sync)
+  
+  New : **New State**
+  New : - Just submitted
+  New : - Awaiting municipality review
+  New : - Visible to all users
+  New : - +10 points to citizen
+  
+  New --> Received : Municipality acknowledges
+  New --> [*] : Admin deletes (spam/duplicate)
+  
+  Received : **Received State**
+  Received : - Municipality confirmed receipt
+  Received : - Investigation started
+  Received : - Citizen notified
+  
+  Received --> InProgress : Work begins
+  Received --> New : Reverted (incorrect status)
+  
+  InProgress : **In Progress State**
+  InProgress : - Actively being resolved
+  InProgress : - May have updates/comments
+  InProgress : - Citizens can track progress
+  
+  InProgress --> Resolved : Work completed
+  InProgress --> Received : Work paused
+  
+  Resolved : **Resolved State**
+  Resolved : - Issue fixed
+  Resolved : - Proof photos uploaded
+  Resolved : - Citizen notified
+  Resolved : - History recorded
+  
+  Resolved --> [*] : Report lifecycle complete
+  
+  note right of New
+    **Triggers:**
+    - createNotification(citizen, 'report_confirmed')
+    - updateUserPoints(+10)
+    - checkBadgeCriteria()
+  end note
+  
+  note right of Received
+    **Triggers:**
+    - createNotification(citizen, 'status_change')
+    - logAuditTrail(portalUser, 'update_status')
+  end note
+  
+  note right of InProgress
+    **Triggers:**
+    - createNotification(citizen, 'status_change')
+    - createNotification(subscribers, 'status_change')
+  end note
+  
+  note right of Resolved
+    **Triggers:**
+    - createNotification(citizen, 'report_resolved')
+    - createNotification(subscribers, 'report_resolved')
+    - insertReportHistory(old_status, new_status, proof_urls)
+  end note
+}
+
+' === USER AUTHENTICATION STATE MACHINE ===
+state "User Authentication" as UserAuth {
+  [*] --> Anonymous : App loads without login
+  
+  Anonymous : **Anonymous/Guest State**
+  Anonymous : - Can view public reports
+  Anonymous : - Can submit reports (guest mode)
+  Anonymous : - Cannot confirm or comment
+  Anonymous : - No points or badges
+  
+  Anonymous --> RegisterFlow : Click "Sign Up"
+  Anonymous --> LoginFlow : Click "Login"
+  
+  RegisterFlow : **Registration Process**
+  RegisterFlow : - Enter credentials
+  RegisterFlow : - Password validation
+  RegisterFlow : - Create account
+  
+  LoginFlow : **Login Process**
+  LoginFlow : - Enter credentials
+  LoginFlow : - Verify password
+  LoginFlow : - Generate JWT token
+  
+  RegisterFlow --> Authenticated : Registration successful\nJWT token issued
+  LoginFlow --> Authenticated : Login successful\nJWT token issued
+  
+  Authenticated : **Authenticated State**
+  Authenticated : - Full app access
+  Authenticated : - Can submit, confirm, comment
+  Authenticated : - Points and badges tracked
+  Authenticated : - Notifications enabled
+  
+  Authenticated --> Anonymous : Logout
+  Authenticated --> [*] : Token expires (7 days)
+  
+  Anonymous --> UpgradeFlow : Guest upgrades to account
+  
+  UpgradeFlow : **Account Upgrade**
+  UpgradeFlow : - Link guest reports to account
+  UpgradeFlow : - Preserve points/badges
+  
+  UpgradeFlow --> Authenticated : Upgrade successful
+  
+  note right of Anonymous
+    **Guest Limitations:**
+    - Anonymous ID: "Anonymous#1234"
+    - Cannot confirm reports
+    - Cannot comment
+    - No gamification
+    - Reports preserved if upgraded
+  end note
+  
+  note right of Authenticated
+    **Token Payload:**
+    - id: UUID
+    - username: string
+    - role: 'citizen' | 'municipality' | 'super_admin'
+    - municipality_id?: string
+    - portal_access_level?: 'read_only' | 'read_write'
+  end note
+}
+
+' === NOTIFICATION STATE MACHINE ===
+state "Notification Lifecycle" as NotificationLifecycle {
+  [*] --> Created : System event triggers notification
+  
+  Created : **Created State**
+  Created : - Notification in database
+  Created : - is_read = false
+  Created : - Push notification sent (if enabled)
+  
+  Created --> Unread : User sees notification indicator
+  
+  Unread : **Unread State**
+  Unread : - Displayed in notifications page
+  Unread : - Badge count updated
+  Unread : - Highlighted in UI
+  
+  Unread --> Read : User clicks notification
+  
+  Read : **Read State**
+  Read : - is_read = true
+  Read : - Badge count decremented
+  Read : - Styling changes (gray out)
+  
+  Read --> Deleted : User dismisses
+  Unread --> Deleted : User dismisses without reading
+  
+  Deleted : **Deleted State**
+  Deleted : - Removed from database
+  Deleted : - No longer visible
+  
+  Deleted --> [*] : Permanently removed
+  
+  note right of Created
+    **Notification Types:**
+    - status_change: Report status updated
+    - new_comment: Comment added to subscribed report
+    - report_confirmed: Another user confirmed your report
+    - badge_earned: New achievement unlocked
+    - report_resolved: Subscribed report marked resolved
+  end note
+  
+  note right of Unread
+    **User sees:**
+    - Red badge on notifications bell
+    - List in notifications page
+    - Toast/push notification (if enabled)
+  end note
+}
+
+' === BADGE EARNING STATE MACHINE ===
+state "Badge Earning Process" as BadgeEarning {
+  [*] --> EligibilityCheck : User performs action\n(submit, confirm, etc.)
+  
+  EligibilityCheck : **Check Eligibility**
+  EligibilityCheck : - Get user stats
+  EligibilityCheck : - Get active badges
+  EligibilityCheck : - Check criteria
+  
+  EligibilityCheck --> NotEligible : Criteria not met
+  EligibilityCheck --> Eligible : Criteria met\nBadge not yet earned
+  
+  NotEligible : **Not Yet Eligible**
+  NotEligible : - Continue tracking progress
+  NotEligible : - Show progress bar (if applicable)
+  
+  NotEligible --> [*] : Wait for next action
+  
+  Eligible : **Eligible for Badge**
+  Eligible : - All requirements met
+  Eligible : - Badge not in user.achievements[]
+  
+  Eligible --> Awarded : Award badge
+  
+  Awarded : **Badge Awarded**
+  Awarded : - Add to user.achievements[]
+  Awarded : - Add +25 bonus points
+  Awarded : - Create notification
+  Awarded : - Show achievement toast
+  
+  Awarded --> [*] : Badge earned successfully
+  
+  note right of EligibilityCheck
+    **Criteria Types:**
+    - report_count: Total reports submitted
+    - confirmation_count: Reports confirmed
+    - point_threshold: Total points reached
+    - category_filter: Reports in specific category
+    
+    **Example:**
+    - pioneer: report_count >= 1
+    - civic_leader: point_threshold >= 100
+    - waste_warrior: report_count >= 3 AND category = 'waste_environment'
+  end note
+  
+  note right of Awarded
+    **Effects:**
+    - updateUser(achievements += badgeId)
+    - updateUser(points += 25)
+    - createNotification('badge_earned', badgeId)
+    - showAchievementToast(badgeId)
+    - confetti animation
+  end note
+}
+
+' === OFFLINE SYNC STATE MACHINE ===
+state "Offline Sync Process" as OfflineSync {
+  [*] --> Online : App loads with network
+  
+  Online : **Online State**
+  Online : - Direct API communication
+  Online : - Real-time updates
+  Online : - No queue needed
+  
+  Online --> Offline : Network disconnects
+  
+  Offline : **Offline State**
+  Offline : - Service Worker intercepts requests
+  Offline : - Cached content served
+  Offline : - Writes queued in IndexedDB
+  
+  Offline --> Queuing : User submits report
+  
+  Queuing : **Queuing Report**
+  Queuing : - Store in IndexedDB
+  Queuing : - Generate timestamp key
+  Queuing : - Show "Queued for sync" message
+  
+  Queuing --> Offline : Report queued successfully
+  
+  Offline --> Syncing : Network reconnects
+  
+  Syncing : **Background Sync**
+  Syncing : - Retrieve queued reports
+  Syncing : - POST to /api/reports
+  Syncing : - Delete from IndexedDB on success
+  Syncing : - Retry on failure
+  
+  Syncing --> Online : All reports synced
+  Syncing --> PartialSync : Some reports failed
+  
+  PartialSync : **Partial Sync**
+  PartialSync : - Some reports synced
+  PartialSync : - Others remain queued
+  PartialSync : - Retry logic active
+  
+  PartialSync --> Syncing : Retry after delay
+  PartialSync --> Online : Manual retry successful
+  
+  note right of Queuing
+    **IndexedDB Structure:**
+    - DB: mshkltk-db
+    - Store: pending-reports
+    - Key: timestamp
+    - Value: PendingReportData
+    
+    **Quota Management:**
+    - Max ~50 MB per origin
+    - Auto-clear oldest 5 if quota exceeded
+  end note
+  
+  note right of Syncing
+    **Background Sync API:**
+    - Triggered on 'online' event
+    - Service Worker handles sync
+    - Retries with exponential backoff
+    - Shows notification on completion
+  end note
+}
+
+' === IMPERSONATION STATE MACHINE ===
+state "Admin Impersonation" as Impersonation {
+  [*] --> AdminLoggedIn : Super Admin logs in
+  
+  AdminLoggedIn : **Admin Authenticated**
+  AdminLoggedIn : - Full admin portal access
+  AdminLoggedIn : - Can view all users
+  AdminLoggedIn : - Can manage system
+  
+  AdminLoggedIn --> ImpersonationStart : Admin clicks "Impersonate"
+  
+  ImpersonationStart : **Initiating Impersonation**
+  ImpersonationStart : - Store admin user (realUser)
+  ImpersonationStart : - Load citizen user (overrideUser)
+  ImpersonationStart : - Set isImpersonating = true
+  
+  ImpersonationStart --> ImpersonatingCitizen : Navigate to citizen portal
+  
+  ImpersonatingCitizen : **Impersonating Citizen**
+  ImpersonatingCitizen : - Full citizen context
+  ImpersonatingCitizen : - See citizen's reports, points, badges
+  ImpersonatingCitizen : - Banner: "You are impersonating [user]"
+  ImpersonatingCitizen : - All actions logged in audit trail
+  
+  ImpersonatingCitizen --> ExitImpersonation : Admin clicks "Exit Impersonation"
+  
+  ExitImpersonation : **Exiting Impersonation**
+  ExitImpersonation : - Restore admin context
+  ExitImpersonation : - Clear overrideUser
+  ExitImpersonation : - Set isImpersonating = false
+  
+  ExitImpersonation --> AdminLoggedIn : Return to admin portal
+  
+  note right of ImpersonatingCitizen
+    **Impersonation Features:**
+    - Test workflows without test accounts
+    - Debug user-specific issues
+    - Verify gamification logic
+    - View exact user experience
+    
+    **Security:**
+    - All actions logged with both user IDs
+    - Only super_admin role can impersonate
+    - Cannot perform destructive actions
+    - Clear visual indicator (banner)
+  end note
+}
+
+legend right
+  **State Machine Conventions:**
+  - **[*]** : Initial/final state (black circle)
+  - **State** : System or object state (rounded rectangle)
+  - **→** : State transition (arrow)
+  - **Trigger** : Event causing transition (arrow label)
+  
+  **Key Patterns:**
+  - All state changes trigger side effects (notifications, logs)
+  - Failed transitions return to previous state
+  - Async operations (API calls) have timeout states
+  - Offline states queue for later processing
+  
+  **Total State Machines:** 6
+  1. Report Lifecycle (5 states)
+  2. User Authentication (5 states)
+  3. Notification Lifecycle (4 states)
+  4. Badge Earning (4 states)
+  5. Offline Sync (5 states)
+  6. Admin Impersonation (4 states)
+endlegend
+
+@enduml

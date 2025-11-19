@@ -1,0 +1,357 @@
+@startuml Mshkltk Use Case Diagram
+!theme plain
+
+title Mshkltk - Complete Use Case Diagram
+
+left to right direction
+
+' Actors
+:Citizen: as citizen
+:Anonymous User: as anon
+:Municipality Staff: as portal
+:Super Admin: as admin
+:System: as system
+
+' External Systems
+:Gemini AI: as gemini
+:Push Notification Service: as push
+
+rectangle "Mshkltk System" {
+  
+  ' === AUTHENTICATION & USER MANAGEMENT ===
+  package "Authentication" {
+    usecase "Register Account" as UC01
+    usecase "Login with Credentials" as UC02
+    usecase "Login as Guest" as UC03
+    usecase "Logout" as UC04
+    usecase "Upgrade Guest to Account" as UC05
+  }
+  
+  ' === CITIZEN FEATURES ===
+  package "Report Management (Citizen)" {
+    usecase "Submit New Report" as UC10
+    usecase "Upload Photos/Videos" as UC11
+    usecase "Select Location on Map" as UC12
+    usecase "View AI Analysis" as UC13
+    usecase "Edit Draft Report" as UC14
+    usecase "Confirm Other's Report" as UC15
+    usecase "Subscribe to Report Updates" as UC16
+    usecase "View Report Details" as UC17
+    usecase "Add Comment to Report" as UC18
+    usecase "Share Report" as UC19
+  }
+  
+  package "Discovery & Exploration (Citizen)" {
+    usecase "View All Reports on Map" as UC20
+    usecase "Filter Reports by Category" as UC21
+    usecase "Filter Reports by Status" as UC22
+    usecase "Search Reports by Location" as UC23
+    usecase "View Trending Reports" as UC24
+    usecase "View Nearby Reports" as UC25
+    usecase "View Report Heatmap" as UC26
+  }
+  
+  package "Notifications & Updates (Citizen)" {
+    usecase "Receive Status Change Notification" as UC30
+    usecase "Receive New Comment Notification" as UC31
+    usecase "Receive Badge Earned Notification" as UC32
+    usecase "Mark Notification as Read" as UC33
+    usecase "Delete Notification" as UC34
+  }
+  
+  package "Gamification (Citizen)" {
+    usecase "View My Achievements" as UC40
+    usecase "View Leaderboard" as UC41
+    usecase "View My Points" as UC42
+    usecase "Earn Badge on Milestone" as UC43
+    usecase "Track Progress to Next Badge" as UC44
+  }
+  
+  package "Profile Management (Citizen)" {
+    usecase "View My Profile" as UC50
+    usecase "Update Avatar" as UC51
+    usecase "View My Reports History" as UC52
+    usecase "View My Confirmed Reports" as UC53
+    usecase "Change Language (EN/AR)" as UC54
+    usecase "Toggle Theme (Light/Dark)" as UC55
+  }
+  
+  ' === MUNICIPALITY PORTAL ===
+  package "Municipality Portal" {
+    usecase "Login to Portal" as UC60
+    usecase "View Dashboard Statistics" as UC61
+    usecase "View All Municipality Reports" as UC62
+    usecase "Update Report Status" as UC63
+    usecase "Add Proof of Resolution" as UC64
+    usecase "Filter Reports by Category" as UC65
+    usecase "Filter Reports by Date Range" as UC66
+    usecase "View Report on Map" as UC67
+    usecase "Add Internal Comment" as UC68
+    usecase "Export Reports to CSV" as UC69
+  }
+  
+  ' === SUPER ADMIN PORTAL ===
+  package "Super Admin Portal" {
+    usecase "Login to Admin Portal" as UC70
+    usecase "View Global Dashboard" as UC71
+    usecase "View All Users" as UC72
+    usecase "Create Municipality Account" as UC73
+    usecase "Suspend/Activate User" as UC74
+    usecase "Impersonate User" as UC75
+    usecase "Exit Impersonation" as UC76
+    usecase "View All Reports (Global)" as UC77
+    usecase "Delete Report" as UC78
+    usecase "View Audit Trail" as UC79
+    usecase "Manage Categories" as UC80
+    usecase "Add New Category" as UC81
+    usecase "Edit Category" as UC82
+    usecase "Deactivate Category" as UC83
+    usecase "Manage Badges" as UC84
+    usecase "Add New Badge" as UC85
+    usecase "Edit Badge Requirements" as UC86
+    usecase "Manage Gamification Points" as UC87
+    usecase "Edit Points Rules" as UC88
+    usecase "Create Report (Admin)" as UC89
+  }
+  
+  ' === OFFLINE & SYNC ===
+  package "Offline Support" {
+    usecase "Queue Report Offline" as UC90
+    usecase "Sync Pending Reports" as UC91
+    usecase "Cache Map Tiles" as UC92
+    usecase "Cache Static Assets" as UC93
+  }
+  
+  ' === AI FEATURES ===
+  package "AI Integration" {
+    usecase "Analyze Photo for Category" as UC100
+    usecase "Detect Severity from Image" as UC101
+    usecase "Generate Bilingual Title" as UC102
+    usecase "Detect Municipality from GPS" as UC103
+    usecase "Transcribe Audio Note" as UC104
+    usecase "Detect Multiple Issues in Photo" as UC105
+  }
+  
+  ' === SYSTEM FEATURES ===
+  package "System Operations" {
+    usecase "Award Badge Automatically" as UC110
+    usecase "Update User Points" as UC111
+    usecase "Send Push Notification" as UC112
+    usecase "Log Admin Action" as UC113
+    usecase "Calculate Nearby Reports" as UC114
+    usecase "Generate Statistics" as UC115
+  }
+}
+
+' === RELATIONSHIPS - CITIZEN ===
+citizen --> UC01
+citizen --> UC02
+citizen --> UC04
+citizen --> UC10
+citizen --> UC11
+citizen --> UC12
+citizen --> UC14
+citizen --> UC15
+citizen --> UC16
+citizen --> UC17
+citizen --> UC18
+citizen --> UC19
+citizen --> UC20
+citizen --> UC21
+citizen --> UC22
+citizen --> UC23
+citizen --> UC24
+citizen --> UC25
+citizen --> UC26
+citizen --> UC30
+citizen --> UC31
+citizen --> UC32
+citizen --> UC33
+citizen --> UC34
+citizen --> UC40
+citizen --> UC41
+citizen --> UC42
+citizen --> UC44
+citizen --> UC50
+citizen --> UC51
+citizen --> UC52
+citizen --> UC53
+citizen --> UC54
+citizen --> UC55
+
+' === RELATIONSHIPS - ANONYMOUS ===
+anon --> UC03
+anon --> UC05
+anon --> UC10
+anon --> UC20
+anon --> UC24
+
+' === RELATIONSHIPS - MUNICIPALITY PORTAL ===
+portal --> UC60
+portal --> UC61
+portal --> UC62
+portal --> UC63
+portal --> UC64
+portal --> UC65
+portal --> UC66
+portal --> UC67
+portal --> UC68
+portal --> UC69
+
+' === RELATIONSHIPS - SUPER ADMIN ===
+admin --> UC70
+admin --> UC71
+admin --> UC72
+admin --> UC73
+admin --> UC74
+admin --> UC75
+admin --> UC76
+admin --> UC77
+admin --> UC78
+admin --> UC79
+admin --> UC80
+admin --> UC81
+admin --> UC82
+admin --> UC83
+admin --> UC84
+admin --> UC85
+admin --> UC86
+admin --> UC87
+admin --> UC88
+admin --> UC89
+
+' === INCLUDE RELATIONSHIPS ===
+UC10 ..> UC11 : <<include>>
+UC10 ..> UC12 : <<include>>
+UC10 ..> UC13 : <<include>>
+UC63 ..> UC113 : <<include>>
+UC73 ..> UC113 : <<include>>
+UC74 ..> UC113 : <<include>>
+UC75 ..> UC113 : <<include>>
+UC78 ..> UC113 : <<include>>
+UC81 ..> UC113 : <<include>>
+UC85 ..> UC113 : <<include>>
+
+' === EXTEND RELATIONSHIPS ===
+UC10 ..> UC90 : <<extend>>\n(if offline)
+UC15 ..> UC43 : <<extend>>\n(if milestone reached)
+UC15 ..> UC111 : <<extend>>
+UC10 ..> UC111 : <<extend>>
+UC18 ..> UC111 : <<extend>>
+
+' === AI INTEGRATION ===
+UC13 --> gemini
+UC100 --> gemini
+UC101 --> gemini
+UC102 --> gemini
+UC103 --> gemini
+UC104 --> gemini
+UC105 --> gemini
+
+' === SYSTEM OPERATIONS ===
+UC110 <-- system
+UC111 <-- system
+UC112 <-- system
+UC113 <-- system
+UC114 <-- system
+UC115 <-- system
+
+UC30 ..> UC112 : <<include>>
+UC31 ..> UC112 : <<include>>
+UC32 ..> UC112 : <<include>>
+
+UC63 ..> UC30 : <<include>>
+UC18 ..> UC31 : <<include>>
+UC43 ..> UC32 : <<include>>
+
+UC25 ..> UC114 : <<include>>
+
+note right of UC10
+  **Submit Report Workflow:**
+  1. Citizen uploads photo
+  2. AI analyzes for category/severity
+  3. Citizen confirms location on map
+  4. Citizen adds description
+  5. Report submitted (online/offline)
+  6. Points awarded (+10)
+  7. Badge check performed
+end note
+
+note right of UC13
+  **AI Analysis Features:**
+  - Category detection (12 categories)
+  - Severity assessment (high/medium/low)
+  - Municipality detection via GPS
+  - Bilingual title generation (EN/AR)
+  - Multi-issue detection in one photo
+  - Audio transcription (future)
+end note
+
+note right of UC63
+  **Municipality Workflow:**
+  1. Staff views pending reports
+  2. Updates status (received → in_progress → resolved)
+  3. Uploads proof of resolution
+  4. System notifies citizen
+  5. Action logged in audit trail
+end note
+
+note right of UC75
+  **Impersonation Feature:**
+  - Admin can view app as any user
+  - Full user context (reports, points, badges)
+  - Testing without creating test accounts
+  - All actions logged in audit trail
+  - Easy exit back to admin portal
+end note
+
+note right of UC90
+  **Offline Support:**
+  - Reports queued in IndexedDB
+  - Automatic sync on reconnect
+  - Service Worker caches static assets
+  - Map tiles cached for offline viewing
+  - User notified when sync completes
+end note
+
+note bottom of UC43
+  **Gamification Rules:**
+  - Submit report: +10 points
+  - Confirm report: +3 points
+  - Earn badge: +25 bonus points
+  - Add comment: +2 points
+  
+  **Badge Examples:**
+  - Pioneer: First report submitted
+  - Civic Leader: 100 points reached
+  - Community Helper: 5 reports confirmed
+  - Waste Warrior: 3 waste reports
+end note
+
+legend right
+  **Actor Roles:**
+  - **Citizen**: Registered user who reports issues
+  - **Anonymous**: Guest user with limited features
+  - **Municipality Staff**: Portal user managing reports
+  - **Super Admin**: System administrator
+  - **System**: Automated background processes
+  - **Gemini AI**: External AI service
+  
+  **Access Levels:**
+  - Citizen: Can submit, confirm, comment
+  - Municipality (Read-Only): View reports only
+  - Municipality (Read-Write): Update status, add proof
+  - Super Admin: Full system access
+  - Utility: Scoped to specific categories
+  
+  **Total Use Cases:** 105+
+  - Authentication: 5
+  - Citizen Features: 45
+  - Municipality Portal: 10
+  - Super Admin: 20
+  - AI Integration: 6
+  - System Operations: 6
+  - Offline Support: 4
+endlegend
+
+@enduml

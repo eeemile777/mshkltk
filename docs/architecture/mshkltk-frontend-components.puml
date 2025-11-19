@@ -1,0 +1,474 @@
+@startuml Mshkltk Frontend Architecture
+!theme plain
+
+title Mshkltk - Frontend Component Architecture (React 18 + TypeScript)
+
+package "Entry Point" {
+  component [index.tsx] as entry
+  component [App.tsx] as app
+  component [HashRouter] as router
+}
+
+package "State Management (Context API)" {
+  component [AppContext] as appContext {
+    **Citizen Portal State**
+    ----
+    - currentUser: User
+    - overrideUser: User (impersonated)
+    - realUser: User (impersonator)
+    - reports: Report[]
+    - notifications: Notification[]
+    - language: EN/AR
+    - theme: Light/Dark
+    ----
+    Methods:
+    + login()
+    + logout()
+    + submitReport()
+    + confirmReport()
+    + loadReports()
+    + loadNotifications()
+    + toggleLanguage()
+  }
+  
+  component [PortalContext] as portalContext {
+    **Municipality Portal State**
+    ----
+    - portalUser: User
+    - municipalityReports: Report[]
+    - statistics: Stats
+    - filters: FilterState
+    ----
+    Methods:
+    + updateReportStatus()
+    + addProofOfResolution()
+    + loadMunicipalityReports()
+    + filterByCategory()
+  }
+  
+  component [SuperAdminContext] as adminContext {
+    **Super Admin State**
+    ----
+    - adminUser: User
+    - allUsers: User[]
+    - allReports: Report[]
+    - categories: DynamicCategory[]
+    - badges: DynamicBadge[]
+    - auditLogs: AuditLog[]
+    ----
+    Methods:
+    + impersonateUser()
+    + manageUsers()
+    + manageCategories()
+    + manageGamification()
+    + viewAuditTrail()
+  }
+}
+
+package "Services Layer" {
+  component [ApiService] as api {
+    **HTTP Client**
+    ----
+    Base URL: localhost:3001/api
+    ----
+    Auth:
+    + register()
+    + login()
+    + loginAnonymous()
+    ----
+    Reports:
+    + getReports()
+    + getReportById()
+    + submitReport()
+    + updateReport()
+    + confirmReport()
+    ----
+    AI:
+    + analyzeMedia()
+    + transcribeAudio()
+    + detectMunicipality()
+    ----
+    Config:
+    + getCategories()
+    + getBadges()
+    + getGamification()
+  }
+}
+
+package "PWA Infrastructure" {
+  component [ServiceWorker] as sw {
+    **Offline Support**
+    ----
+    - Cache strategies
+    - Background sync
+    - Push notifications
+    ----
+    + install()
+    + activate()
+    + fetch()
+    + sync()
+  }
+  
+  component [IndexedDB] as idb {
+    **Local Storage**
+    ----
+    DB: mshkltk-db
+    Store: pending-reports
+    ----
+    + addPendingReport()
+    + getPendingReports()
+    + deletePendingReport()
+  }
+  
+  component [manifest.json] as manifest {
+    **PWA Config**
+    ----
+    - name: Mshkltk
+    - icons
+    - theme_color
+    - background_color
+    - display: standalone
+  }
+}
+
+package "Citizen Portal Pages" {
+  component [LandingPage] as landing
+  component [HomePage] as home
+  component [MapPage] as map
+  component [TrendingPage] as trending
+  component [ReportFormPage] as reportForm
+  component [ReportDetailsPage] as reportDetails
+  component [NotificationsPage] as notifications
+  component [AchievementsPage] as achievements
+  component [ProfilePage] as profile
+  component [LoginPage] as login
+  component [SignupPage] as signup
+}
+
+package "Municipality Portal Pages" {
+  component [PortalDashboardPage] as portalDash
+  component [PortalReportsListPage] as portalReports
+  component [PortalMapPage] as portalMap
+  component [PortalReportDetailsPage] as portalDetails
+  component [PortalLoginPage] as portalLogin
+}
+
+package "Super Admin Portal Pages" {
+  component [SuperAdminDashboardPage] as adminDash
+  component [SuperAdminReportsPage] as adminReports
+  component [SuperAdminUsersPage] as adminUsers
+  component [SuperAdminCategoriesPage] as adminCategories
+  component [SuperAdminGamificationPage] as adminGamification
+  component [SuperAdminAuditTrailPage] as adminAudit
+  component [SuperAdminMapPage] as adminMap
+  component [SuperAdminLoginPage] as adminLogin
+}
+
+package "Shared Components" {
+  component [Layout] as layout {
+    - Header
+    - Navigation
+    - Footer
+  }
+  
+  component [AuthGate] as authGate {
+    Protects citizen routes
+    Redirects to /login if not authenticated
+  }
+  
+  component [PortalAuthGate] as portalGate {
+    Protects portal routes
+    Checks role: municipality
+  }
+  
+  component [SuperAdminAuthGate] as adminGate {
+    Protects admin routes
+    Checks role: super_admin
+  }
+  
+  component [Header] as header {
+    - Logo
+    - Language toggle (EN/AR)
+    - Theme toggle (Light/Dark)
+    - User menu
+    - Notifications bell
+  }
+  
+  component [InteractiveMap] as mapComponent {
+    **Leaflet Integration**
+    ----
+    - Marker clustering
+    - Heatmap layer
+    - Location picker
+    - Geolocation API
+    - OpenStreetMap tiles
+  }
+  
+  component [AchievementToast] as achievementToast {
+    - Badge animation
+    - Confetti effect
+    - Auto-dismiss
+  }
+  
+  component [ReportCard] as reportCard {
+    - Report preview
+    - Status badge
+    - Category icon
+    - Confirmation count
+  }
+  
+  component [Spinner] as spinner
+}
+
+package "Portal-Specific Components" {
+  component [PortalLayout] as portalLayout {
+    - Portal header
+    - Sidebar navigation
+    - Municipality branding
+  }
+  
+  component [PortalStatsCards] as portalStats {
+    - Total reports
+    - Pending reports
+    - Resolved this month
+    - Average resolution time
+  }
+}
+
+package "Admin-Specific Components" {
+  component [SuperAdminLayout] as adminLayout {
+    - Admin header
+    - Sidebar navigation
+    - Impersonation banner
+  }
+  
+  component [CategoryEditor] as categoryEditor {
+    - Add/edit categories
+    - Manage subcategories
+    - Icon/color picker
+    - Active/inactive toggle
+  }
+  
+  component [BadgeEditor] as badgeEditor {
+    - Add/edit badges
+    - Set requirements
+    - Icon picker
+  }
+  
+  component [UserTable] as userTable {
+    - User list
+    - Role filter
+    - Suspend/activate
+    - Impersonate action
+  }
+  
+  component [AuditLogTable] as auditTable {
+    - Action history
+    - Admin filter
+    - Time filter
+    - Details viewer
+  }
+}
+
+package "Constants & Types" {
+  component [constants.ts] as constants {
+    - PATHS (routes)
+    - CATEGORIES (12 types)
+    - BADGES (14 achievements)
+    - STATUS_COLORS
+    - ICON_MAP (React Icons)
+    - translations (EN/AR)
+  }
+  
+  component [types.ts] as types {
+    - User interface
+    - Report interface
+    - Notification interface
+    - Badge interface
+    - DynamicCategory interface
+    - ReportData interface
+  }
+}
+
+' Relationships - Entry & Routing
+entry --> app
+app --> router
+router --> appContext
+router --> portalContext
+router --> adminContext
+
+' Relationships - Contexts to Services
+appContext --> api
+portalContext --> api
+adminContext --> api
+api --> sw
+
+' Relationships - PWA
+sw --> idb
+sw --> manifest
+
+' Relationships - Citizen Pages
+home --> appContext
+home --> layout
+home --> reportCard
+map --> appContext
+map --> mapComponent
+trending --> appContext
+trending --> reportCard
+reportForm --> appContext
+reportForm --> mapComponent
+reportForm --> api
+reportDetails --> appContext
+notifications --> appContext
+achievements --> appContext
+achievements --> achievementToast
+profile --> appContext
+login --> appContext
+signup --> appContext
+
+' Relationships - Portal Pages
+portalDash --> portalContext
+portalDash --> portalLayout
+portalDash --> portalStats
+portalReports --> portalContext
+portalReports --> portalLayout
+portalMap --> portalContext
+portalMap --> mapComponent
+portalDetails --> portalContext
+portalDetails --> portalLayout
+portalLogin --> portalContext
+
+' Relationships - Admin Pages
+adminDash --> adminContext
+adminDash --> adminLayout
+adminReports --> adminContext
+adminReports --> adminLayout
+adminUsers --> adminContext
+adminUsers --> adminLayout
+adminUsers --> userTable
+adminCategories --> adminContext
+adminCategories --> adminLayout
+adminCategories --> categoryEditor
+adminGamification --> adminContext
+adminGamification --> adminLayout
+adminGamification --> badgeEditor
+adminAudit --> adminContext
+adminAudit --> adminLayout
+adminAudit --> auditTable
+adminMap --> adminContext
+adminMap --> mapComponent
+adminLogin --> adminContext
+
+' Relationships - Layout
+layout --> header
+layout --> authGate
+portalLayout --> portalGate
+adminLayout --> adminGate
+
+' Relationships - Constants
+appContext --> constants
+appContext --> types
+home --> constants
+reportForm --> constants
+header --> constants
+
+note right of appContext
+  **State Initialization:**
+  - Loads from localStorage on mount
+  - Syncs with backend on user actions
+  - Manages offline queue via IndexedDB
+  - Supports impersonation for admin testing
+  
+  **Key Features:**
+  - JWT token management
+  - Bilingual support (EN/AR)
+  - Theme persistence (Light/Dark)
+  - Real-time notifications
+  - Gamification tracking
+end note
+
+note right of api
+  **API Communication:**
+  - Base URL: localhost:3001/api
+  - Headers: Authorization: Bearer {token}
+  - Error handling with retries
+  - Snake_case → camelCase transformation
+  
+  **Authentication:**
+  - Token stored in localStorage
+  - Auto-attached to all requests
+  - Refresh on 401 responses
+end note
+
+note right of sw
+  **Caching Strategies:**
+  - Cache First: Static assets (CSS, JS, images)
+  - Network First: API requests
+  - Stale While Revalidate: Map tiles
+  
+  **Background Sync:**
+  - Queues failed report submissions
+  - Retries on network reconnect
+  - Notifies user on sync completion
+end note
+
+note right of mapComponent
+  **Leaflet Features:**
+  - Marker clustering (performance)
+  - Heatmap visualization
+  - Custom category icons
+  - Geolocation API integration
+  - PostGIS nearby queries
+  
+  **Libraries:**
+  - leaflet.markercluster
+  - leaflet.heat
+  - react-leaflet (wrapper)
+end note
+
+note right of header
+  **Language Toggle:**
+  - Switches between EN/AR
+  - RTL layout for Arabic
+  - Persists in localStorage
+  
+  **Theme Toggle:**
+  - Light/Dark mode
+  - Tailwind CSS theme switching
+  - Persists in localStorage
+end note
+
+note bottom of constants
+  **764 Lines - Single Source of Truth**
+  
+  All app-wide constants centralized:
+  - 12 report categories with bilingual names
+  - 14 achievement badges with icons
+  - Status color mappings
+  - API route paths
+  - React Icons mapping
+  - Full EN/AR translation dictionary
+end note
+
+legend right
+  **Frontend Tech Stack**
+  - **Framework**: React 18.3.1
+  - **Language**: TypeScript 5.8.2
+  - **Routing**: React Router v6 (HashRouter for PWA)
+  - **Build Tool**: Vite 6.2.0
+  - **State**: Context API (no Redux/Zustand)
+  - **Styling**: Tailwind CSS (inline classes)
+  - **Maps**: Leaflet 1.9.4
+  - **Charts**: Chart.js 4.4.3, Recharts 2.12.7
+  - **Icons**: React Icons 5.2.1
+  - **Testing**: Playwright (46 E2E tests)
+  
+  **Key Patterns:**
+  - Three separate contexts (Citizen, Portal, Admin)
+  - Offline-first with Service Worker + IndexedDB
+  - Route protection with role-based auth gates
+  - Bilingual (EN/AR) with RTL support
+  - Real-time updates via polling (30s interval)
+endlegend
+
+@enduml

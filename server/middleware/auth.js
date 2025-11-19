@@ -58,6 +58,44 @@ const authMiddleware = (req, res, next) => {
 };
 
 /**
+ * Middleware to check if user is suspended
+ * Must be used after authMiddleware
+ */
+const checkUserSuspended = async (req, res, next) => {
+  try {
+    // Skip check for super_admin
+    if (req.user && req.user.role === 'super_admin') {
+      return next();
+    }
+
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    // Import here to avoid circular dependency
+    const { findUserById } = require('../db/queries/users');
+    const user = await findUserById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.is_active) {
+      return res.status(403).json({ 
+        error: 'Account suspended', 
+        message: 'Your account has been suspended. Please contact an administrator.'
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error checking user suspension:', error);
+    // Don't block request on error, just log
+    next();
+  }
+};
+
+/**
  * Middleware to check if user has a specific role
  */
 const requireRole = (...allowedRoles) => {
@@ -97,6 +135,7 @@ module.exports = {
   generateToken,
   verifyToken,
   authMiddleware,
+  checkUserSuspended,
   requireRole,
   requireWriteAccess,
 };

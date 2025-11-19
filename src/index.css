@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', 'Rubik', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Arabic font */
+[lang="ar"],
+[lang="ar"] * {
+  font-family: 'Cairo', sans-serif;
+}
+
+/* RTL support */
+[dir="rtl"] {
+  direction: rtl;
+}

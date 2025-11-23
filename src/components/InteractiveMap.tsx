@@ -64,7 +64,7 @@ const SeverityIndicator: React.FC<{ severity: ReportSeverity; className?: string
         [ReportSeverity.Low]: { text: '!', title: 'Low' },
     };
     const { text, title } = severityMap[severity] || severityMap.low;
-    
+
     return (
         <span className={`font-black text-lg text-coral dark:text-coral-dark ${className}`} title={`Severity: ${title}`}>
             {text}
@@ -89,7 +89,7 @@ const MapPopup: React.FC<{ report: Report; t: any; onNavigate: () => void; langu
                 <div className="flex justify-between items-center text-xs text-text-secondary dark:text-text-secondary-dark mb-2">
                     <p>{report.area}</p>
                     <div className="flex items-center gap-2">
-                         <SeverityIndicator severity={report.severity} className="text-base" />
+                        <SeverityIndicator severity={report.severity} className="text-base" />
                         <div className="flex items-center gap-1 font-bold text-mango dark:text-mango-dark">
                             <FaCircleCheck /><span>{report.confirmations_count}</span>
                         </div>
@@ -123,13 +123,13 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     categoriesOverride
 }) => {
     const {
-      theme, mapCenter, mapZoom, setMapView, mapTargetLocation, clearMapTarget,
-      activeCategories, activeStatuses, activeTimeFilter, t, language, categories
+        theme, mapCenter, mapZoom, setMapView, mapTargetLocation, clearMapTarget,
+        activeCategories, activeStatuses, activeTimeFilter, t, language, categories
     } = React.useContext(AppContext);
-    
+
     const effectiveCategories = categoriesOverride || categories;
-    
-    const geolocation = useGeolocation({ 
+
+    const geolocation = useGeolocation({
         enableHighAccuracy: true,
         maximumAge: 10000, // Cache position for 10 seconds
         timeout: 27000 // 27 second timeout
@@ -174,7 +174,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         const center: L.LatLngTuple = initialViewTarget
             ? [initialViewTarget[0], initialViewTarget[1]]
             : (initialCenter || mapCenter || [33.87, 35.85]);
-        
+
         const zoom = initialViewTarget?.[2]
             ? initialViewTarget[2]
             : (initialZoom || mapZoom || 8.5);
@@ -185,7 +185,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             zoomControl: false,
             attributionControl: true,
         };
-        
+
         if (bounds) {
             mapOptions.maxBounds = bounds;
             mapOptions.maxBoundsViscosity = 1.0;
@@ -196,7 +196,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
         const map = L.map(mapContainer.current, mapOptions);
         mapRef.current = map;
-        
+
         if (initialBounds) {
             // Use a small timeout to ensure the map container has its final dimensions
             // before fitting bounds, which helps calculate the correct zoom level.
@@ -215,7 +215,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             const MAX_FAN_PINS = 3;
             const pinsToShow = children.slice(0, MAX_FAN_PINS);
             const overflowCount = childCount > MAX_FAN_PINS ? childCount - MAX_FAN_PINS : 0;
-            
+
             let totalSpreadAngle = pinsToShow.length === 2 ? 25 : 45;
             const angleStep = pinsToShow.length > 1 ? totalSpreadAngle / (pinsToShow.length - 1) : 0;
             const startAngle = -totalSpreadAngle / 2;
@@ -223,7 +223,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             const pinsHtml = pinsToShow.map((marker: any, i: number) => {
                 const categoryKey = marker.options.category as ReportCategory;
                 const categoryData = effectiveCategories[categoryKey] || CATEGORIES[categoryKey] || CATEGORIES['other_unknown'];
-                
+
                 if (!categoryData) {
                     console.warn(`Category data for "${categoryKey}" not found in dynamic or static config during cluster creation.`);
                     return '';
@@ -236,7 +236,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 const iconInnerHtml = ReactDOMServer.renderToString(React.createElement(IconComponent, { size: iconSize }));
                 const angle = startAngle + (i * angleStep);
                 const zIndex = pinsToShow.length - i;
-                
+
                 return `
                     <div class="fan-pin-wrapper" style="transform: rotate(${angle}deg); z-index: ${zIndex};">
                         <div class="report-leaflet-div-icon" style="background-color: ${color}; border: 3px solid ${color}; width: 36px; height: 36px;">
@@ -245,11 +245,11 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                     </div>
                 `;
             }).join('');
-            
+
             const overflowHtml = overflowCount > 0
                 ? `<div class="fan-overflow-badge">${overflowCount > 99 ? '99+' : `${overflowCount}+`}</div>`
                 : '';
-            
+
             const finalHtml = `<div class="fan-cluster-container">${pinsHtml}${overflowHtml}</div>`;
 
             return L.divIcon({
@@ -264,7 +264,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             maxClusterRadius: 30,
             iconCreateFunction: iconCreateFunction,
         }).addTo(map);
-        
+
         // TEMPORARILY DISABLED - heatmap causing blank page issues
         // const heatGradient = {
         //     0.4: 'rgba(75, 163, 195, 0.4)',
@@ -294,19 +294,19 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             const center = mapRef.current.getCenter();
             setMapView([center.lat, center.lng], mapRef.current.getZoom());
         });
-        
+
         // This prevents the geolocation effect from overriding our target.
         if (initialViewTarget) {
             initialLocationSetRef.current = true;
         }
-        
+
         return () => {
             if (mapRef.current) {
                 mapRef.current.remove();
                 mapRef.current = null;
             }
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run once
 
     // Apply CSS filter for dark mode
@@ -340,9 +340,9 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         if (!clusterGroup) {
             return;
         }
-        
+
         clusterGroup.clearLayers();
-        
+
         const heatData: [number, number, number][] = [];
         const markers: L.Marker[] = [];
 
@@ -377,23 +377,23 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 const placeholder = document.createElement('div');
                 const root = createRoot(placeholder);
                 root.render(<MapPopup report={report} t={t} onNavigate={handleNavigate} language={language} />);
-                
-                if(mapRef.current) {
+
+                if (mapRef.current) {
                     L.popup({ offset: [0, -25], minWidth: 256 })
                         .setLatLng([report.lat, report.lng])
                         .setContent(placeholder)
                         .openOn(mapRef.current);
                 }
             });
-            
+
             markers.push(marker);
             if (!isDraggablePinVisible) {
                 heatData.push([report.lat, report.lng, report.confirmations_count]);
             }
         });
-        
+
         (clusterGroup as any).addLayers(markers);
-        
+
         // TEMPORARILY DISABLED - heatmap causing blank page issues
         // const heatLayer = heatLayerRef.current;
         // if (!isDraggablePinVisible && heatLayer && map.getContainer()) {
@@ -414,14 +414,14 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         if (mapTargetLocation) {
             const [lat, lng, zoom] = mapTargetLocation;
             map.flyTo([lat, lng], zoom || 15, { duration: 1.5 });
-            
+
             // FIX: Wait for the fly-to animation to finish before clearing the target.
             // This prevents a race condition where the target is cleared before the map can use it,
             // which was causing navigation to fail or the map to jump.
             map.once('moveend', () => {
                 clearMapTarget();
             });
-            
+
             initialLocationSetRef.current = true;
         }
     }, [mapTargetLocation, clearMapTarget]);
@@ -440,12 +440,12 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             initialLocationSetRef.current = true;
         }
     }, [geolocation.latitude, geolocation.longitude, hideUserLocationMarker]);
-    
+
     // User location marker management
     React.useEffect(() => {
         const map = mapRef.current;
         if (!map || !map.getSize()?.y) return;
-        
+
         if (hideUserLocationMarker) {
             if (userLocationMarkerRef.current) {
                 userLocationMarkerRef.current.remove();
@@ -498,21 +498,21 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
         if (isDraggablePinVisible && !draggableMarkerRef.current && draggablePinPosition) {
             console.log('🎯 Creating draggable marker at:', draggablePinPosition);
-            
+
             // Create a simple, visible custom icon using divIcon (use classes so CSS can style light/dark)
             const customIcon = L.divIcon({
                 className: 'draggable-marker-icon',
                 html: `<div class="draggable-marker"></div>`,
-                iconSize: [30, 30],
-                iconAnchor: [15, 15],
+                iconSize: [50, 50],
+                iconAnchor: [25, 50], // Point at the bottom center (like a real map pin)
             });
-            
+
             const marker = L.marker(draggablePinPosition, {
                 draggable: true,
                 icon: customIcon,
                 zIndexOffset: 10000,
             }).addTo(map);
-            
+
             console.log('✅ Custom draggable marker added to map');
 
             marker.on('dragstart', () => {

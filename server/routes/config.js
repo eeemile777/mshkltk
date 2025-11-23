@@ -110,7 +110,20 @@ router.get('/categories', configCacheMiddleware, async (req, res) => {
     const result = await query(
       'SELECT * FROM dynamic_categories ORDER BY label_en ASC'
     );
-    res.json({ categories: result.rows });
+
+    // Transform database format to frontend format
+    const categories = result.rows.map(cat => ({
+      id: cat.id,
+      icon: cat.icon,
+      color_light: cat.color, // DB stores as 'color', frontend expects 'color_light'
+      color_dark: cat.color_dark,
+      name_en: cat.name_en || cat.label_en, // Fallback to label_en if name_en is missing
+      name_ar: cat.name_ar || cat.label_ar,
+      is_active: cat.is_active,
+      subCategories: cat.sub_categories || [] // DB stores as 'sub_categories', frontend expects 'subCategories'
+    }));
+
+    res.json({ categories });
   } catch (error) {
     console.error('Error fetching categories:', error);
     res.status(500).json({ error: 'Failed to fetch categories' });
@@ -192,17 +205,17 @@ router.get('/categories', configCacheMiddleware, async (req, res) => {
  */
 router.post('/categories', authMiddleware, requireRole('super_admin'), async (req, res) => {
   try {
-    const { 
-      id, 
-      label_en, 
-      label_ar, 
-      name_en, 
-      name_ar, 
-      icon, 
-      color, 
+    const {
+      id,
+      label_en,
+      label_ar,
+      name_en,
+      name_ar,
+      icon,
+      color,
       color_dark,
       sub_categories = [],
-      is_active = true 
+      is_active = true
     } = req.body;
 
     // Accept either label or name fields
@@ -463,7 +476,41 @@ router.get('/badges', async (req, res) => {
     const result = await query(
       'SELECT * FROM dynamic_badges ORDER BY requirement_value ASC'
     );
-    res.json({ badges: result.rows });
+
+    // Map DB fields to frontend expected structure
+    const badges = result.rows.map(badge => {
+      let criteriaType = 'report_count';
+      if (badge.requirement_type === 'reports_confirmed') criteriaType = 'confirmation_count';
+      if (badge.requirement_type === 'points') criteriaType = 'point_threshold';
+
+      const criteria = {
+        type: criteriaType,
+        value: badge.requirement_value,
+      };
+
+      // Add category filters for specific badges
+      const categoryMap = {
+        'park_protector': 'public_spaces',
+        'health_hero': 'public_health',
+        'urban_planner_badge': 'urban_planning',
+        'road_guardian': 'infrastructure',
+        'lightbringer': 'electricity_energy',
+        'water_watchdog': 'water_sanitation',
+        'safety_sentinel': 'public_safety',
+        'waste_warrior': 'waste_environment'
+      };
+
+      if (categoryMap[badge.id]) {
+        criteria.category_filter = categoryMap[badge.id];
+      }
+
+      return {
+        ...badge,
+        criteria
+      };
+    });
+
+    res.json({ badges });
   } catch (error) {
     console.error('Error fetching badges:', error);
     res.status(500).json({ error: 'Failed to fetch badges' });
@@ -529,13 +576,13 @@ router.get('/badges', async (req, res) => {
  */
 router.post('/badges', authMiddleware, requireRole('super_admin'), async (req, res) => {
   try {
-    const { 
-      label_en, label_ar, description_en, description_ar, 
-      icon, condition_type, condition_value, points_reward, is_active = true 
+    const {
+      label_en, label_ar, description_en, description_ar,
+      icon, condition_type, condition_value, points_reward, is_active = true
     } = req.body;
 
-    if (!label_en || !label_ar || !description_en || !description_ar || 
-        !icon || !condition_type || condition_value === undefined || points_reward === undefined) {
+    if (!label_en || !label_ar || !description_en || !description_ar ||
+      !icon || !condition_type || condition_value === undefined || points_reward === undefined) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -746,10 +793,10 @@ router.get('/gamification', async (req, res) => {
       // Return default settings
       return res.json({
         rules: [
-          {"id": "submit_report", "points": 10, "description": "For submitting a new report"},
-          {"id": "confirm_report", "points": 3, "description": "For confirming an existing report"},
-          {"id": "earn_badge", "points": 25, "description": "Bonus for earning a new badge"},
-          {"id": "comment", "points": 2, "description": "For adding a comment to a report"}
+          { "id": "submit_report", "points": 10, "description": "For submitting a new report" },
+          { "id": "confirm_report", "points": 3, "description": "For confirming an existing report" },
+          { "id": "earn_badge", "points": 25, "description": "Bonus for earning a new badge" },
+          { "id": "comment", "points": 2, "description": "For adding a comment to a report" }
         ]
       });
     }

@@ -1,7 +1,7 @@
 import React, { createContext, useState, useCallback, useEffect, useRef, useMemo, useReducer, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Language, Theme, Report, User, Notification, Badge, ReportCategory, ReportStatus, Comment, ReportHistory, PendingReportData, TimeFilter, NotificationType, Preview, ReportData, DynamicCategory, DynamicBadge, GamificationSettings } from '../types';
-import { translations, BADGES, PATHS, ICON_MAP } from '../constants';
+import { translations, BADGES, CATEGORIES, PATHS, ICON_MAP } from '../constants';
 import * as api from '../services/api';
 import L from 'leaflet';
 
@@ -40,19 +40,19 @@ const addPendingReport = (report: PendingReportData): Promise<void> => {
     const transaction = db.transaction([STORE_NAME], 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
     transaction.oncomplete = () => resolve();
-    
+
     // SECURITY FIX #12: Handle quota exceeded error
     transaction.onerror = (e) => {
       const error = (e.target as any)?.error;
-      
+
       // Handle storage quota exceeded
       if (error && error.name === 'QuotaExceededError') {
         console.warn('⚠️ Storage quota exceeded. Attempting to clear old reports...');
-        
+
         // Try to clear oldest pending reports to make space
         const clearRequest = store.openCursor();
         let cleared = 0;
-        
+
         clearRequest.onsuccess = (event) => {
           const cursor = (event.target as IDBRequest).result;
           if (cursor && cleared < 5) { // Clear up to 5 oldest reports
@@ -69,56 +69,56 @@ const addPendingReport = (report: PendingReportData): Promise<void> => {
             }
           }
         };
-        
+
         clearRequest.onerror = () => reject(error);
       } else {
         reject(error);
       }
     };
-    
+
     store.add(report);
   });
 };
 
 const getPendingReports = (): Promise<PendingReportData[]> => {
-    return new Promise((resolve, reject) => {
-        if (!db) return reject('DB not initialized');
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
+  return new Promise((resolve, reject) => {
+    if (!db) return reject('DB not initialized');
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
 };
 
 const deletePendingReport = (timestamp: number): Promise<void> => {
-    return new Promise((resolve, reject) => {
-        if (!db) return reject('DB not initialized');
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        transaction.oncomplete = () => resolve();
-        transaction.onerror = () => reject(transaction.error);
-        store.delete(timestamp);
-    });
+  return new Promise((resolve, reject) => {
+    if (!db) return reject('DB not initialized');
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    store.delete(timestamp);
+  });
 };
 // --- End IndexedDB Helpers ---
 
 // --- Helper Functions for State Initialization ---
 
 const getInitialState = <T extends string>(key: string, allValues: T[]): Set<T> => {
-    try {
-        const item = localStorage.getItem(key);
-        if (item) {
-            const parsed = JSON.parse(item);
-            if (Array.isArray(parsed)) {
-                const validValues = parsed.filter((v: any) => allValues.includes(v));
-                return new Set(validValues);
-            }
-        }
-    } catch (error) {
-        console.error(`Error reading ${key} from localStorage`, error);
+  try {
+    const item = localStorage.getItem(key);
+    if (item) {
+      const parsed = JSON.parse(item);
+      if (Array.isArray(parsed)) {
+        const validValues = parsed.filter((v: any) => allValues.includes(v));
+        return new Set(validValues);
+      }
     }
-    return new Set();
+  } catch (error) {
+    console.error(`Error reading ${key} from localStorage`, error);
+  }
+  return new Set();
 };
 
 
@@ -138,9 +138,9 @@ interface AppContextType {
   exitImpersonation: (redirectPath: string) => void;
   notifications: Notification[];
   unreadNotificationsCount: number;
-  
-  signup: (data: Pick<User, 'first_name' | 'last_name' | 'username'> & {password: string; avatarUrl?: string}, options?: { upgradingFromGuest?: boolean }) => Promise<User>;
-  login: (data: Pick<User, 'username'> & {password: string}) => Promise<User>;
+
+  signup: (data: Pick<User, 'first_name' | 'last_name' | 'username'> & { password: string; avatarUrl?: string }, options?: { upgradingFromGuest?: boolean }) => Promise<User>;
+  login: (data: Pick<User, 'username'> & { password: string }) => Promise<User>;
   loginAnonymous: () => Promise<User>;
   logout: () => Promise<void>;
   updateUserAvatar: (avatarUrl: string) => Promise<void>;
@@ -206,8 +206,8 @@ interface AppContextType {
 const defaultContextValue: any = {
   language: Language.AR,
   theme: Theme.LIGHT,
-  toggleLanguage: () => {},
-  toggleTheme: () => {},
+  toggleLanguage: () => { },
+  toggleTheme: () => { },
   t: translations.ar,
   reports: [],
   loading: true,
@@ -216,13 +216,13 @@ const defaultContextValue: any = {
   overrideUser: null,
   realUser: null,
   isImpersonating: false,
-  exitImpersonation: () => {},
+  exitImpersonation: () => { },
   notifications: [],
   unreadNotificationsCount: 0,
   isOnboardingActive: false,
-  finishOnboarding: () => {},
-  skipOnboarding: () => {},
-  restartOnboarding: () => {},
+  finishOnboarding: () => { },
+  skipOnboarding: () => { },
+  restartOnboarding: () => { },
   comments: [],
   reportHistory: [],
   categories: {},
@@ -244,7 +244,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOnboardingActive, setIsOnboardingActive] = useState(false);
   const [achievementToastId, setAchievementToastId] = useState<string | null>(null);
-  
+
   const [comments, setComments] = useState<(Comment & { user: User })[]>([]);
   const [reportHistory, setReportHistory] = useState<ReportHistory[]>([]);
 
@@ -262,8 +262,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [wizardStep, setWizardStep] = useState(1);
   const [isWizardActive, setIsWizardActive] = useState(false);
 
-  // Dynamic Config State
-  const [categories, setCategories] = useState<any>({});
+  // Dynamic Config State - Initialize with static fallback to prevent crashes
+  const [categories, setCategories] = useState<any>(CATEGORIES);
   const [dynamicBadges, setDynamicBadges] = useState<DynamicBadge[]>([]);
   const [gamificationSettings, setGamificationSettings] = useState<GamificationSettings | null>(null);
 
@@ -280,124 +280,139 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(user);
     await api.setCurrentUser(user);
   }, []);
-  
+
   const showNewBadge = useCallback((badge: DynamicBadge) => {
     if (!effectiveCurrentUser) return;
-    
+
     setAchievementToastId(badge.id);
+    const badgeName = language === 'ar' ? badge.name_ar : badge.name_en;
     const newNotification: Notification = {
-        id: `notif-badge-${badge.id}-${Date.now()}`,
-        user_id: effectiveCurrentUser.id,
-        type: NotificationType.Badge,
-        metadata: { badgeName: language === 'ar' ? badge.name_ar : badge.name_en },
-        report_id: null,
-        created_at: new Date().toISOString(),
-        read: false,
+      id: `notif-badge-${badge.id}-${Date.now()}`,
+      user_id: effectiveCurrentUser.id,
+      type: NotificationType.Badge,
+      title_en: `New Badge: ${badge.name_en}`,
+      title_ar: `شارة جديدة: ${badge.name_ar}`,
+      metadata: { badgeName },
+      report_id: null,
+      created_at: new Date().toISOString(),
+      read: false,
     };
     setNotifications(prev => [newNotification, ...prev]);
   }, [effectiveCurrentUser, language]);
-  
+
   const checkAndAwardBadges = useCallback((user: User, allUserReports: Report[], dynamicBadgesList: DynamicBadge[]): DynamicBadge | null => {
-      const earnedBadgeIds = new Set(user.achievements);
-      for (const badge of dynamicBadgesList) {
-          if (!badge.is_active || earnedBadgeIds.has(badge.id)) continue;
+    const earnedBadgeIds = new Set(user.achievements);
+    for (const badge of dynamicBadgesList) {
+      if (!badge.is_active || earnedBadgeIds.has(badge.id)) continue;
 
-          let conditionMet = false;
-          const { type, value, category_filter } = badge.criteria;
-          switch (type) {
-              case 'report_count':
-                  const relevantReports = category_filter ? allUserReports.filter(r => r.category === category_filter) : allUserReports;
-                  if (relevantReports.length >= value) conditionMet = true;
-                  break;
-              case 'confirmation_count':
-                  if (user.reportsConfirmed >= value) conditionMet = true;
-                  break;
-              case 'point_threshold':
-                  if (user.points >= value) conditionMet = true;
-                  break;
-          }
-          if (conditionMet) return badge;
+      // Skip badges with undefined or invalid criteria
+      if (!badge.criteria || !badge.criteria.type) {
+        console.warn(`Badge ${badge.id} has invalid criteria:`, badge.criteria);
+        continue;
       }
-      return null;
+
+      let conditionMet = false;
+      const { type, value, category_filter } = badge.criteria;
+      switch (type) {
+        case 'report_count':
+          const relevantReports = category_filter ? allUserReports.filter(r => r.category === category_filter) : allUserReports;
+          if (relevantReports.length >= value) conditionMet = true;
+          break;
+        case 'confirmation_count':
+          if (user.reportsConfirmed >= value) conditionMet = true;
+          break;
+        case 'point_threshold':
+          if (user.points >= value) conditionMet = true;
+          break;
+      }
+      if (conditionMet) return badge;
+    }
+    return null;
   }, []);
-  
+
   const processBadgeAwards = useCallback(async (user: User, allReports: Report[], dynamicBadgesList: DynamicBadge[]) => {
-      let currentUserState = { ...user };
-      const userReports = allReports.filter(r => r.created_by === currentUserState.id);
-      let awardedBadges = false;
+    let currentUserState = { ...user };
+    const userReports = allReports.filter(r => r.created_by === currentUserState.id);
+    let awardedBadges = false;
 
-      while (true) {
-          const newBadge = checkAndAwardBadges(currentUserState, userReports, dynamicBadgesList);
-          if (newBadge) {
-              awardedBadges = true;
-              const pointsForBadge = gamificationSettings?.pointsRules.find(r => r.id === 'earn_badge')?.points || 0;
-              currentUserState = { ...currentUserState, achievements: [...currentUserState.achievements, newBadge.id], points: currentUserState.points + pointsForBadge };
-              showNewBadge(newBadge);
-              await new Promise(resolve => setTimeout(resolve, 6500));
-          } else {
-              break;
-          }
+    while (true) {
+      const newBadge = checkAndAwardBadges(currentUserState, userReports, dynamicBadgesList);
+      if (newBadge) {
+        awardedBadges = true;
+        const pointsForBadge = gamificationSettings?.pointsRules.find(r => r.id === 'earn_badge')?.points || 0;
+        currentUserState = { ...currentUserState, achievements: [...currentUserState.achievements, newBadge.id], points: currentUserState.points + pointsForBadge };
+        showNewBadge(newBadge);
+        await new Promise(resolve => setTimeout(resolve, 6500));
+      } else {
+        break;
       }
+    }
 
-      if (awardedBadges) {
-          await handleUserUpdate(currentUserState);
-      }
-      return currentUserState;
+    if (awardedBadges) {
+      await handleUserUpdate(currentUserState);
+    }
+    return currentUserState;
   }, [checkAndAwardBadges, showNewBadge, handleUserUpdate, gamificationSettings]);
 
   const fetchAllData = useCallback(async (user: User) => {
     setLoading(true);
     try {
-        // For guest users, only fetch public data
-        const isGuest = user.is_anonymous;
-        
-        const promises = [
-            api.fetchReports(),
-            isGuest ? Promise.resolve([]) : api.fetchNotificationsByUserId(user.id),
-            isGuest ? Promise.resolve([]) : getPendingReports(),
-            api.getDynamicCategories(),
-            api.getDynamicBadges(),
-            api.getGamificationSettings(),
-        ];
-        
-        const [reportsData, notificationsData, pendingReportsData, dynamicCategoriesData, dynamicBadgesData, gamificationSettingsData] = await Promise.all(promises);
-        
-        // Ensure dynamicCategoriesData is actually an array
-        const categoriesArray = Array.isArray(dynamicCategoriesData) ? dynamicCategoriesData : [];
-        const categoriesObject = categoriesArray.reduce((acc, cat) => {
-            (acc as any)[cat.id] = {
-                icon: ICON_MAP[cat.icon] || ICON_MAP['FaQuestion'],
-                color: { light: cat.color_light, dark: cat.color_dark },
-                name_en: cat.name_en,
-                name_ar: cat.name_ar,
-                is_active: cat.is_active,
-                subCategories: (cat.subCategories || []).reduce((subAcc, sub) => {
-                    (subAcc as any)[sub.id] = { name_en: sub.name_en, name_ar: sub.name_ar };
-                    return subAcc;
-                }, {} as any)
-            };
-            return acc;
-        }, {});
+      // For guest users, only fetch public data
+      const isGuest = user.is_anonymous;
+
+      const promises = [
+        api.fetchReports(),
+        isGuest ? Promise.resolve([]) : api.fetchNotificationsByUserId(user.id),
+        isGuest ? Promise.resolve([]) : getPendingReports(),
+        api.getDynamicCategories(),
+        api.getDynamicBadges(),
+        api.getGamificationSettings(),
+      ];
+
+      const [reportsData, notificationsData, pendingReportsData, dynamicCategoriesData, dynamicBadgesData, gamificationSettingsData] = await Promise.all(promises);
+
+      // Ensure dynamicCategoriesData is actually an array
+      const categoriesArray = Array.isArray(dynamicCategoriesData) ? dynamicCategoriesData : [];
+      const categoriesObject = categoriesArray.reduce((acc, cat) => {
+        (acc as any)[cat.id] = {
+          icon: ICON_MAP[cat.icon] || ICON_MAP['FaQuestion'],
+          color: { light: cat.color_light, dark: cat.color_dark },
+          name_en: cat.name_en,
+          name_ar: cat.name_ar,
+          is_active: cat.is_active,
+          subCategories: (cat.subCategories || []).reduce((subAcc, sub) => {
+            (subAcc as any)[sub.id] = { name_en: sub.name_en, name_ar: sub.name_ar };
+            return subAcc;
+          }, {} as any)
+        };
+        return acc;
+      }, {});
+
+      // Only update categories if we successfully fetched some
+      if (Object.keys(categoriesObject).length > 0) {
         setCategories(categoriesObject);
-        setDynamicBadges(dynamicBadgesData || []);
-        setGamificationSettings(gamificationSettingsData || null);
+      } else {
+        console.warn('Fetched categories empty, keeping static fallback');
+      }
+      setDynamicBadges(dynamicBadgesData || []);
+      setGamificationSettings(gamificationSettingsData || null);
 
-        const pendingReportsForState: Report[] = pendingReportsData
-            .filter(p => p.created_by === user.id)
-            .map(p => ({ ...p, id: `pending-${p.timestamp}`, created_at: new Date(p.timestamp).toISOString(), status: ReportStatus.New, confirmations_count: 1, isPending: true }));
-        
-        const combinedReports = [...pendingReportsForState, ...reportsData];
-        const uniqueReports = Array.from(new Map(combinedReports.map(item => [item.id, item])).values());
-        
-        setReports(uniqueReports.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-        setNotifications(notificationsData);
+      const pendingReportsForState: Report[] = pendingReportsData
+        .filter(p => p.created_by === user.id)
+        .map(p => ({ ...p, id: `pending-${p.timestamp}`, created_at: new Date(p.timestamp).toISOString(), status: ReportStatus.New, confirmations_count: 1, isPending: true }));
 
-        await processBadgeAwards(user, uniqueReports, dynamicBadgesData);
+      const combinedReports = [...pendingReportsForState, ...reportsData];
+      const uniqueReports = Array.from(new Map(combinedReports.map(item => [item.id, item])).values());
+
+      setReports(uniqueReports.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      setNotifications(notificationsData);
+
+      await processBadgeAwards(user, uniqueReports, dynamicBadgesData);
 
     } catch (error) {
-        console.error("Failed to fetch app data", error);
+      console.error("Failed to fetch app data", error);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   }, [processBadgeAwards]);
 
@@ -408,11 +423,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (event.data && event.data.type === 'PERFORM_SYNC') {
         const pending = await getPendingReports();
         if (pending.length === 0) return;
-        
+
         const userForSync = overrideUser || currentUser;
         if (!userForSync) {
-            console.warn("Sync requested but no user is logged in. Aborting.");
-            return;
+          console.warn("Sync requested but no user is logged in. Aborting.");
+          return;
         }
 
         for (const reportData of pending) {
@@ -445,8 +460,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         navigator.serviceWorker?.addEventListener('message', handleSWMessage);
         const user = await api.getCurrentUser();
         setCurrentUser(user);
-      } catch (error) {
-        console.error("Failed to initialize the app:", error);
+      } catch (error: any) {
+        // Only log error if it's NOT the expected "No token provided" error
+        const errorMessage = error?.message || error?.toString() || '';
+        if (!errorMessage.includes('No token provided')) {
+          console.error("Failed to initialize the app:", error);
+        }
         // If we can't fetch the user (e.g., backend offline), create an anonymous user
         // This allows the app to still render instead of showing a blank page
         const anonymousUser: User = {
@@ -481,7 +500,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
     };
-  }, [currentUser, overrideUser]); // Added currentUser and overrideUser dependency
+  }, []); // Run only once on mount - DO NOT add currentUser/overrideUser as dependencies!
 
   // Effect for refreshing data when the tab becomes visible
   useEffect(() => {
@@ -504,17 +523,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const user = effectiveCurrentUser;
     if (user && user.id !== lastFetchedUserId.current) {
-        lastFetchedUserId.current = user.id;
-        fetchAllData(user);
-        // Don't show onboarding tour for override users (Super Admin testing).
-        if (!user.onboarding_complete && !overrideUser) {
-            setTimeout(() => setIsOnboardingActive(true), 500);
-        }
+      lastFetchedUserId.current = user.id;
+      fetchAllData(user);
+      // Don't show onboarding tour for override users (Super Admin testing).
+      if (!user.onboarding_complete && !overrideUser) {
+        setTimeout(() => setIsOnboardingActive(true), 500);
+      }
     } else if (!user && !authLoading) {
-        setReports([]);
-        setNotifications([]);
-        setLoading(false);
-        lastFetchedUserId.current = null;
+      setReports([]);
+      setNotifications([]);
+      setLoading(false);
+      lastFetchedUserId.current = null;
     }
   }, [effectiveCurrentUser, overrideUser, authLoading, fetchAllData]);
 
@@ -528,21 +547,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const toggleTheme = useCallback(() => setTheme(p => (p === Theme.LIGHT ? Theme.DARK : Theme.LIGHT)), []);
   const clearAchievementToast = useCallback(() => setAchievementToastId(null), []);
   const clearImpersonationRedirect = useCallback(() => setImpersonationRedirectPath(null), []);
-  
+
   const exitImpersonation = useCallback(async (redirectPath: string) => {
     api.logout(); // Clear JWT token
     setOverrideUser(null);
     setRealUser(null);
     setImpersonationRedirectPath(redirectPath);
   }, []);
-  
+
   const finishOnboarding = useCallback(async () => {
     setIsOnboardingActive(false);
     if (currentUser) {
       // Update local state immediately
       const updatedUser = { ...currentUser, onboarding_complete: true };
       setCurrentUser(updatedUser);
-      
+
       // Persist to backend
       try {
         await api.updateCurrentUser({ onboarding_complete: true });
@@ -551,14 +570,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
   }, [currentUser]);
-  
+
   const skipOnboarding = useCallback(async () => {
     setIsOnboardingActive(false);
     if (currentUser) {
       // Update local state immediately
       const updatedUser = { ...currentUser, onboarding_complete: true };
       setCurrentUser(updatedUser);
-      
+
       // Persist to backend
       try {
         await api.updateCurrentUser({ onboarding_complete: true });
@@ -567,25 +586,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
   }, [currentUser]);
-  
+
   const restartOnboarding = useCallback(() => {
     setIsOnboardingActive(true);
   }, []);
-  
+
   const signup = useCallback(async (data, options) => {
     if (options?.upgradingFromGuest && currentUser?.is_anonymous) {
-        const upgradedUser = await api.upgradeAnonymousUser(currentUser, data);
-        await handleUserUpdate(upgradedUser);
-        return upgradedUser;
+      const upgradedUser = await api.upgradeAnonymousUser(currentUser, data);
+      await handleUserUpdate(upgradedUser);
+      return upgradedUser;
     }
     const user = await api.createUser(data);
     await handleUserUpdate(user);
     return user;
   }, [handleUserUpdate, currentUser]);
-  
-  const login = useCallback(async (data) => { 
-    const user = await api.loginUser(data); 
-    
+
+  const login = useCallback(async (data) => {
+    const user = await api.loginUser(data);
+
     // Check if user is a super admin or portal user
     if (user.role === 'super_admin') {
       // Throw a special error to trigger redirect to super admin portal
@@ -600,11 +619,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       error.user = user;
       throw error;
     }
-    
-    await handleUserUpdate(user); 
-    return user; 
+
+    await handleUserUpdate(user);
+    return user;
   }, [handleUserUpdate]);
-  
+
   const loginAnonymous = useCallback(async () => { const user = await api.createAnonymousUser(); await handleUserUpdate(user); return user; }, [handleUserUpdate]);
   const logout = useCallback(async () => { await api.logout(); setCurrentUser(null); setReports([]); setNotifications([]); setComments([]); setReportHistory([]); }, []);
 
@@ -620,7 +639,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setTempUserOverride = useCallback(async (impersonatedUser: User | null, impersonatorUser: User | null = null, redirectPath: string | null = null) => {
     api.logout(); // Clear current JWT token
     if (impersonatedUser && impersonatorUser && (impersonatedUser.role !== 'citizen')) {
-        await api.setCurrentUser(impersonatedUser, true);
+      await api.setCurrentUser(impersonatedUser, true);
     }
     setOverrideUser(impersonatedUser);
     setRealUser(impersonatorUser);
@@ -629,49 +648,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const submitReport = useCallback(async (reportData) => {
     if (!effectiveCurrentUser) throw new Error("User not authenticated");
-    
+
     // Removed blocking AI translation. The report is now created instantly.
     // A real backend would handle translation asynchronously. Here, we just
     // duplicate the text to satisfy the data model.
     let submissionPayload: Omit<Report, 'id' | 'created_at' | 'status' | 'confirmations_count'>;
     if (language === 'ar') {
-        submissionPayload = { ...reportData, title_ar: reportData.title, note_ar: reportData.note, title_en: reportData.title, note_en: reportData.note, created_by: effectiveCurrentUser.id };
+      submissionPayload = { ...reportData, title_ar: reportData.title, note_ar: reportData.note, title_en: reportData.title, note_en: reportData.note, created_by: effectiveCurrentUser.id };
     } else {
-        submissionPayload = { ...reportData, title_en: reportData.title, note_en: reportData.note, title_ar: reportData.title, note_ar: reportData.note, created_by: effectiveCurrentUser.id };
+      submissionPayload = { ...reportData, title_en: reportData.title, note_en: reportData.note, title_ar: reportData.title, note_ar: reportData.note, created_by: effectiveCurrentUser.id };
     }
     delete (submissionPayload as any).title;
     delete (submissionPayload as any).note;
-    
+
     const queueForSync = async (payload: any) => {
-        const pendingReport: PendingReportData = { ...payload, timestamp: Date.now() };
-        await addPendingReport(pendingReport);
-        const reportForState: Report = {...pendingReport, id: `pending-${pendingReport.timestamp}`, created_at: new Date(pendingReport.timestamp).toISOString(), status: ReportStatus.New, confirmations_count: 1, isPending: true };
-        setReports(prev => [reportForState, ...prev].sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-        if ('serviceWorker' in navigator && 'SyncManager' in window) navigator.serviceWorker.ready.then(sw => (sw as any).sync.register('sync-new-reports'));
-        return reportForState;
+      const pendingReport: PendingReportData = { ...payload, timestamp: Date.now() };
+      await addPendingReport(pendingReport);
+      const reportForState: Report = { ...pendingReport, id: `pending-${pendingReport.timestamp}`, created_at: new Date(pendingReport.timestamp).toISOString(), status: ReportStatus.New, confirmations_count: 1, isPending: true };
+      setReports(prev => [reportForState, ...prev].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      if ('serviceWorker' in navigator && 'SyncManager' in window) navigator.serviceWorker.ready.then(sw => (sw as any).sync.register('sync-new-reports'));
+      return reportForState;
     };
 
     if (navigator.onLine) {
-        try {
-            const newReport = await api.submitReport(submissionPayload, effectiveCurrentUser);
-            setReports(prev => [newReport, ...prev].sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-            
-            // Refetch user data to get updated points and stats from backend
-            if (!overrideUser && currentUser && currentUser.role === 'citizen') {
-              try {
-                const updatedUser = await api.getCurrentUser();
-                setCurrentUser(updatedUser);
-                processBadgeAwards(updatedUser, [newReport, ...reports], dynamicBadges);
-              } catch (error) {
-                console.error('Failed to refetch user after submit:', error);
-              }
-            }
-            
-            return newReport;
-        } catch (error) {
-            console.warn("Online submission failed, falling back to sync.", error);
-            return await queueForSync(submissionPayload);
+      try {
+        const newReport = await api.submitReport(submissionPayload, effectiveCurrentUser);
+        setReports(prev => [newReport, ...prev].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+
+        // Refetch user data to get updated points and stats from backend
+        if (!overrideUser && currentUser && currentUser.role === 'citizen') {
+          try {
+            const updatedUser = await api.getCurrentUser();
+            setCurrentUser(updatedUser);
+            processBadgeAwards(updatedUser, [newReport, ...reports], dynamicBadges);
+          } catch (error) {
+            console.error('Failed to refetch user after submit:', error);
+          }
         }
+
+        return newReport;
+      } catch (error) {
+        console.warn("Online submission failed, falling back to sync.", error);
+        return await queueForSync(submissionPayload);
+      }
     }
     return await queueForSync(submissionPayload);
   }, [effectiveCurrentUser, overrideUser, currentUser, reports, processBadgeAwards, language, dynamicBadges]);
@@ -680,14 +699,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const confirmReport = useCallback(async (reportId: string) => {
     if (!effectiveCurrentUser || reportId.startsWith('pending-') || effectiveCurrentUser.confirmedReportIds?.includes(reportId) || reports.find(r => r.id === reportId)?.created_by === effectiveCurrentUser.id) return;
-    
+
     const { report: updatedReport, newNotifications } = await api.confirmReport(reportId, effectiveCurrentUser);
     updateReportInState(updatedReport);
     if (newNotifications.length > 0) {
-        const notificationsForCurrentUser = newNotifications.filter(n => n.user_id === effectiveCurrentUser.id);
-        if (notificationsForCurrentUser.length > 0) setNotifications(prev => [...notificationsForCurrentUser, ...prev].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      const notificationsForCurrentUser = newNotifications.filter(n => n.user_id === effectiveCurrentUser.id);
+      if (notificationsForCurrentUser.length > 0) setNotifications(prev => [...notificationsForCurrentUser, ...prev].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
     }
-    
+
     // Refetch user data to get updated points and stats from backend
     if (!overrideUser && currentUser && currentUser.role === 'citizen') {
       try {
@@ -700,19 +719,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [effectiveCurrentUser, overrideUser, currentUser, reports, updateReportInState, processBadgeAwards, dynamicBadges]);
 
-  const markNotificationsAsRead = useCallback(() => { setNotifications(prev => prev.map(n => ({...n, read: true}))); }, []);
+  const markNotificationsAsRead = useCallback(() => { setNotifications(prev => prev.map(n => ({ ...n, read: true }))); }, []);
   const fetchComments = useCallback(async (reportId: string) => { const data = await api.fetchCommentsByReportId(reportId); setComments(data); }, []);
 
   const addComment = useCallback(async (reportId: string, text: string) => {
-      if (!effectiveCurrentUser) return;
-      const { comment: newComment, newNotifications } = await api.addComment(reportId, text, effectiveCurrentUser);
-      setComments(prev => [newComment, ...prev]);
-      if (newNotifications.length > 0) {
-        const notificationsForCurrentUser = newNotifications.filter(n => n.user_id === effectiveCurrentUser.id);
-        if (notificationsForCurrentUser.length > 0) setNotifications(prev => [...notificationsForCurrentUser, ...prev].sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-      }
+    if (!effectiveCurrentUser) return;
+    const { comment: newComment, newNotifications } = await api.addComment(reportId, text, effectiveCurrentUser);
+    setComments(prev => [newComment, ...prev]);
+    if (newNotifications.length > 0) {
+      const notificationsForCurrentUser = newNotifications.filter(n => n.user_id === effectiveCurrentUser.id);
+      if (notificationsForCurrentUser.length > 0) setNotifications(prev => [...notificationsForCurrentUser, ...prev].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+    }
   }, [effectiveCurrentUser]);
-  
+
   const fetchReportHistory = useCallback(async (reportId: string) => { const data = await api.fetchHistoryByReportId(reportId); setReportHistory(data); }, []);
 
   const toggleReportSubscription = useCallback(async (reportId: string) => {
@@ -726,53 +745,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Optimistic UI updates
     const isCurrentlySubscribed = originalUser.subscribedReportIds?.includes(reportId);
     const updatedUserOptimistic = {
-        ...originalUser,
-        subscribedReportIds: isCurrentlySubscribed
-            ? (originalUser.subscribedReportIds || []).filter(id => id !== reportId)
-            : [...(originalUser.subscribedReportIds || []), reportId]
+      ...originalUser,
+      subscribedReportIds: isCurrentlySubscribed
+        ? (originalUser.subscribedReportIds || []).filter(id => id !== reportId)
+        : [...(originalUser.subscribedReportIds || []), reportId]
     };
     if (overrideUser) {
-        setOverrideUser(updatedUserOptimistic);
+      setOverrideUser(updatedUserOptimistic);
     } else {
-        setCurrentUser(updatedUserOptimistic);
+      setCurrentUser(updatedUserOptimistic);
     }
     updateReportInState({
-        ...originalReport,
-        subscribedUserIds: isCurrentlySubscribed
-            ? (originalReport.subscribedUserIds || []).filter(id => id !== effectiveCurrentUser.id)
-            : [...(originalReport.subscribedUserIds || []), effectiveCurrentUser.id]
+      ...originalReport,
+      subscribedUserIds: isCurrentlySubscribed
+        ? (originalReport.subscribedUserIds || []).filter(id => id !== effectiveCurrentUser.id)
+        : [...(originalReport.subscribedUserIds || []), effectiveCurrentUser.id]
     });
 
     try {
-        // BUG FIX: Pass only the user ID to the API to prevent race conditions with stale user objects.
-        const { report, user, newNotifications } = await api.toggleSubscription(reportId, effectiveCurrentUser.id);
+      // BUG FIX: Pass only the user ID to the API to prevent race conditions with stale user objects.
+      const { report, user, newNotifications } = await api.toggleSubscription(reportId, effectiveCurrentUser.id);
 
-        // Update state with fresh data from the API response
-        if (overrideUser) {
-            setOverrideUser(user);
-        } else {
-            await handleUserUpdate(user);
+      // Update state with fresh data from the API response
+      if (overrideUser) {
+        setOverrideUser(user);
+      } else {
+        await handleUserUpdate(user);
+      }
+      updateReportInState(report);
+
+      if (newNotifications.length > 0) {
+        const notificationsForCurrentUser = newNotifications.filter(n => n.user_id === effectiveCurrentUser.id);
+        if (notificationsForCurrentUser.length > 0) {
+          setNotifications(prev => [...notificationsForCurrentUser, ...prev].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
         }
-        updateReportInState(report);
-        
-        if (newNotifications.length > 0) {
-            const notificationsForCurrentUser = newNotifications.filter(n => n.user_id === effectiveCurrentUser.id);
-            if (notificationsForCurrentUser.length > 0) {
-                setNotifications(prev => [...notificationsForCurrentUser, ...prev].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-            }
-        }
+      }
     } catch (error) {
-        console.error("Failed to toggle subscription", error);
-        // Revert optimistic updates on failure
-        if (overrideUser) {
-            setOverrideUser(originalUser);
-        } else {
-            setCurrentUser(originalUser);
-        }
-        updateReportInState(originalReport);
+      console.error("Failed to toggle subscription", error);
+      // Revert optimistic updates on failure
+      if (overrideUser) {
+        setOverrideUser(originalUser);
+      } else {
+        setCurrentUser(originalUser);
+      }
+      updateReportInState(originalReport);
     }
-}, [effectiveCurrentUser, overrideUser, reports, handleUserUpdate, updateReportInState]);
-  
+  }, [effectiveCurrentUser, overrideUser, reports, handleUserUpdate, updateReportInState]);
+
   const toggleCategory = useCallback((category: ReportCategory) => setActiveCategories(prev => { const newSet = new Set(prev); if (newSet.has(category)) newSet.delete(category); else newSet.add(category); return newSet; }), []);
   const setCategoriesFilter = useCallback((categories: Set<ReportCategory>) => setActiveCategories(categories), []);
   const clearCategories = useCallback(() => setActiveCategories(new Set()), []);
@@ -780,7 +799,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const toggleStatus = useCallback((status: ReportStatus) => setActiveStatuses(prev => { const newSet = new Set(prev); if (newSet.has(status)) newSet.delete(status); else newSet.add(status); return newSet; }), []);
   const setStatuses = useCallback((statuses: Set<ReportStatus>) => setActiveStatuses(statuses), []);
   const clearStatuses = useCallback(() => setActiveStatuses(new Set()), []);
-  
+
   const startWizard = useCallback(() => {
     // FIX: Initialize missing `detectedIssues` and `multiReportSelection` properties to match the `ReportData` type.
     setWizardData({ category: null, sub_category: null, previews: [], location: null, address: '', title: '', description: '', municipality: '', withMedia: null, severity: null, detectedIssues: [], multiReportSelection: {} });

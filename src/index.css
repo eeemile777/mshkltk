@@ -21,7 +21,81 @@ body {
   font-family: 'Cairo', sans-serif;
 }
 
+
 /* RTL support */
 [dir="rtl"] {
   direction: rtl;
+}
+
+/* Draggable Marker Styles - HIGHLY VISIBLE VERSION */
+.draggable-marker-icon {
+  cursor: move !important;
+  z-index: 10000 !important;
+}
+
+.draggable-marker {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%);
+  border: 5px solid #FFFFFF;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 0 0 8px rgba(20, 184, 166, 0.3),
+    0 8px 20px rgba(20, 184, 166, 0.6),
+    0 0 40px rgba(20, 184, 166, 0.4);
+  position: relative;
+  animation: markerPulse 1.5s ease-in-out infinite;
+}
+
+.draggable-marker::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  background: #FFFFFF;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.draggable-marker::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 12px solid #14B8A6;
+  filter: drop-shadow(0 -2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Dark mode support */
+.dark .draggable-marker {
+  border-color: #1F2937;
+  box-shadow: 0 0 0 8px rgba(20, 184, 166, 0.4),
+    0 8px 20px rgba(20, 184, 166, 0.8),
+    0 0 40px rgba(20, 184, 166, 0.6);
+}
+
+@keyframes markerPulse {
+
+  0%,
+  100% {
+    transform: rotate(-45deg) scale(1);
+    box-shadow: 0 0 0 8px rgba(20, 184, 166, 0.3),
+      0 8px 20px rgba(20, 184, 166, 0.6),
+      0 0 40px rgba(20, 184, 166, 0.4);
+  }
+
+  50% {
+    transform: rotate(-45deg) scale(1.1);
+    box-shadow: 0 0 0 12px rgba(20, 184, 166, 0.2),
+      0 12px 30px rgba(20, 184, 166, 0.8),
+      0 0 60px rgba(20, 184, 166, 0.6);
+  }
 }

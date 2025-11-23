@@ -91,51 +91,51 @@ const validatePasswordComplexity = (password) => {
  *         description: Server error
  */
 router.post('/register', authLimiter, validateRegistration, asyncHandler(async (req, res) => {
-    const { username, password, first_name, last_name, role = 'citizen' } = req.body;
+  const { username, password, first_name, last_name, role = 'citizen' } = req.body;
 
-    // SECURITY FIX #15: Enhanced password validation
-    const passwordError = validatePasswordComplexity(password);
-    if (passwordError) {
-      return res.status(400).json({ error: passwordError });
-    }
+  // SECURITY FIX #15: Enhanced password validation
+  const passwordError = validatePasswordComplexity(password);
+  if (passwordError) {
+    return res.status(400).json({ error: passwordError });
+  }
 
-    // Check if username already exists
-    const existingUser = await findUserByUsername(username);
-    if (existingUser) {
-      return res.status(409).json({ error: 'Username already exists' });
-    }
+  // Check if username already exists
+  const existingUser = await findUserByUsername(username);
+  if (existingUser) {
+    return res.status(409).json({ error: 'Username already exists' });
+  }
 
-    // Generate salt and hash password
-    const salt = generateSalt();
-    const password_hash = await hashPassword(password, salt);
+  // Generate salt and hash password
+  const salt = generateSalt();
+  const password_hash = await hashPassword(password, salt);
 
-    // Create user
-    const display_name = first_name && last_name 
-      ? `${first_name} ${last_name}` 
-      : username;
+  // Create user
+  const display_name = first_name && last_name
+    ? `${first_name} ${last_name}`
+    : username;
 
-    const newUser = await createUser({
-      username,
-      first_name: first_name || null,
-      last_name: last_name || null,
-      display_name,
-      is_anonymous: false,
-      password_hash,
-      salt,
-      role,
-    });
+  const newUser = await createUser({
+    username,
+    first_name: first_name || null,
+    last_name: last_name || null,
+    display_name,
+    is_anonymous: false,
+    password_hash,
+    salt,
+    role,
+  });
 
-    // Generate token
-    const token = generateToken(newUser);
+  // Generate token
+  const token = generateToken(newUser);
 
-    // Don't send password hash and salt to client
-    delete newUser.password_hash;
-    delete newUser.salt;
+  // Don't send password hash and salt to client
+  delete newUser.password_hash;
+  delete newUser.salt;
 
-    res.status(201).json({
-      user: newUser,
-      token,
-    });
+  res.status(201).json({
+    user: newUser,
+    token,
+  });
 }));
 
 /**
@@ -185,36 +185,36 @@ router.post('/register', authLimiter, validateRegistration, asyncHandler(async (
  *         description: Server error
  */
 router.post('/login', authLimiter, validateLogin, asyncHandler(async (req, res) => {
-    const { username, password } = req.body;
+  const { username, password } = req.body;
 
-    // Find user
-    const user = await findUserByUsername(username);
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid username or password' });
-    }
+  // Find user
+  const user = await findUserByUsername(username);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid username or password' });
+  }
 
-    // Check if account is active
-    if (!user.is_active) {
-      return res.status(403).json({ error: 'Account is suspended' });
-    }
+  // Check if account is active
+  if (!user.is_active) {
+    return res.status(403).json({ error: 'Account is suspended' });
+  }
 
-    // Verify password
-    const isValidPassword = await verifyPassword(password, user.salt, user.password_hash);
-    if (!isValidPassword) {
-      return res.status(401).json({ error: 'Invalid username or password' });
-    }
+  // Verify password
+  const isValidPassword = await verifyPassword(password, user.salt, user.password_hash);
+  if (!isValidPassword) {
+    return res.status(401).json({ error: 'Invalid username or password' });
+  }
 
-    // Generate token
-    const token = generateToken(user);
+  // Generate token
+  const token = generateToken(user);
 
-    // Don't send password hash and salt to client
-    delete user.password_hash;
-    delete user.salt;
+  // Don't send password hash and salt to client
+  delete user.password_hash;
+  delete user.salt;
 
-    res.json({
-      user,
-      token,
-    });
+  res.json({
+    user,
+    token,
+  });
 }));
 
 /**
@@ -265,7 +265,7 @@ router.post('/login', authLimiter, validateLogin, asyncHandler(async (req, res) 
  */
 router.post('/verify', async (req, res) => {
   const authHeader = req.headers.authorization;
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ valid: false });
   }

@@ -1,6 +1,6 @@
 const { query, getClient } = require('../connection');
 const { awardPoints } = require('./users');
-const { evaluateBadges } = require('../services/badgeEvaluator');
+const { evaluateBadges } = require('../../services/badgeEvaluator');
 const { createNotification } = require('./notifications');
 
 /**
@@ -69,7 +69,7 @@ const getReportById = async (reportId) => {
 // Get all reports with filters
 const getReports = async (filters = {}) => {
   const { municipality, category, status, created_by, limit = 100, offset = 0 } = filters;
-  
+
   let queryText = 'SELECT * FROM reports WHERE 1=1';
   const params = [];
   let paramCount = 1;
@@ -141,7 +141,8 @@ const updateReport = async (reportId, updates, userId = null) => {
 
     const allowedFields = [
       'title_en', 'title_ar', 'photo_urls', 'note_en', 'note_ar',
-      'status', 'severity', 'category', 'sub_category', 'assigned_to'
+      'status', 'severity', 'category', 'sub_category', 'assigned_to',
+      'resolution_photo_url'
     ];
 
     const fields = [];
@@ -235,7 +236,7 @@ const updateReport = async (reportId, updates, userId = null) => {
 // Confirm a report (increment confirmations)
 const confirmReport = async (reportId, userId) => {
   const client = await getClient();
-  
+
   try {
     await client.query('BEGIN');
 
@@ -287,7 +288,7 @@ const confirmReport = async (reportId, userId) => {
     }
 
     await client.query('COMMIT');
-    
+
     return reportResult.rows[0];
   } catch (error) {
     await client.query('ROLLBACK');
@@ -333,7 +334,7 @@ const deleteReport = async (reportId) => {
 // Get reports by municipality (for portal)
 const getReportsByMunicipality = async (municipality, filters = {}) => {
   const { status, category, limit = 100, offset = 0 } = filters;
-  
+
   let queryText = 'SELECT * FROM reports WHERE municipality = $1';
   const params = [municipality];
   let paramCount = 2;

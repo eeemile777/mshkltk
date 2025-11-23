@@ -11,8 +11,6 @@ export enum Theme {
   DARK = 'dark',
 }
 
-// FIX: Broke a circular dependency by defining ReportCategory as a static union type
-// instead of deriving it from the CATEGORIES constant. This was causing a white screen on load.
 export type ReportCategory =
   | 'infrastructure'
   | 'electricity_energy'
@@ -27,12 +25,12 @@ export type ReportCategory =
   | 'transparency_services'
   | 'other_unknown';
 
-
 export enum ReportStatus {
   New = 'new',
   Received = 'received',
   InProgress = 'in_progress',
   Resolved = 'resolved',
+  Rejected = 'rejected', // Added to match some frontend usage, though not in DB enum explicitly yet
 }
 
 export enum ReportSeverity {
@@ -55,10 +53,13 @@ export enum LeaderboardFilter {
 }
 
 export enum Credibility {
-    Pending = 'Pending',
-    Pass = 'Pass',
-    NeedsReview = 'Needs Review',
+  Pending = 'Pending',
+  Pass = 'Pass',
+  NeedsReview = 'Needs Review',
 }
+
+export type UserRole = 'citizen' | 'municipality' | 'super_admin' | 'utility' | 'union_of_municipalities';
+export type PortalAccessLevel = 'read_write' | 'read_only';
 
 export interface Report {
   id: string;
@@ -69,9 +70,8 @@ export interface Report {
   lng: number;
   area: string;
   municipality: string; // AI-detected municipality
-  // FIX: Changed category type to be more specific, fixing multiple type errors.
-  category: ReportCategory; // Now an ID
-  sub_category?: string; // Now an ID
+  category: ReportCategory;
+  sub_category?: string;
   note_en: string;
   note_ar: string;
   status: ReportStatus;
@@ -82,6 +82,11 @@ export interface Report {
   isPending?: boolean; // For offline submissions
   timestamp?: number; // For IDB key
   subscribedUserIds?: string[]; // array of userIds
+
+  // Optional fields that might be joined
+  comments_count?: number;
+  trending_score?: number;
+  resolution_photo_url?: string;
 }
 
 export type PendingReportData = Omit<Report, 'id' | 'created_at' | 'status' | 'confirmations_count'> & { timestamp: number };
@@ -105,8 +110,8 @@ export interface User {
   created_at: string; // ISO
   avatarUrl: string;
   onboarding_complete?: boolean;
-  role: 'citizen' | 'municipality' | 'super_admin' | 'utility' | 'union_of_municipalities';
-  portal_access_level?: 'read_write' | 'read_only';
+  role: UserRole;
+  portal_access_level?: PortalAccessLevel;
   municipality_id?: string; // e.g., 'beirut'
   scoped_categories?: ReportCategory[]; // For 'utility' role
   scoped_municipalities?: string[]; // For 'utility' or 'union_of_municipalities' role
@@ -116,7 +121,6 @@ export interface User {
   portal_subtitle?: string;
 }
 
-
 export enum NotificationType {
   StatusChange = 'status_change',
   Badge = 'badge',
@@ -124,6 +128,7 @@ export enum NotificationType {
   NewFollower = 'new_follower',
   NewComment = 'new_comment',
   ProofRequest = 'proof_request',
+  ReportResolved = 'report_resolved',
 }
 
 export interface Notification {
@@ -131,9 +136,14 @@ export interface Notification {
   user_id: string;
   type: NotificationType;
   report_id: string | null;
+  title_en: string;
+  title_ar: string;
+  body_en?: string;
+  body_ar?: string;
   created_at: string;
   read: boolean;
-  metadata: { [key: string]: string }; // E.g., { reportTitle: '...', newStatus: 'in_progress' }
+  metadata?: { [key: string]: string }; // Kept for flexibility
+  is_read?: boolean; // Alias for read, to match DB column sometimes
 }
 
 export interface Badge {
@@ -142,7 +152,6 @@ export interface Badge {
   name_en: string;
   description_ar: string;
   description_en: string;
-  // FIX: Changed icon type to React.ReactNode to allow JSX elements.
   icon: React.ReactNode; // The character or identifier for the icon
 }
 
@@ -159,53 +168,60 @@ export interface Comment {
   user_id: string;
   text: string;
   created_at: string;
+  user?: User; // Optional joined user data
 }
 
 export interface ReportHistory {
   id: string;
   report_id: string;
-  status: ReportStatus;
-  updated_at: string;
-  updated_by_id?: string; // User ID of who made the change
-  updated_by_name?: string; // Display name for quick access
+  old_status?: ReportStatus;
+  new_status: ReportStatus;
+  changed_by?: string; // User ID
+  notes?: string;
+  proof_urls?: string[];
+  timestamp: string; // created_at in DB
+
+  // Joined fields
+  changed_by_username?: string;
+  changed_by_display_name?: string;
+  updated_at?: string; // Alias for timestamp in some contexts
+  updated_by_id?: string; // Alias for changed_by
+  updated_by_name?: string; // Alias for changed_by_display_name
 }
 
-// FIX: Added Preview interface to be globally available.
 export interface Preview {
-    file: File;
-    url: string;
-    type: 'image' | 'video';
-    status: 'pending' | 'valid' | 'rejected';
-    rejectionReason?: string;
+  file: File;
+  url: string;
+  type: 'image' | 'video';
+  status: 'pending' | 'valid' | 'rejected';
+  rejectionReason?: string;
 }
 
 // --- Report Wizard Types ---
-// FIX: Moved from ReportWizardPage.tsx to break circular dependency
 export type AiVerificationStatus = 'pending' | 'pass' | 'fail' | 'images_removed' | 'idle';
 
 export interface AIssue {
-    title: string;
-    description: string;
-    category: ReportCategory | null;
-    sub_category: string | null;
-    severity: ReportSeverity | null;
+  title: string;
+  description: string;
+  category: ReportCategory | null;
+  sub_category: string | null;
+  severity: ReportSeverity | null;
 }
 
 export interface ReportData {
-    // FIX: Changed category type to be more specific, fixing multiple type errors.
-    category: ReportCategory | null;
-    sub_category: string | null;
-    previews: Preview[];
-    location: L.LatLngTuple | null;
-    address: string;
-    title: string;
-    description: string;
-    municipality: string;
-    withMedia: boolean | null;
-    severity: ReportSeverity | null;
-    // New fields for multi-report flow
-    detectedIssues: AIssue[];
-    multiReportSelection: Record<number, boolean>;
+  category: ReportCategory | null;
+  sub_category: string | null;
+  previews: Preview[];
+  location: L.LatLngTuple | null;
+  address: string;
+  title: string;
+  description: string;
+  municipality: string;
+  withMedia: boolean | null;
+  severity: ReportSeverity | null;
+  // New fields for multi-report flow
+  detectedIssues: AIssue[];
+  multiReportSelection: Record<number, boolean>;
 }
 
 // --- Dynamic Configuration Types ---
@@ -223,8 +239,11 @@ export interface DynamicCategory {
   color_dark: string;
   name_en: string;
   name_ar: string;
+  label_en?: string; // Alias for name_en
+  label_ar?: string; // Alias for name_ar
   is_active: boolean;
   subCategories: DynamicSubCategory[];
+  sub_categories?: DynamicSubCategory[]; // Alias
 }
 
 export type BadgeCriteriaType = 'report_count' | 'confirmation_count' | 'point_threshold';
@@ -244,25 +263,40 @@ export interface DynamicBadge {
   };
 }
 
-export type PointsRuleAction = 'submit_report' | 'confirm_report' | 'earn_badge';
+export type PointsRuleAction = 'submit_report' | 'confirm_report' | 'earn_badge' | 'comment';
 
 export interface PointsRule {
-    id: PointsRuleAction;
-    points: number;
-    description: string;
+  id: PointsRuleAction;
+  points: number;
+  description: string;
 }
 
 export interface GamificationSettings {
-    id: 'default'; // Only one settings object
-    pointsRules: PointsRule[];
+  id: 'default'; // Only one settings object
+  pointsRules: PointsRule[];
 }
 
 // --- Audit Log ---
 export interface AuditLog {
   id: string;
+  admin_id?: string;
+  action: string;
+  entity_type?: string;
+  entity_id?: string;
+  details?: any;
   timestamp: string;
-  actorId: string;
-  actorName: string;
-  actorRole: User['role'];
-  message: string;
+
+  // Frontend convenience fields (mapped from DB or joined)
+  actorId?: string;
+  actorName?: string;
+  actorRole?: UserRole;
+  message?: string;
+}
+
+export interface ReportFilters {
+  status?: string;
+  category?: string;
+  municipalityId?: string;
+  limit?: number;
+  offset?: number;
 }

@@ -43,7 +43,7 @@ const FilterPill: React.FC<{
 
     const dropdownClasses = `absolute ${dropdownPositionClasses} w-56 bg-card dark:bg-surface-dark rounded-2xl shadow-xl p-2 z-10 flex flex-col gap-1 transition-all duration-200 custom-scrollbar max-h-[60vh] overflow-y-auto ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
         }`;
-    
+
     const baseItemClasses = "flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-start transition-colors hover:bg-muted dark:hover:bg-bg-dark focus:outline-none focus:bg-muted dark:focus:bg-bg-dark";
 
     return (
@@ -67,7 +67,7 @@ const FilterPill: React.FC<{
                         if (!category) return null; // Safeguard if category object is not ready
                         const ItemIcon = category.icon;
                         return (
-                             <button
+                            <button
                                 key={catKey}
                                 role="menuitemcheckbox"
                                 aria-checked={checked}
@@ -83,9 +83,10 @@ const FilterPill: React.FC<{
                     })
                     : Object.values(ReportStatus).map(stat => {
                         const checked = activeStatuses.has(stat);
-                        const colorClass = (STATUS_COLORS[stat][theme === 'dark' ? 'dark' : 'light'].split(' ').find(c => c.startsWith('bg-'))) || '';
+                        const statusColor = STATUS_COLORS[stat]?.[theme === 'dark' ? 'dark' : 'light'];
+                        const colorClass = statusColor?.split(' ').find(c => c.startsWith('bg-')) || 'bg-gray-400';
                         return (
-                             <button
+                            <button
                                 key={stat}
                                 role="menuitemcheckbox"
                                 aria-checked={checked}
@@ -140,7 +141,7 @@ const TimeFilterPill: React.FC = () => {
         ? 'bg-teal dark:bg-teal-dark text-white'
         : 'bg-navy dark:bg-sand text-sand dark:text-navy'
         }`;
-    
+
     const dropdownPositionClasses = 'top-full mt-2 right-0 origin-top-right';
     const dropdownClasses = `absolute ${dropdownPositionClasses} w-56 bg-card dark:bg-surface-dark rounded-2xl shadow-xl p-2 z-10 flex flex-col gap-1 transition-all duration-200 ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`;
     const baseItemClasses = "flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-start transition-colors hover:bg-muted dark:hover:bg-bg-dark focus:outline-none focus:bg-muted dark:focus:bg-bg-dark";
@@ -168,7 +169,7 @@ const TimeFilterPill: React.FC = () => {
                             className={`${baseItemClasses} ${checked ? 'bg-teal/10 dark:bg-teal-dark/20' : ''}`}
                             onClick={() => { setTimeFilter(option.id); setIsOpen(false); }}
                         >
-                             <span className={`text-base ${checked ? 'font-bold text-navy dark:text-text-primary-dark' : 'font-medium text-text-secondary dark:text-text-secondary-dark'}`}>
+                            <span className={`text-base ${checked ? 'font-bold text-navy dark:text-text-primary-dark' : 'font-medium text-text-secondary dark:text-text-secondary-dark'}`}>
                                 {option.label}
                             </span>
                         </button>
@@ -196,7 +197,7 @@ const MapControls: React.FC = () => {
 
         setCategories(new Set(validCats as ReportCategory[]));
         setStatuses(new Set(validStatuses as ReportStatus[]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [categories]); // Re-run if categories are loaded after initial mount
 
     // Effect to synchronize context state to URL query params (debounced)

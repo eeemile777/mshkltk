@@ -55,6 +55,10 @@ const { authMiddleware, requireRole } = require('../middleware/auth');
  *         description: Server error
  */
 router.post('/', authMiddleware, async (req, res) => {
+  // Disallow anonymous users from commenting
+  if (req.user && req.user.is_anonymous) {
+    return res.status(403).json({ error: 'Anonymous users cannot comment' });
+  }
   try {
     const { report_id, text } = req.body;
 

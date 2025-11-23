@@ -11,7 +11,7 @@ if (!rootElement) {
 // Suppress leaflet.heat library errors that occur during map initialization
 const originalError = console.error;
 let errorSuppressCount = 0;
-(console as any).error = function(...args: any[]) {
+(console as any).error = function (...args: any[]) {
   const msg = String(args[0]);
   // Suppress leaflet heat layer errors specifically
   if (msg.includes('Cannot read properties of null') && msg.includes('getSize')) {
@@ -50,8 +50,8 @@ if ((import.meta as any).env?.VITE_SW_KILL === '1') {
     // Construct a full, absolute URL to sw.js using the page's origin.
     // This is the most robust way to ensure the URL is correct and satisfies the same-origin policy.
     const swUrl = new URL('sw.js', window.location.origin);
-    
-    navigator.serviceWorker.register(swUrl, { type: 'module' })
+
+    navigator.serviceWorker.register(swUrl)
       .then(registration => {
         console.log('Service Worker registered with scope:', registration.scope);
       })

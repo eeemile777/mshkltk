@@ -20,6 +20,7 @@ const generateToken = (user) => {
     role: user.role,
     municipality_id: user.municipality_id,
     portal_access_level: user.portal_access_level,
+    is_anonymous: !!user.is_anonymous,
   };
 
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
@@ -81,8 +82,8 @@ const checkUserSuspended = async (req, res, next) => {
     }
 
     if (!user.is_active) {
-      return res.status(403).json({ 
-        error: 'Account suspended', 
+      return res.status(403).json({
+        error: 'Account suspended',
         message: 'Your account has been suspended. Please contact an administrator.'
       });
     }

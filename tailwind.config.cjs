@@ -40,52 +40,16 @@ module.exports = {
         'xl': '1rem', // 16px
         '2xl': '1.5rem',
       },
-      keyframes: {
-        glow: {
-          '0%, 100%': { boxShadow: '0 0 5px #FFA62B, 0 0 10px #FFA62B, 0 0 15px #FFA62B' },
-          '50%': { boxShadow: '0 0 10px #FFA62B, 0 0 20px #FFA62B, 0 0 30px #FFA62B' },
-        },
-        'elegant-spin': {
-          '0%': { transform: 'rotate(0deg)' },
-          '100%': { transform: 'rotate(360deg)' },
-        },
-        'subtle-glow': {
-          '0%, 100%': { boxShadow: '0 0 8px rgba(0, 191, 166, 0.4), 0 0 16px rgba(0, 191, 166, 0.2)' },
-          '50%': { boxShadow: '0 0 16px rgba(0, 191, 166, 0.6), 0 0 24px rgba(0, 191, 166, 0.4)' },
-        },
-        'badge-appear': {
-          '0%': { transform: 'scale(0.5) translateY(20px)', opacity: '0' },
-          '100%': { transform: 'scale(1) translateY(0)', opacity: '1' },
-        },
-        shimmer: {
-          '100%': { transform: 'translateX(100%)' },
-        },
-        'fade-in': {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        'pulse-dot': {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.5' },
-        },
-        'slide-down': {
-          '0%': { transform: 'translateY(-100%)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        'slide-up': {
-          '0%': { transform: 'translateY(10px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        'fade-in-scale': {
-          '0%': { transform: 'scale(0.95)', opacity: '0' },
-          '100%': { transform: 'scale(1)', opacity: '1' },
-        },
-        'bounce-subtle': {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-5px)' },
-        },
-      },
       animation: {
+        'bounce-subtle': 'bounce-subtle 1s ease-in-out infinite',
+        'float-subtle': 'float-subtle 10s ease-in-out infinite',
+        'logo-pulse': 'logo-pulse 3s ease-in-out infinite',
+        'icon-emerge-left': 'icon-emerge-left 1.5s ease-in-out forwards',
+        'icon-emerge-right': 'icon-emerge-right 1.5s ease-in-out forwards',
+        'fade-out-slow': 'fade-out-slow 1.5s ease-in-out forwards',
+        'logo-fade-in': 'logo-fade-in 1.5s ease-in-out forwards',
+        'icon-merge-left': 'icon-merge-left 1.5s ease-in-out forwards',
+        'icon-merge-right': 'icon-merge-right 1.5s ease-in-out forwards',
         glow: 'glow 2s ease-in-out infinite',
         'elegant-spin': 'elegant-spin 1s linear infinite',
         'subtle-glow': 'subtle-glow 2.5s ease-in-out infinite',
@@ -96,7 +60,90 @@ module.exports = {
         'slide-down': 'slide-down 0.3s ease-out',
         'slide-up': 'slide-up 0.3s ease-out',
         'fade-in-scale': 'fade-in-scale 0.3s ease-out',
-        'bounce-subtle': 'bounce-subtle 1s ease-in-out infinite',
+      },
+    },
+    keyframes: {
+      glow: {
+        '0%, 100%': { boxShadow: '0 0 5px #FFA62B, 0 0 10px #FFA62B, 0 0 15px #FFA62B' },
+        '50%': { boxShadow: '0 0 10px #FFA62B, 0 0 20px #FFA62B, 0 0 30px #FFA62B' },
+      },
+      'elegant-spin': {
+        '0%': { transform: 'rotate(0deg)' },
+        '100%': { transform: 'rotate(360deg)' },
+      },
+      'subtle-glow': {
+        '0%, 100%': { boxShadow: '0 0 8px rgba(0, 191, 166, 0.4), 0 0 16px rgba(0, 191, 166, 0.2)' },
+        '50%': { boxShadow: '0 0 16px rgba(0, 191, 166, 0.6), 0 0 24px rgba(0, 191, 166, 0.4)' },
+      },
+      'badge-appear': {
+        '0%': { transform: 'scale(0.5) translateY(20px)', opacity: '0' },
+        '100%': { transform: 'scale(1) translateY(0)', opacity: '1' },
+      },
+      shimmer: {
+        '100%': { transform: 'translateX(100%)' },
+      },
+      'fade-in': {
+        '0%': { opacity: '0' },
+        '100%': { opacity: '1' },
+      },
+      'pulse-dot': {
+        '0%, 100%': { opacity: '1' },
+        '50%': { opacity: '0.5' },
+      },
+      'slide-down': {
+        '0%': { transform: 'translateY(-100%)', opacity: '0' },
+        '100%': { transform: 'translateY(0)', opacity: '1' },
+      },
+      'slide-up': {
+        '0%': { transform: 'translateY(10px)', opacity: '0' },
+        '100%': { transform: 'translateY(0)', opacity: '1' },
+      },
+      'fade-in-scale': {
+        '0%': { transform: 'scale(0.95)', opacity: '0' },
+        '100%': { transform: 'scale(1)', opacity: '1' },
+      },
+      'bounce-subtle': {
+        '0%, 100%': { transform: 'translateY(0)' },
+        '50%': { transform: 'translateY(-5px)' },
+      },
+      'float-subtle': {
+        '0%': { transform: 'translateY(0px) rotate(0deg)', opacity: '0.1' },
+        '25%': { transform: 'translateY(-20px) rotate(8deg)', opacity: '0.5' },
+        '50%': { transform: 'translateY(0px) rotate(0deg)', opacity: '0.8' },
+        '75%': { transform: 'translateY(20px) rotate(-8deg)', opacity: '0.5' },
+        '100%': { transform: 'translateY(0px) rotate(0deg)', opacity: '0.1' },
+      },
+      'logo-pulse': {
+        '0%, 100%': { transform: 'scale(1)', filter: 'drop-shadow(0 0 5px rgba(255, 166, 43, 0.4))' },
+        '50%': { transform: 'scale(1.03)', filter: 'drop-shadow(0 0 15px rgba(255, 166, 43, 0.7))' },
+      },
+      'icon-emerge-left': {
+        '0%': { transform: 'translateX(0) scale(0.5)', opacity: '0' },
+        '50%': { transform: 'translateX(-120px) scale(1)', opacity: '1' },
+        '100%': { transform: 'translateX(-150px) scale(0.8)', opacity: '0' },
+      },
+      'icon-emerge-right': {
+        '0%': { transform: 'translateX(0) scale(0.5)', opacity: '0' },
+        '50%': { transform: 'translateX(120px) scale(1)', opacity: '1' },
+        '100%': { transform: 'translateX(150px) scale(0.8)', opacity: '0' },
+      },
+      'fade-out-slow': {
+        '0%': { opacity: '1', transform: 'scale(1)' },
+        '100%': { opacity: '0', transform: 'scale(0.9)' },
+      },
+      'logo-fade-in': {
+        '0%': { opacity: '0', transform: 'scale(0.9)' },
+        '100%': { opacity: '1', transform: 'scale(1)' },
+      },
+      'icon-merge-left': {
+        '0%': { transform: 'translateX(-150px) scale(0.8)', opacity: '0' },
+        '50%': { transform: 'translateX(-120px) scale(1)', opacity: '1' },
+        '100%': { transform: 'translateX(0) scale(0.5)', opacity: '0' },
+      },
+      'icon-merge-right': {
+        '0%': { transform: 'translateX(150px) scale(0.8)', opacity: '0' },
+        '50%': { transform: 'translateX(120px) scale(1)', opacity: '1' },
+        '100%': { transform: 'translateX(0) scale(0.5)', opacity: '0' },
       },
     },
   },

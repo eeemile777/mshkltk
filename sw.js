@@ -1,10 +1,9 @@
 
-const CACHE_NAME = 'mshkltk-cache-v4';
+const CACHE_NAME = 'mshkltk-cache-v5';
 const APP_SHELL_URLS = [
   '/',
-  '/index.html',
-  '/src/index.tsx',
-  '/src/App.tsx'
+  '/index.html'
+  // Removed /src/index.tsx and /src/App.tsx as they are bundled by Vite and don't exist as separate files
 ];
 
 self.addEventListener('install', (event) => {
@@ -38,7 +37,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  
+
   // NEVER cache API requests - always go to network, but handle offline gracefully
   if (url.pathname.startsWith('/api/') || url.origin.includes(':3001')) {
     event.respondWith(
@@ -49,10 +48,10 @@ self.addEventListener('fetch', (event) => {
           // For API requests, return a proper error response that the app can parse
           return new Response(
             JSON.stringify({ error: 'Network error. Please check your connection.' }),
-            { 
-              status: 503, 
-              statusText: 'Service Unavailable', 
-              headers: { 'Content-Type': 'application/json' } 
+            {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: { 'Content-Type': 'application/json' }
             }
           );
         })

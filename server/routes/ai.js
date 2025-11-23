@@ -93,7 +93,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
  */
 router.post('/analyze-media', authMiddleware, (req, res, next) => {
   const contentType = req.get('Content-Type') || '';
-  
+
   if (contentType.includes('multipart/form-data')) {
     // Handle file upload
     single('file')(req, res, async (err) => {
@@ -107,7 +107,7 @@ router.post('/analyze-media', authMiddleware, (req, res, next) => {
         }
 
         if (!process.env.GEMINI_API_KEY) {
-          return res.status(503).json({ 
+          return res.status(503).json({
             error: 'AI service not configured',
             message: 'GEMINI_API_KEY environment variable not set'
           });
@@ -161,7 +161,7 @@ Respond in JSON format only:
         const response = await result.response;
         const text = response.text();
         const jsonMatch = text.match(/\{[\s\S]*\}/);
-        
+
         if (jsonMatch) {
           const analysis = JSON.parse(jsonMatch[0]);
           // Ensure severity is included, default to medium if not provided
@@ -170,7 +170,7 @@ Respond in JSON format only:
           }
           res.json(analysis);
         } else {
-          res.json({ 
+          res.json({
             category: availableCategories[0] || 'Other',
             title: 'Issue detected',
             description: text,
@@ -181,7 +181,7 @@ Respond in JSON format only:
         console.error('AI analysis error:', error);
         console.error('Error details:', error.message);
         console.error('Error stack:', error.stack);
-        res.status(500).json({ 
+        res.status(500).json({
           error: 'Failed to analyze media',
           details: error.message,
           hint: 'Check if GEMINI_API_KEY is valid and has proper permissions'
@@ -199,7 +199,7 @@ Respond in JSON format only:
         }
 
         if (!process.env.GEMINI_API_KEY) {
-          return res.status(503).json({ 
+          return res.status(503).json({
             error: 'AI service not configured',
             message: 'GEMINI_API_KEY environment variable not set'
           });
@@ -220,7 +220,7 @@ Respond in JSON format only:
   "title": "العنوان",
   "description": "الوصف"
 }`
-      : `Analyze this image and determine:
+          : `Analyze this image and determine:
 1. The most appropriate category from: ${availableCategories.join(', ')}
 2. A short title for the issue
 3. A detailed description of the problem
@@ -232,36 +232,36 @@ Respond in JSON format:
   "description": "description"
 }`;
 
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          data: mediaData,
-          mimeType: mimeType,
-        },
-      },
-      prompt,
-    ]);
+        const result = await model.generateContent([
+          {
+            inlineData: {
+              data: mediaData,
+              mimeType: mimeType,
+            },
+          },
+          prompt,
+        ]);
 
-    const response = result.response;
-    const text = response.text();
-    
-    // Extract JSON from response (Gemini sometimes wraps it in markdown)
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return res.status(500).json({ 
-        error: 'Failed to parse AI response',
-        rawResponse: text 
-      });
-    }
+        const response = result.response;
+        const text = response.text();
 
-    const analysis = JSON.parse(jsonMatch[0]);
-    
-    res.json(analysis);
+        // Extract JSON from response (Gemini sometimes wraps it in markdown)
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          return res.status(500).json({
+            error: 'Failed to parse AI response',
+            rawResponse: text
+          });
+        }
+
+        const analysis = JSON.parse(jsonMatch[0]);
+
+        res.json(analysis);
       } catch (error) {
         console.error('AI analysis error:', error);
-        res.status(500).json({ 
+        res.status(500).json({
           error: 'AI analysis failed',
-          message: error.message 
+          message: error.message
         });
       }
     })();
@@ -315,7 +315,7 @@ Respond in JSON format:
  *       500:
  *         description: Detection failed
  */
-router.post('/detect-municipality', authMiddleware, async (req, res) => {
+router.post('/detect-municipality', async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
 
@@ -338,28 +338,18 @@ router.post('/detect-municipality', authMiddleware, async (req, res) => {
     }
 
     const data = await response.json();
-    
+
     // Extract municipality from address components
-    const municipality = data.address?.city || 
-                         data.address?.town || 
-                         data.address?.municipality || 
-                         data.address?.county || 
-                         'Unknown';
+    const municipality = data.address?.city ||
+      data.address?.town ||
+      data.address?.municipality ||
+      data.address?.county ||
+      'beirut'; // Default fallback
 
-    const region = data.address?.state || data.address?.region || '';
-    const address = data.display_name || '';
-
-    res.json({
-      municipality,
-      region,
-      address,
-    });
+    res.json({ municipality: municipality.toLowerCase() });
   } catch (error) {
     console.error('Municipality detection error:', error);
-    res.status(500).json({ 
-      error: 'Municipality detection failed',
-      message: error.message 
-    });
+    res.json({ municipality: 'beirut' }); // Fallback instead of error
   }
 });
 
@@ -428,7 +418,7 @@ router.post('/detect-municipality', authMiddleware, async (req, res) => {
  */
 router.post('/transcribe-audio', authMiddleware, (req, res, next) => {
   const contentType = req.get('Content-Type') || '';
-  
+
   if (contentType.includes('multipart/form-data')) {
     // Handle file upload
     single('file')(req, res, async (err) => {
@@ -442,7 +432,7 @@ router.post('/transcribe-audio', authMiddleware, (req, res, next) => {
         }
 
         if (!process.env.GEMINI_API_KEY) {
-          return res.status(503).json({ 
+          return res.status(503).json({
             error: 'AI service not configured',
             message: 'GEMINI_API_KEY environment variable not set'
           });
@@ -481,55 +471,55 @@ router.post('/transcribe-audio', authMiddleware, (req, res, next) => {
         console.error('Audio transcription error:', error);
         console.error('File mimetype:', req.file?.mimetype);
         console.error('File size:', req.file?.size);
-        res.status(500).json({ 
+        res.status(500).json({
           error: 'Transcription failed',
-          message: error.message 
+          message: error.message
         });
       }
     });
   } else {
     // Handle base64 JSON upload (existing functionality)
     (async () => {
-  try {
-    const { audioData, mimeType, language = 'en' } = req.body;
+      try {
+        const { audioData, mimeType, language = 'en' } = req.body;
 
-    if (!audioData || !mimeType) {
-      return res.status(400).json({ error: 'audioData and mimeType are required' });
-    }
+        if (!audioData || !mimeType) {
+          return res.status(400).json({ error: 'audioData and mimeType are required' });
+        }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(503).json({ 
-        error: 'AI service not configured',
-        message: 'GEMINI_API_KEY environment variable not set'
-      });
-    }
+        if (!process.env.GEMINI_API_KEY) {
+          return res.status(503).json({
+            error: 'AI service not configured',
+            message: 'GEMINI_API_KEY environment variable not set'
+          });
+        }
 
-    // Use Gemini 2.5 Flash (stable)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        // Use Gemini 2.5 Flash (stable)
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    const prompt = language === 'ar'
-      ? 'استمع إلى هذا التسجيل الصوتي واكتب نصه بالكامل.'
-      : 'Listen to this audio recording and transcribe it to text.';
+        const prompt = language === 'ar'
+          ? 'استمع إلى هذا التسجيل الصوتي واكتب نصه بالكامل.'
+          : 'Listen to this audio recording and transcribe it to text.';
 
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: audioData,
-          mimeType: mimeType,
-        },
-      },
-    ]);
+        const result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              data: audioData,
+              mimeType: mimeType,
+            },
+          },
+        ]);
 
-    const response = result.response;
-    const text = response.text();
+        const response = result.response;
+        const text = response.text();
 
-    res.json({ text });
+        res.json({ text });
       } catch (error) {
         console.error('Audio transcription error:', error);
-        res.status(500).json({ 
+        res.status(500).json({
           error: 'Transcription failed',
-          message: error.message 
+          message: error.message
         });
       }
     })();

@@ -122,6 +122,11 @@ router.post('/analyze-media', authMiddleware, (req, res, next) => {
 
         const prompt = language === 'ar'
           ? `حلل هذه الصورة/الفيديو وحدد:
+أولاً، تحقق مما إذا كانت الصورة مناسبة للإبلاغ عن مشاكل المدينة.
+- إذا كانت الصورة تحتوي على وجوه الناس (سيلفي، صور شخصية)، أو محتوى غير ذي صلة (طعام، حيوانات أليفة، أشياء عشوائية)، أو ليس لها علاقة بالبنية التحتية أو المشاكل المدنية، اضبط "is_valid" على false.
+- إذا كانت الصورة تظهر مشكلة مدنية حقيقية (طرق، مياه، كهرباء، نفايات، مباني، إلخ)، اضبط "is_valid" على true.
+
+إذا كانت صالحة، حدد:
 1. الفئة الأنسب من هذه القائمة: ${availableCategories.join(', ')}
 2. عنوان مختصر للمشكلة (5-10 كلمات)
 3. وصف تفصيلي للمشكلة
@@ -129,12 +134,19 @@ router.post('/analyze-media', authMiddleware, (req, res, next) => {
 
 أجب بتنسيق JSON فقط:
 {
+  "is_valid": true/false,
+  "rejection_reason": "سبب ودي إذا كانت غير صالحة (فارغ إذا كانت صالحة)",
   "category": "الفئة",
   "title": "العنوان",
   "description": "الوصف",
   "severity": "low|medium|high"
 }`
           : `Analyze this image/video and determine:
+First, check if the image is appropriate for city issue reporting.
+- If the image contains people's faces (selfies, portraits), irrelevant content (food, pets, random objects), or is not related to infrastructure or civic issues, set "is_valid" to false.
+- If the image shows a real civic problem (roads, water, electricity, waste, buildings, etc), set "is_valid" to true.
+
+If valid, determine:
 1. The most appropriate category from this list: ${availableCategories.join(', ')}
 2. A short title for the issue (5-10 words)
 3. A detailed description of the issue
@@ -142,6 +154,8 @@ router.post('/analyze-media', authMiddleware, (req, res, next) => {
 
 Respond in JSON format only:
 {
+  "is_valid": true/false,
+  "rejection_reason": "friendly reason if invalid (empty if valid)",
   "category": "category",
   "title": "title",
   "description": "description",
@@ -210,26 +224,44 @@ Respond in JSON format only:
 
         const prompt = language === 'ar'
           ? `حلل هذه الصورة وحدد:
-1. الفئة الأنسب من هذه القائمة: ${availableCategories.join(', ')}
-2. عنوان مختصر للمشكلة
-3. وصف تفصيلي للمشكلة
+أولاً، تحقق مما إذا كانت الصورة مناسبة للإبلاغ عن مشاكل المدينة. 
+- إذا كانت الصورة تحتوي على وجوه الناس (سيلفي، صور شخصية)، أو محتوى غير ذي صلة (طعام، حيوانات أليفة، أشياء عشوائية)، أو ليس لها علاقة بالبنية التحتية أو المشاكل المدنية، اضبط "is_valid" على false.
+- إذا كانت الصورة تظهر مشكلة مدنية حقيقية (طرق، مياه، كهرباء، نفايات، مباني، إلخ)، اضبط "is_valid" على true.
 
-أجب بتنسيق JSON:
+إذا كانت صالحة، حدد:
+1. الفئة الأنسب من هذه القائمة: ${availableCategories.join(', ')}
+2. عنوان مختصر للمشكلة (5-10 كلمات)
+3. وصف تفصيلي للمشكلة
+4. درجة الخطورة: "low" (منخفض), "medium" (متوسط), أو "high" (عالي)
+
+أجب بتنسيق JSON فقط:
 {
+  "is_valid": true/false,
+  "rejection_reason": "سبب ودي إذا كانت غير صالحة (فارغ إذا كانت صالحة)",
   "category": "الفئة",
   "title": "العنوان",
-  "description": "الوصف"
+  "description": "الوصف",
+  "severity": "low|medium|high"
 }`
           : `Analyze this image and determine:
-1. The most appropriate category from: ${availableCategories.join(', ')}
-2. A short title for the issue
-3. A detailed description of the problem
+First, check if the image is appropriate for city issue reporting.
+- If the image contains people's faces (selfies, portraits), irrelevant content (food, pets, random objects), or is not related to infrastructure or civic issues, set "is_valid" to false.
+- If the image shows a real civic problem (roads, water, electricity, waste, buildings, etc), set "is_valid" to true.
 
-Respond in JSON format:
+If valid, determine:
+1. The most appropriate category from: ${availableCategories.join(', ')}
+2. A short title for the issue (5-10 words)
+3. A detailed description of the problem
+4. The severity level: "low", "medium", or "high"
+
+Respond in JSON format only:
 {
+  "is_valid": true/false,
+  "rejection_reason": "friendly reason if invalid (empty if valid)",
   "category": "category",
   "title": "title",
-  "description": "description"
+  "description": "description",
+  "severity": "low|medium|high"
 }`;
 
         const result = await model.generateContent([

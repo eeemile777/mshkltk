@@ -24,7 +24,7 @@ Fully implemented Super Admin portal with dynamic categories, badges, gamificati
 - Added `submitted_by_admin_id` to reports table
 
 ### Phase 2: Seed Data Population
-**File:** `server/db/seed-data.sql`
+**File:** `server/db/schema.sql` (core defaults) and `server/db/seed.sql` (demo data)
 
 **12 Categories Seeded:**
 1. infrastructure - Unpaved roads, broken sidewalks, bridges
@@ -318,7 +318,8 @@ Authorization: Bearer {admin_token}
 - `docs/api/superadmin.md` - Super Admin API reference
 - `docs/api/gamification.md` - Gamification system details
 - `server/db/schema.sql` - Database structure
-- `server/db/seed-data.sql` - Seed data SQL
+- Core seed now lives in `server/db/schema.sql` (categories with sub-categories, badges, gamification, super admin)
+- Demo users/reports live in `server/db/seed.sql`
 - `.github/copilot-instructions.md` - Project architecture
 
 ---

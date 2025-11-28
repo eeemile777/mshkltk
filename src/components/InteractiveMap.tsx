@@ -137,6 +137,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     const navigate = useNavigate();
     const mapContainer = React.useRef<HTMLDivElement>(null);
     const mapRef = React.useRef<L.Map | null>(null);
+    const [mapReady, setMapReady] = React.useState(false);
     const tileLayerRef = React.useRef<L.TileLayer | null>(null);
     const clusterGroupRef = React.useRef<L.FeatureGroup | null>(null);
     const heatLayerRef = React.useRef<any | null>(null); // Using 'any' for leaflet.heat typings
@@ -196,6 +197,8 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
         const map = L.map(mapContainer.current, mapOptions);
         mapRef.current = map;
+        // Mark map as ready on next frame (ensures container has layout)
+        requestAnimationFrame(() => setMapReady(true));
 
         if (initialBounds) {
             // Use a small timeout to ensure the map container has its final dimensions
@@ -483,10 +486,11 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     }, [geolocation.latitude, geolocation.longitude, hideUserLocationMarker]);
 
 
-    // Effect for the draggable pin
+    // Effect for the draggable pin (runs when visibility, position, or map readiness changes)
     React.useEffect(() => {
         const map = mapRef.current;
-        if (!map || !map.getSize()?.y) return;
+        if (!map) return;
+        if (!mapReady) return; // wait until map is flagged ready
 
         if (!isDraggablePinVisible) {
             if (draggableMarkerRef.current) {
@@ -499,12 +503,14 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         if (isDraggablePinVisible && !draggableMarkerRef.current && draggablePinPosition) {
             console.log('🎯 Creating draggable marker at:', draggablePinPosition);
 
-            // Create a simple, visible custom icon using divIcon (use classes so CSS can style light/dark)
+            // Compact teal pin with white border and subtle shadow
+            const inlineHtml = `<div style="position:relative;width:32px;height:32px;"><div style="position:absolute;bottom:-2px;left:50%;width:8px;height:8px;background:rgba(16,185,129,.3);border-radius:50%;transform:translateX(-50%);filter:blur(2px);"></div><div style="position:absolute;top:0;left:0;width:32px;height:32px;border:3px solid #fff;border-radius:50%;background:#10b981;box-shadow:0 2px 8px rgba(16,185,129,.4);cursor:move;"></div></div>`;
+
             const customIcon = L.divIcon({
-                className: 'draggable-marker-icon',
-                html: `<div class="draggable-marker"></div>`,
-                iconSize: [50, 50],
-                iconAnchor: [25, 50], // Point at the bottom center (like a real map pin)
+                html: inlineHtml,
+                className: 'inline-draggable-pin',
+                iconSize: [32, 32],
+                iconAnchor: [16, 16], // center point
             });
 
             const marker = L.marker(draggablePinPosition, {
@@ -513,7 +519,22 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 zIndexOffset: 10000,
             }).addTo(map);
 
-            console.log('✅ Custom draggable marker added to map');
+            console.log('✅ Inline draggable marker added to map');
+
+            // Second-frame visibility assurance
+            setTimeout(() => {
+                const el = marker.getElement();
+                if (!el) {
+                    console.warn('⚠️ Pin element still missing, forcing Leaflet default icon');
+                    marker.setIcon(L.icon({
+                        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+                        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41]
+                    }));
+                }
+            }, 150);
 
             marker.on('dragstart', () => {
                 isPinDraggingRef.current = true;
@@ -533,9 +554,13 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             // We now use our `isPinDraggingRef` which is correctly updated by drag events.
             if (!isPinDraggingRef.current) {
                 draggableMarkerRef.current.setLatLng(draggablePinPosition);
+                // Bring to front in case other layers changed ordering
+                if ((draggableMarkerRef.current as any).bringToFront) {
+                    (draggableMarkerRef.current as any).bringToFront();
+                }
             }
         }
-    }, [isDraggablePinVisible, draggablePinPosition, onDraggablePinMove, onDraggablePinDragStart]);
+    }, [isDraggablePinVisible, draggablePinPosition, onDraggablePinMove, onDraggablePinDragStart, mapReady]);
 
 
     return (

@@ -12,8 +12,8 @@ import Step1Type from './report/Step1_Type';
 import Step3Location from './report/Step3_Location';
 import Step4Details from './report/Step4_Details';
 
-import { GoogleGenAI, Type } from '@google/genai';
 import { FaXmark, FaVideoSlash, FaCamera, FaImages, FaTrash, FaSpinner, FaArrowLeft, FaArrowRight, FaStop, FaMicrophone, FaCircleCheck, FaTriangleExclamation, FaCircleInfo } from 'react-icons/fa6';
+import * as api from '../services/api';
 
 // --- EXIF Orientation Correction Helpers ---
 
@@ -226,81 +226,67 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
     };
 
     const runAiMediaAnalysis = React.useCallback(async () => {
+        // If no previews, do not clear a prior 'fail' (invalid media) state.
         if (!wizardData || wizardData.previews.length === 0) {
-            setAiVerification({ status: 'idle', message: '' });
+            if (aiVerification.status !== 'fail') {
+                setAiVerification({ status: 'idle', message: '' });
+            }
             return;
         }
-        
-        if (!process.env.API_KEY) {
-            setAiVerification({ status: 'fail', message: "AI analysis requires an API key." });
-            return;
-        }
+        // Use backend AI; no client API key needed
 
         setIsAiLoading(true);
         setAiVerification({ status: 'pending', message: t.aiAnalyzingCanProceed });
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const mediaParts = await Promise.all(wizardData.previews.map(p => fileToGenerativePart(p.file)));
-            const langName = language === 'ar' ? 'Arabic' : 'English';
-            const categoryList = JSON.stringify(Object.keys(categories).reduce((acc: Record<string, string[]>, catKey) => {
-                const cat = categories[catKey as ReportCategory];
-                if (cat && cat.subCategories) {
-                   acc[catKey] = Object.keys(cat.subCategories);
-                }
-                return acc;
-            }, {}), null, 2);
-
-            const prompt = `You are an AI assistant for a civic issue reporting app. Your task is to analyze media (images AND videos) to identify issues and check for policy violations. Your response MUST be a single, valid JSON object.
-
-Follow these steps with ZERO DEVIATION:
-
-1.  **Policy/Safety Analysis (Per Media Part):** For EACH media part provided, determine if it violates our safety policies. A violation occurs if the media clearly shows:
-    -   A human face (especially selfies or close-ups).
-    -   A readable vehicle license plate.
-    -   Identifiable military or law enforcement personnel or vehicles.
-    -   Content that is not related to a potential civic issue (e.g., a picture of a pet, a document).
-
-2.  **Filtering Decision:** Create a list in \`media_to_flag\` containing the \`index\` and a brief \`reason\` (in ${langName}) for EVERY media part that violates the policies. If no violations are found, this list MUST be an empty array [].
-
-3.  **Holistic Content Analysis:** Analyze ALL media parts together, even those flagged for removal, to understand the user's intent. The content might be a clear problem (pothole), a potential issue (a leaning tree), or informational (an empty lot).
-
-4.  **Content Generation (Mandatory):** Based on your holistic analysis, you MUST generate the following details. ALWAYS provide a value for each field.
-    -   **Categorization:** Select the MOST LIKELY parent \`category\` and child \`sub_category\` from this list: ${categoryList}. If no clear issue is present, use 'other_unknown' or an appropriate category (e.g., 'public_spaces' for a park).
-    -   **Severity Assessment:** Assess the severity. The value for \`severity\` MUST be one of these exact lowercase strings: 'high', 'medium', 'low'.
-    -   Generate a concise, descriptive \`title\` (max 10 words, in ${langName}).
-    -   Generate a clear \`description\` (20-40 words, in ${langName}), written from the citizen's first-person perspective (e.g., "I noticed that...").
-
-Your JSON output must strictly adhere to the schema. Your primary job is the policy check, but the content generation is equally critical for assisting the user.`;
-            
-            const response = await ai.models.generateContent({
-              model: 'gemini-2.5-flash',
-              contents: { parts: [{ text: prompt }, ...mediaParts] },
-              config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: Type.OBJECT, properties: { title: { type: Type.STRING }, description: { type: Type.STRING }, category: { type: Type.STRING }, sub_category: { type: Type.STRING }, severity: { type: Type.STRING }, media_to_flag: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { index: { type: Type.INTEGER }, reason: { type: Type.STRING } }, required: ["index", "reason"] } } }, required: ["title", "description", "category", "sub_category", "severity", "media_to_flag"] } }
+            // Send first media to backend AI endpoint (base64 JSON mode)
+            const firstFile = wizardData.previews[0].file;
+            const base64EncodedData = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+                reader.onerror = (error) => reject(error);
+                reader.readAsDataURL(firstFile);
             });
 
-            const result = JSON.parse(response.text);
-            const indicesToFlag = new Set(result.media_to_flag?.map((item: any) => item.index) || []);
+            const result = await api.analyzeMedia({
+                mediaData: base64EncodedData,
+                mimeType: firstFile.type,
+                language: language === 'ar' ? 'ar' : 'en',
+                availableCategories: Object.keys(categories),
+            });
+
+            // Check if AI rejected the image
+            if ((result as any).is_valid === false) {
+                const aiReason = (result as any).rejection_reason;
+                const friendlyMessage = aiReason ? `${t.aiImageNotSuitable}. ${aiReason}` : `${t.aiImageNotSuitable}. ${t.aiImageNotSuitableDetails}`;
+                
+                // Remove all previews and show friendly rejection message
+                updateWizardData({ previews: [] });
+                setAiVerification({ 
+                    status: 'fail', 
+                    message: friendlyMessage
+                });
+                return;
+            }
+
+            const indicesToFlag = new Set((result as any).media_to_flag?.map((item: any) => item.index) || []);
             const newPreviews = wizardData.previews.map((preview, index) => {
                 if (indicesToFlag.has(index)) {
-                    const reasonItem = result.media_to_flag.find((item: any) => item.index === index);
+                    const reasonItem = (result as any).media_to_flag?.find((item: any) => item.index === index);
                     return { ...preview, status: 'rejected' as const, rejectionReason: reasonItem?.reason };
                 }
                 return { ...preview, status: 'valid' as const };
             });
             
-            updateWizardData({ previews: newPreviews, title: result.title, description: result.description, category: result.category, sub_category: result.sub_category, severity: result.severity, });
+            updateWizardData({ previews: newPreviews, title: result.title, description: result.description, category: result.category, sub_category: (result as any).sub_category, severity: (result as any).severity ?? 'medium', });
             if (indicesToFlag.size > 0) { setAiVerification({ status: 'images_removed', message: t.aiMediaRemoved.replace('{count}', String(indicesToFlag.size)) }); } else { setAiVerification({ status: 'pass', message: t.aiVerified }); }
         } catch (error) {
-            console.error("Gemini API Error:", error);
+            console.error("AI Error:", error);
             setAiVerification({ status: 'fail', message: "AI analysis failed. Please add details manually." });
         } finally {
             setIsAiLoading(false);
         }
-    }, [wizardData, language, updateWizardData, t, categories]);
+    }, [wizardData, language, updateWizardData, t, categories, aiVerification.status]);
 
     const prevPreviewsRef = React.useRef(wizardData?.previews);
 
@@ -313,27 +299,15 @@ Your JSON output must strictly adhere to the schema. Your primary job is the pol
     }, [wizardData?.previews, runAiMediaAnalysis]);
 
     const runAiTranscription = React.useCallback(async (audioBase64: string, mimeType: string) => {
-        if (!process.env.API_KEY) { setIsTranscribing(false); return; }
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const langName = language === 'ar' ? 'Arabic' : 'English';
-            const prompt = `You are a helpful assistant. A citizen is reporting a civic issue via audio. Your task is to process their recording.
-1.  First, transcribe the audio. The user might speak in ${langName} or a mix of languages.
-2.  From the transcription, craft a 'title' (max 10 words) and a 'description' (20-50 words).
-3.  CRITICAL: The tone must be a first-person narrative, as if you are the citizen reporting the issue. Use "I saw...", "There is a...", etc. Do NOT say "The user reported..." or describe it from a third-person perspective.
-4.  The final output must be in ${langName}.
-Your response MUST be a single, valid JSON object with "title" and "description" keys.`;
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: { parts: [{ text: prompt }, { inlineData: { data: audioBase64, mimeType } }] },
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, description: { type: Type.STRING } }, required: ["title", "description"] } }
+            const result = await api.transcribeAudio({
+                audioData: audioBase64,
+                mimeType,
+                language: language === 'ar' ? 'ar' : 'en',
             });
-            const result = JSON.parse(response.text);
-            updateWizardData({ title: result.title, description: result.description });
+            updateWizardData({ description: result.text });
         } catch (error) {
-            console.error("Gemini audio transcription error:", error);
+            console.error("AI transcription error:", error);
         } finally {
             setIsTranscribing(false);
         }
@@ -517,7 +491,6 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                         <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none"></div>
 
                         <div className="absolute inset-x-0 bottom-0 z-10 p-4 text-white">
-                           {wizardData.previews.length > 0 && (
                             <div className="space-y-2 mb-2">
                                 {aiVerification.status !== 'idle' && (
                                     <div className={`text-sm p-2 rounded-lg flex items-center gap-2 backdrop-blur-sm ${
@@ -528,6 +501,7 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                                         <span className="font-semibold">{aiVerification.message}</span>
                                     </div>
                                 )}
+                                {wizardData.previews.length > 0 && (
                                  <div className="flex items-center gap-2 overflow-x-auto pb-2">
                                     {wizardData.previews.map((preview, index) => (
                                     <div key={preview.url} className="relative w-16 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 border-white/50">
@@ -543,8 +517,8 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                                     </div>
                                     ))}
                                 </div>
+                                )}
                             </div>
-                           )}
                            <div className="text-center text-xs mb-4"><p>{t.tapForPhoto}</p><p>{t.holdToRecord}</p></div>
                            <div className="flex items-center justify-around">
                                <button onClick={() => fileInputRef.current?.click()} disabled={(wizardData.previews.length || 0) >= 5} className="flex flex-col items-center gap-1 font-bold text-sm disabled:opacity-50"><div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center"><FaImages size={20} /></div><span>{t.gallery}</span></button>
@@ -581,6 +555,41 @@ Your response MUST be a single, valid JSON object with "title" and "description"
             {wizardStep > 1 && wizardData.withMedia !== null && (
                 <WizardStepper currentStep={stepperCurrentStep} totalSteps={stepperSteps.length} stepNames={stepperSteps} />
             )}
+                        {/* Persistent AI rejection / guidance banner */}
+                        {aiVerification.status === 'fail' && wizardData.withMedia === true && wizardStep > 1 && wizardData.previews.length === 0 && (
+                            <div className="w-full px-4 mb-2">
+                                <div className="rounded-xl bg-mango/15 border border-mango/40 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 animate-fade-in">
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-mango mt-1 flex-shrink-0"><FaTriangleExclamation size={18} /></span>
+                                        <div className="text-sm leading-relaxed">
+                                            <div className="font-semibold mb-1">{t.aiImageNotSuitable}</div>
+                                            <div className="opacity-80">{t.aiAddPhotoPrompt}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setWizardStep(2)}
+                                            className="px-3 py-2 rounded-lg text-xs font-semibold bg-teal text-white hover:bg-teal/90"
+                                        >{t.aiAddNewPhotoAction}</button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                // Convert flow to no-media path
+                                                updateWizardData({ withMedia: false });
+                                                // Clear AI state when switching flow
+                                                setAiVerification({ status: 'idle', message: '' });
+                                                // Adjust step index (remove media step offset)
+                                                if (wizardStep >= 3) {
+                                                    setWizardStep(wizardStep - 1);
+                                                }
+                                            }}
+                                            className="px-3 py-2 rounded-lg text-xs font-semibold bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                                        >{t.aiContinueWithoutPhoto}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
             <div className="w-full flex-grow min-h-0 flex flex-col">
                 {renderStep()}
             </div>

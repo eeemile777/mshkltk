@@ -10,50 +10,14 @@ TRUNCATE TABLE report_history CASCADE;
 TRUNCATE TABLE comments CASCADE;
 TRUNCATE TABLE notifications CASCADE;
 TRUNCATE TABLE reports CASCADE;
-TRUNCATE TABLE users CASCADE;
-TRUNCATE TABLE dynamic_categories CASCADE;
-TRUNCATE TABLE dynamic_badges CASCADE;
+-- Keep dynamic configuration seeded by schema.sql
+-- TRUNCATE TABLE dynamic_categories CASCADE;
+-- TRUNCATE TABLE dynamic_badges CASCADE;
 -- gamification_settings already has default data from schema.sql
 
--- =====================================================
--- SEED DYNAMIC CATEGORIES
--- =====================================================
--- NOTE: All seeded data can be edited/deleted from Super Admin panel
--- Categories are fully manageable via /api/config/categories endpoints
+-- Categories are seeded by schema.sql (with sub_categories)
 
-INSERT INTO dynamic_categories (id, label_en, label_ar, icon, color, is_active, created_at) VALUES
-('infrastructure', 'Infrastructure', 'البنية التحتية', 'FaRoadBridge', '#4A90E2', true, NOW()),
-('electricity_energy', 'Electricity & Energy', 'الكهرباء والطاقة', 'FaBolt', '#F5A623', true, NOW()),
-('water_sanitation', 'Water & Sanitation', 'المياه والصرف الصحي', 'FaFaucetDrip', '#50E3C2', true, NOW()),
-('waste_environment', 'Waste & Environment', 'النفايات والبيئة', 'FaRecycle', '#B8E986', true, NOW()),
-('public_safety', 'Public Safety', 'السلامة العامة', 'FaShieldHalved', '#9013FE', true, NOW()),
-('public_spaces', 'Public Spaces', 'المساحات العامة', 'FaTreeCity', '#417505', true, NOW()),
-('public_health', 'Public Health', 'الصحة العامة', 'FaBriefcaseMedical', '#D0021B', true, NOW()),
-('urban_planning', 'Urban Planning', 'التخطيط العمراني', 'FaRulerCombined', '#BD10E0', true, NOW()),
-('transportation', 'Transportation', 'النقل', 'FaBus', '#7ED321', true, NOW()),
-('emergencies', 'Emergencies', 'الطوارئ', 'FaTriangleExclamation', '#FF5A5F', true, NOW()),
-('transparency_services', 'Transparency & Services', 'الشفافية والخدمات', 'FaFileSignature', '#0D3B66', true, NOW()),
-('other_unknown', 'Other / Unknown', 'أخرى / غير معروف', 'FaQuestion', '#9E9E9E', true, NOW());
-
--- =====================================================
--- SEED DYNAMIC BADGES
--- =====================================================
--- NOTE: All badges can be edited/deleted from Super Admin panel
--- Fully manageable via /api/config/badges endpoints
-
-INSERT INTO dynamic_badges (id, name_en, name_ar, description_en, description_ar, icon, requirement_type, requirement_value, is_active, created_at) VALUES
-('pioneer', 'Pioneer', 'الرائد', 'Submitted your first report.', 'قدم أول بلاغ لك.', 'FaStar', 'reports_count', 1, true, NOW()),
-('waste_warrior', 'Waste Warrior', 'محارب النفايات', 'Submitted 3 reports about waste.', 'قدم 3 بلاغات عن النفايات.', 'FaDumpster', 'reports_count', 3, true, NOW()),
-('road_guardian', 'Road Guardian', 'حارس الطريق', 'Submitted a report about roads.', 'قدم بلاغاً عن الطرق.', 'FaShieldHalved', 'reports_count', 1, true, NOW()),
-('lightbringer', 'Lightbringer', 'جالب النور', 'Submitted a report about lighting.', 'قدم بلاغاً عن الإنارة.', 'FaLightbulb', 'reports_count', 1, true, NOW()),
-('good_samaritan', 'Good Samaritan', 'فاعل خير', 'Confirmed your first report.', 'أكدت أول بلاغ لك.', 'FaHeart', 'reports_confirmed', 1, true, NOW()),
-('community_helper', 'Community Helper', 'مساعد المجتمع', 'Confirmed 5 reports.', 'أكدت 5 بلاغات.', 'FaHandshakeAngle', 'reports_confirmed', 5, true, NOW()),
-('civic_leader', 'Civic Leader', 'قائد مدني', 'Reached 100 points.', 'وصلت إلى 100 نقطة.', 'FaTrophy', 'points', 100, true, NOW()),
-('water_watchdog', 'Water Watchdog', 'رقيب المياه', 'Reported an issue about water or sanitation.', 'قدم بلاغاً عن المياه أو الصرف الصحي.', 'FaDroplet', 'reports_count', 1, true, NOW()),
-('safety_sentinel', 'Safety Sentinel', 'حارس السلامة', 'Reported a public safety hazard.', 'قدم بلاغاً عن خطر على السلامة العامة.', 'FaTrafficLight', 'reports_count', 1, true, NOW()),
-('park_protector', 'Park Protector', 'حامي الحدائق', 'Reported an issue in a public space.', 'قدم بلاغاً عن مشكلة في مساحة عامة.', 'FaPersonShelter', 'reports_count', 1, true, NOW()),
-('health_hero', 'Health Hero', 'بطل الصحة', 'Reported a public health concern.', 'قدم بلاغاً عن مشكلة صحية عامة.', 'FaVirusSlash', 'reports_count', 1, true, NOW()),
-('urban_planner_badge', 'Urban Planner', 'المخطط الحضري', 'Reported an urban planning violation.', 'قدم بلاغاً عن مخالفة تخطيط عمراني.', 'FaBuildingUser', 'reports_count', 1, true, NOW());
+-- Badges are seeded by schema.sql
 
 -- =====================================================
 -- SEED USERS
@@ -61,57 +25,56 @@ INSERT INTO dynamic_badges (id, name_en, name_ar, description_en, description_ar
 -- NOTE: All demo users can be edited/deleted from Super Admin panel
 -- Use /api/users endpoints to manage users
 -- IMPORTANT: Change all passwords before production!
+-- PASSWORD: 'password' (bcrypt hashed with salt 'salt123')
+-- BCRYPT HASH: $2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq
 
--- Super Admin
-INSERT INTO users (id, username, password_hash, salt, role, display_name, municipality_id, points, reports_count, reports_confirmed, achievements, created_at) VALUES
-(uuid_generate_v4(), 'admin', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'super_admin', 'System Administrator', NULL, 0, 0, 0, '{}', NOW());
+-- NOTE: Do not recreate Super Admin here. Admin is seeded by schema.sql.
 
 -- Portal Users (Municipality Access) - EDITABLE/DELETABLE
 INSERT INTO users (id, username, password_hash, salt, role, display_name, municipality_id, portal_access_level, points, reports_count, reports_confirmed, achievements, created_at) VALUES
-(uuid_generate_v4(), 'beirut_portal', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'municipality', 'Beirut Municipality Portal', 'beirut', 'read_write', 0, 0, 0, '{}', NOW()),
-(uuid_generate_v4(), 'tripoli_portal', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'municipality', 'Tripoli Municipality Portal', 'tripoli', 'read_write', 0, 0, 0, '{}', NOW()),
-(uuid_generate_v4(), 'sidon_portal', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'municipality', 'Sidon Municipality Portal', 'sidon', 'read_only', 0, 0, 0, '{}', NOW());
+(uuid_generate_v4(), 'beirut_portal', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'municipality', 'Beirut Municipality Portal', 'beirut', 'read_write', 0, 0, 0, '{}', NOW()),
+(uuid_generate_v4(), 'tripoli_portal', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'municipality', 'Tripoli Municipality Portal', 'tripoli', 'read_write', 0, 0, 0, '{}', NOW()),
+(uuid_generate_v4(), 'sidon_portal', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'municipality', 'Sidon Municipality Portal', 'sidon', 'read_only', 0, 0, 0, '{}', NOW())
+ON CONFLICT (username) DO NOTHING;
 
 -- Regular Citizens (Demo Users) - FULLY EDITABLE/DELETABLE
 -- Creating 25 realistic users with varied activity levels
 INSERT INTO users (id, username, password_hash, salt, role, display_name, municipality_id, points, reports_count, reports_confirmed, achievements, created_at) VALUES
 -- Power users (very active, lots of reports)
-(uuid_generate_v4(), 'ali_hassan', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Ali Hassan', NULL, 245, 15, 8, '{pioneer,civic_leader,community_helper}', NOW() - INTERVAL '120 days'),
-(uuid_generate_v4(), 'maya_khalil', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Maya Khalil', NULL, 198, 12, 6, '{pioneer,waste_warrior,civic_leader}', NOW() - INTERVAL '90 days'),
-(uuid_generate_v4(), 'layla_nasser', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Layla Nasser', NULL, 167, 10, 5, '{pioneer,civic_leader,community_helper}', NOW() - INTERVAL '80 days'),
+(uuid_generate_v4(), 'ali_hassan', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Ali Hassan', NULL, 245, 15, 8, '{pioneer,civic_leader,community_helper}', NOW() - INTERVAL '120 days'),
+(uuid_generate_v4(), 'maya_khalil', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Maya Khalil', NULL, 198, 12, 6, '{pioneer,waste_warrior,civic_leader}', NOW() - INTERVAL '90 days'),
+(uuid_generate_v4(), 'layla_nasser', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Layla Nasser', NULL, 167, 10, 5, '{pioneer,civic_leader,community_helper}', NOW() - INTERVAL '80 days'),
 
 -- Active users (moderate activity)
-(uuid_generate_v4(), 'rami_said', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Rami Said', NULL, 132, 8, 4, '{pioneer,road_guardian}', NOW() - INTERVAL '70 days'),
-(uuid_generate_v4(), 'omar_haddad', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Omar Haddad', NULL, 115, 7, 3, '{pioneer,good_samaritan}', NOW() - INTERVAL '60 days'),
-(uuid_generate_v4(), 'nour_ibrahim', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Nour Ibrahim', NULL, 98, 6, 3, '{pioneer,waste_warrior}', NOW() - INTERVAL '55 days'),
-(uuid_generate_v4(), 'zahra_mansour', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Zahra Mansour', NULL, 87, 5, 2, '{pioneer}', NOW() - INTERVAL '50 days'),
-(uuid_generate_v4(), 'karim_saleh', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Karim Saleh', NULL, 76, 5, 2, '{pioneer,road_guardian}', NOW() - INTERVAL '48 days'),
+(uuid_generate_v4(), 'rami_said', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Rami Said', NULL, 132, 8, 4, '{pioneer,road_guardian}', NOW() - INTERVAL '70 days'),
+(uuid_generate_v4(), 'omar_haddad', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Omar Haddad', NULL, 115, 7, 3, '{pioneer,good_samaritan}', NOW() - INTERVAL '60 days'),
+(uuid_generate_v4(), 'nour_ibrahim', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Nour Ibrahim', NULL, 98, 6, 3, '{pioneer,waste_warrior}', NOW() - INTERVAL '55 days'),
+(uuid_generate_v4(), 'zahra_mansour', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Zahra Mansour', NULL, 87, 5, 2, '{pioneer}', NOW() - INTERVAL '50 days'),
+(uuid_generate_v4(), 'karim_saleh', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Karim Saleh', NULL, 76, 5, 2, '{pioneer,road_guardian}', NOW() - INTERVAL '48 days'),
 
 -- Regular users (occasional reporters)
-(uuid_generate_v4(), 'sara_azar', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Sara Azar', NULL, 54, 4, 1, '{pioneer}', NOW() - INTERVAL '45 days'),
-(uuid_generate_v4(), 'ahmad_khoury', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Ahmad Khoury', NULL, 51, 3, 2, '{pioneer}', NOW() - INTERVAL '42 days'),
-(uuid_generate_v4(), 'dina_elias', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Dina Elias', NULL, 47, 3, 1, '{pioneer}', NOW() - INTERVAL '40 days'),
-(uuid_generate_v4(), 'youssef_chahine', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Youssef Chahine', NULL, 43, 3, 1, '{pioneer}', NOW() - INTERVAL '38 days'),
-(uuid_generate_v4(), 'lina_farah', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Lina Farah', NULL, 39, 3, 1, '{pioneer}', NOW() - INTERVAL '35 days'),
+(uuid_generate_v4(), 'sara_azar', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Sara Azar', NULL, 54, 4, 1, '{pioneer}', NOW() - INTERVAL '45 days'),
+(uuid_generate_v4(), 'ahmad_khoury', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Ahmad Khoury', NULL, 51, 3, 2, '{pioneer}', NOW() - INTERVAL '42 days'),
+(uuid_generate_v4(), 'dina_elias', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Dina Elias', NULL, 47, 3, 1, '{pioneer}', NOW() - INTERVAL '40 days'),
+(uuid_generate_v4(), 'youssef_chahine', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Youssef Chahine', NULL, 43, 3, 1, '{pioneer}', NOW() - INTERVAL '38 days'),
+(uuid_generate_v4(), 'lina_farah', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Lina Farah', NULL, 39, 3, 1, '{pioneer}', NOW() - INTERVAL '35 days'),
 
 -- Light users (few reports)
-(uuid_generate_v4(), 'marwan_badawi', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Marwan Badawi', NULL, 32, 2, 1, '{pioneer}', NOW() - INTERVAL '30 days'),
-(uuid_generate_v4(), 'hala_sfeir', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Hala Sfeir', NULL, 28, 2, 0, '{pioneer}', NOW() - INTERVAL '28 days'),
-(uuid_generate_v4(), 'fadi_geagea', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Fadi Geagea', NULL, 24, 2, 1, '{pioneer}', NOW() - INTERVAL '25 days'),
-(uuid_generate_v4(), 'rima_harb', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Rima Harb', NULL, 21, 1, 0, '{pioneer}', NOW() - INTERVAL '22 days'),
-(uuid_generate_v4(), 'michel_aoun', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Michel Aoun', NULL, 18, 1, 0, '{pioneer}', NOW() - INTERVAL '20 days'),
-(uuid_generate_v4(), 'nadine_labaki', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Nadine Labaki', NULL, 16, 1, 0, '{pioneer}', NOW() - INTERVAL '18 days'),
-(uuid_generate_v4(), 'georges_khabbaz', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Georges Khabbaz', NULL, 14, 1, 0, '{pioneer}', NOW() - INTERVAL '15 days'),
+(uuid_generate_v4(), 'marwan_badawi', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Marwan Badawi', NULL, 32, 2, 1, '{pioneer}', NOW() - INTERVAL '30 days'),
+(uuid_generate_v4(), 'hala_sfeir', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Hala Sfeir', NULL, 28, 2, 0, '{pioneer}', NOW() - INTERVAL '28 days'),
+(uuid_generate_v4(), 'fadi_geagea', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Fadi Geagea', NULL, 24, 2, 1, '{pioneer}', NOW() - INTERVAL '25 days'),
+(uuid_generate_v4(), 'rima_harb', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Rima Harb', NULL, 21, 1, 0, '{pioneer}', NOW() - INTERVAL '22 days'),
+(uuid_generate_v4(), 'michel_aoun', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Michel Aoun', NULL, 18, 1, 0, '{pioneer}', NOW() - INTERVAL '20 days'),
+(uuid_generate_v4(), 'nadine_labaki', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Nadine Labaki', NULL, 16, 1, 0, '{pioneer}', NOW() - INTERVAL '18 days'),
+(uuid_generate_v4(), 'georges_khabbaz', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Georges Khabbaz', NULL, 14, 1, 0, '{pioneer}', NOW() - INTERVAL '15 days'),
 
 -- Very light users (1 report each)
-(uuid_generate_v4(), 'rita_hayek', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Rita Hayek', NULL, 12, 1, 0, '{pioneer}', NOW() - INTERVAL '12 days'),
-(uuid_generate_v4(), 'elie_saab', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Elie Saab', NULL, 10, 1, 0, '{pioneer}', NOW() - INTERVAL '10 days'),
-(uuid_generate_v4(), 'carine_roitfeld', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Carine Roitfeld', NULL, 10, 1, 0, '{pioneer}', NOW() - INTERVAL '8 days'),
-(uuid_generate_v4(), 'ziad_doueiri', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Ziad Doueiri', NULL, 10, 1, 0, '{pioneer}', NOW() - INTERVAL '6 days'),
-(uuid_generate_v4(), 'nada_zeidan', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'salt123', 'citizen', 'Nada Zeidan', NULL, 10, 1, 0, '{pioneer}', NOW() - INTERVAL '4 days');
-
--- Note: All passwords are 'password' (for demo purposes)
--- password_hash is a placeholder - in real implementation, these would be properly hashed with bcrypt/argon2
+(uuid_generate_v4(), 'rita_hayek', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Rita Hayek', NULL, 12, 1, 0, '{pioneer}', NOW() - INTERVAL '12 days'),
+(uuid_generate_v4(), 'elie_saab', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Elie Saab', NULL, 10, 1, 0, '{pioneer}', NOW() - INTERVAL '10 days'),
+(uuid_generate_v4(), 'carine_roitfeld', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Carine Roitfeld', NULL, 10, 1, 0, '{pioneer}', NOW() - INTERVAL '8 days'),
+(uuid_generate_v4(), 'ziad_doueiri', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Ziad Doueiri', NULL, 10, 1, 0, '{pioneer}', NOW() - INTERVAL '6 days'),
+(uuid_generate_v4(), 'nada_zeidan', '$2b$10$/XKB3KURteVp2nW0mjXnou.u.V6wh4DxBRJ6L3lCaqlVQ8slrf5sq', 'salt123', 'citizen', 'Nada Zeidan', NULL, 10, 1, 0, '{pioneer}', NOW() - INTERVAL '4 days')
+ON CONFLICT (username) DO NOTHING;
 
 -- =====================================================
 -- SEED SAMPLE REPORTS (100 reports across Lebanon)

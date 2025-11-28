@@ -357,6 +357,28 @@ docker logs mshkltk-postgres
 
 ---
 
+## 🗄️ Database Seeding
+
+- Core schema + defaults load automatically via `./setup-database-docker.sh` (runs `server/db/schema.sql`). Includes:
+  - 12 categories with sub-categories
+  - 14 badges and gamification settings
+  - One default super admin user: `admin` / `password`
+
+- Optional demo data (35 users + ~100 reports):
+
+```bash
+# After setup, load demo data (resets users/reports only)
+docker exec -i mshkltk-postgres \
+  psql -U postgres -d mshkltk < server/db/seed.sql
+```
+
+- Notes:
+  - `schema.sql` is the single source of truth for structure and core defaults
+  - `seed.sql` avoids categories/badges to keep `sub_categories` intact
+  - Safe to re-run `seed.sql` anytime to refresh demo content
+
+---
+
 ## 🎯 WORK SESSION CHECKLIST
 
 **Start of session:**

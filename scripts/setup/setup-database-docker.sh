@@ -133,6 +133,12 @@ docker exec -i ${CONTAINER_NAME} psql -U postgres -d ${POSTGRES_DB} < server/db/
 echo "✅ Schema imported successfully!"
 echo ""
 
+# Optional next step: load demo data (fake users + reports)
+echo "💡 Tip: To load demo data (demo users + 100 reports), run:"
+echo "   docker exec -i ${CONTAINER_NAME} psql -U postgres -d ${POSTGRES_DB} < server/db/seed.sql"
+echo "   Note: This resets reports/comments/history/audit_logs, inserts demo users if missing, and keeps admin/categories/badges."
+echo ""
+
 # Update .env file
 echo "📝 Updating .env file..."
 if [ -f ".env" ]; then

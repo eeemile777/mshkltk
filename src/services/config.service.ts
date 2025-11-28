@@ -3,8 +3,35 @@ import { APP_CONFIG } from '../constants/config';
 import { DynamicCategory, DynamicBadge } from '../types';
 
 export const getDynamicCategories = async (): Promise<DynamicCategory[]> => {
-    const response = await apiRequest<{ categories: DynamicCategory[] }>('/config/categories', {}, false);
-    return response.categories || [];
+    const response = await apiRequest<{ categories: any[] }>(
+        '/config/categories',
+        {},
+        false
+    );
+    const categories = Array.isArray(response.categories) ? response.categories : [];
+    // Normalize backend snake_case to frontend expected shape
+    return categories.map((cat: any) => {
+        const subCats = Array.isArray(cat.subCategories)
+            ? cat.subCategories
+            : Array.isArray(cat.sub_categories)
+            ? cat.sub_categories
+            : [];
+        return {
+            id: cat.id,
+            name_en: cat.name_en,
+            name_ar: cat.name_ar,
+            icon: cat.icon,
+            color_light: cat.color_light ?? cat.color,
+            color_dark: cat.color_dark ?? cat.color_dark ?? cat.color_light ?? cat.color,
+            is_active: cat.is_active ?? true,
+            // Convert subcategory items to expected shape { id, name_en, name_ar }
+            subCategories: subCats.map((sub: any) => ({
+                id: sub.id,
+                name_en: sub.name_en ?? sub.label_en ?? sub.name,
+                name_ar: sub.name_ar ?? sub.label_ar ?? sub.name,
+            })),
+        } as DynamicCategory;
+    });
 };
 
 export const createCategory = async (categoryData: any): Promise<any> => {

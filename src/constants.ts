@@ -226,6 +226,11 @@ export const translations: Record<Language, any> = {
     okGotIt: 'حسنًا، فهمت!',
     // Auth
     login: 'تسجيل الدخول',
+    signup: 'إنشاء حساب',
+    createAccountToReport: 'أنشئ حسابًا للإبلاغ',
+    createAccountToReportSubtitle: 'لضمان المساءلة وإبقائك على اطلاع بحالة بلاغك، يلزم وجود حساب.',
+    loginRequiredToComment: 'يجب تسجيل الدخول لإضافة تعليق',
+    loginOrSignup: 'تسجيل الدخول / إنشاء حساب',
     username: 'اسم المستخدم',
     password: 'كلمة المرور',
     invalidCredentials: 'اسم المستخدم أو كلمة المرور غير صحيحة.',
@@ -549,6 +554,11 @@ export const translations: Record<Language, any> = {
     okGotIt: 'OK, Got It!',
     // Auth
     login: 'Log In',
+    signup: 'Sign Up',
+    createAccountToReport: 'Create an Account to Report',
+    createAccountToReportSubtitle: 'To ensure accountability and keep you updated on your report status, an account is required.',
+    loginRequiredToComment: 'Log in to add a comment',
+    loginOrSignup: 'Log In / Sign Up',
     username: 'Username',
     password: 'Password',
     invalidCredentials: 'Invalid username or password.',

@@ -180,6 +180,10 @@ interface AppContextType {
   activeStatuses: Set<ReportStatus>;
   toggleStatus: (status: ReportStatus) => void;
   setStatuses: (statuses: Set<ReportStatus>) => void;
+  // Gatekeeper modal state
+  isAuthPromptOpen: boolean;
+  openAuthPrompt: () => void;
+  closeAuthPrompt: () => void;
   clearStatuses: () => void;
 
   activeTimeFilter: TimeFilter;
@@ -227,6 +231,9 @@ const defaultContextValue: any = {
   reportHistory: [],
   categories: {},
   gamificationSettings: null,
+  isAuthPromptOpen: false,
+  openAuthPrompt: () => { },
+  closeAuthPrompt: () => { },
 };
 
 
@@ -266,6 +273,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [categories, setCategories] = useState<any>(CATEGORIES);
   const [dynamicBadges, setDynamicBadges] = useState<DynamicBadge[]>([]);
   const [gamificationSettings, setGamificationSettings] = useState<GamificationSettings | null>(null);
+  // Gatekeeper modal state
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState<boolean>(false);
+  const openAuthPrompt = useCallback(() => setIsAuthPromptOpen(true), []);
+  const closeAuthPrompt = useCallback(() => setIsAuthPromptOpen(false), []);
 
   // Impersonation State
   const [impersonationRedirectPath, setImpersonationRedirectPath] = useState<string | null>(null);
@@ -612,7 +623,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       error.redirectTo = '/superadmin/login';
       error.user = user;
       throw error;
-    } else if (user.role === 'portal' && user.portal_access_level) {
+    } else if (
+      // Treat municipality-facing roles as portal users
+      (user.role === 'municipality' || user.role === 'utility' || user.role === 'union_of_municipalities' || user.role === 'portal')
+      && user.portal_access_level
+    ) {
       // Throw a special error to trigger redirect to portal login
       const error: any = new Error('Portal accounts must login through the portal');
       error.redirectTo = '/portal/login';
@@ -820,6 +835,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     wizardData, wizardStep, isWizardActive, startWizard, resetWizard, setWizardStep, updateWizardData,
     categories, gamificationSettings,
     impersonationRedirectPath, clearImpersonationRedirect,
+    isAuthPromptOpen, openAuthPrompt, closeAuthPrompt,
   }), [
     language, theme, toggleLanguage, toggleTheme, t, reports, loading, authLoading, effectiveCurrentUser, overrideUser, realUser, isImpersonating, exitImpersonation, notifications,
     signup, login, loginAnonymous, logout, updateUserAvatar, submitReport, confirmReport, updateReportInState, setTempUserOverride,
@@ -830,7 +846,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     searchQuery, setSearchQuery,
     wizardData, wizardStep, isWizardActive, startWizard, resetWizard, updateWizardData, setWizardStep,
     categories, gamificationSettings,
-    impersonationRedirectPath, clearImpersonationRedirect
+    impersonationRedirectPath, clearImpersonationRedirect,
+    isAuthPromptOpen, openAuthPrompt, closeAuthPrompt,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

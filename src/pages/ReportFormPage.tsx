@@ -182,8 +182,21 @@ interface ReportFormPageProps {
 }
 
 const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }) => {
-    const { t, language, currentUser, submitReport, flyToLocation, wizardData, isWizardActive, wizardStep, setWizardStep, updateWizardData, resetWizard, categories } = React.useContext(AppContext);
+    const { t, language, currentUser, submitReport, flyToLocation, wizardData, isWizardActive, wizardStep, setWizardStep, updateWizardData, resetWizard, categories, openAuthPrompt } = React.useContext(AppContext);
     const navigate = useNavigate();
+    
+    // Block anonymous users from accessing report form
+    React.useEffect(() => {
+        if (!currentUser || currentUser.is_anonymous) {
+            openAuthPrompt();
+            navigate(PATHS.HOME, { replace: true });
+        }
+    }, [currentUser, openAuthPrompt, navigate]);
+
+    // Block rendering if user is not authenticated
+    if (!currentUser || currentUser.is_anonymous) {
+        return null;
+    }
     
     React.useEffect(() => {
         if (!isWizardActive) {
@@ -282,7 +295,17 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
             if (indicesToFlag.size > 0) { setAiVerification({ status: 'images_removed', message: t.aiMediaRemoved.replace('{count}', String(indicesToFlag.size)) }); } else { setAiVerification({ status: 'pass', message: t.aiVerified }); }
         } catch (error) {
             console.error("AI Error:", error);
-            setAiVerification({ status: 'fail', message: "AI analysis failed. Please add details manually." });
+            const msg = (error as any)?.message || '';
+            // Provide clearer, user-facing messages based on common failure cases
+            let friendly = t.aiAnalyzing; // default fallback
+            if (msg.includes('No token provided') || msg.includes('HTTP 401')) {
+                friendly = 'Please sign in to use AI analysis.';
+            } else if (msg.includes('HTTP 503') || msg.toLowerCase().includes('ai service not configured') || msg.toLowerCase().includes('gemini')) {
+                friendly = 'AI service unavailable. Server API key configuration required.';
+            } else {
+                friendly = 'AI analysis failed. Please add details manually.';
+            }
+            setAiVerification({ status: 'fail', message: friendly });
         } finally {
             setIsAiLoading(false);
         }
@@ -320,6 +343,12 @@ const ReportFormPage: React.FC<ReportFormPageProps> = ({ onSuccessRedirectPath }
         const previewsToSubmit = wizardData.previews.filter(p => p.status !== 'rejected');
         if (wizardData.withMedia === null || !currentUser || !wizardData.category || !wizardData.severity) return;
         if (wizardData.withMedia === true && previewsToSubmit.length === 0) return;
+        
+        // Block anonymous users from submitting reports
+        if (currentUser.is_anonymous) {
+            openAuthPrompt();
+            return;
+        }
         
         setIsSubmitting(true);
         

@@ -56,7 +56,7 @@ const updateUser = async (userId, updates) => {
   const allowedFields = [
     'first_name', 'last_name', 'display_name', 'avatar_url',
     'onboarding_complete', 'points', 'achievements', 'reports_count',
-    'reports_confirmed', 'is_active', 'password_hash', 'salt', 'role',
+    'reports_confirmed', 'is_active', 'is_anonymous', 'password_hash', 'salt', 'role',
     'portal_access_level', 'municipality_id', 'scoped_categories',
     'scoped_municipalities', 'scoped_sub_categories', 'portal_title', 'portal_subtitle'
   ];

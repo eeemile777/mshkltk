@@ -37,6 +37,14 @@ export const createAnonymousUser = async (): Promise<any> => {
         password: `Temp_${Date.now()}123`, // Meets complexity: Uppercase, Lowercase, Number, >8 chars
         first_name: 'Guest',
     });
+    
+    // Mark user as anonymous in the backend
+    try {
+        await updateCurrentUser({ is_anonymous: true });
+    } catch (err) {
+        console.warn('Failed to mark user as anonymous:', err);
+    }
+    
     return { ...response.user, is_anonymous: true };
 };
 

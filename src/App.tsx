@@ -27,6 +27,7 @@ import SignupPage from './pages/auth/SignupPage';
 import AnonymousRedirect from './pages/auth/AnonymousRedirect';
 import Logout from './pages/auth/Logout';
 import AchievementToast from './components/AchievementToast';
+import AuthPromptModal from './components/AuthPromptModal';
 
 // Portal Imports
 import PortalLayout from './components/portal/PortalLayout';
@@ -94,6 +95,7 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <Router>
         <AppProvider>
+                    <AuthPromptModal />
           <ImpersonationRedirectHandler />
           <Routes>
             {/* --- Public Landing Page --- */}

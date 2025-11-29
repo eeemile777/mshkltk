@@ -31,15 +31,25 @@ interface ReportWizardPageProps {
 }
 
 const ReportWizardPage: React.FC<ReportWizardPageProps> = ({ onSuccessRedirectPath }) => {
-    const { t, language, currentUser, submitReport, flyToLocation, wizardData, isWizardActive, wizardStep, setWizardStep, updateWizardData, resetWizard, categories } = React.useContext(AppContext);
+    const { t, language, currentUser, submitReport, flyToLocation, wizardData, isWizardActive, wizardStep, setWizardStep, updateWizardData, resetWizard, categories, openAuthPrompt } = React.useContext(AppContext);
     const navigate = useNavigate();
     
-    // Redirect if wizard hasn't been started properly
+    // Redirect if wizard hasn't been started properly or user is anonymous
     React.useEffect(() => {
+        if (!currentUser || currentUser.is_anonymous) {
+            openAuthPrompt();
+            navigate(PATHS.HOME, { replace: true });
+            return;
+        }
         if (!isWizardActive) {
             navigate(PATHS.HOME, { replace: true });
         }
-    }, [isWizardActive, navigate]);
+    }, [isWizardActive, navigate, currentUser, openAuthPrompt]);
+
+    // Block rendering if user is not authenticated
+    if (!currentUser || currentUser.is_anonymous || !isWizardActive) {
+        return null;
+    }
 
     const [isAiLoading, setIsAiLoading] = React.useState(false);
     const [aiVerification, setAiVerification] = React.useState<{ status: AiVerificationStatus, message: string }>({ status: 'idle', message: '' });
@@ -316,6 +326,12 @@ Your response MUST be a single, valid JSON object with "title" and "description"
         const previewsToSubmit = wizardData.previews.filter(p => p.status !== 'rejected');
         if (wizardData.withMedia === null || !currentUser || !wizardData.category || !wizardData.severity) return;
         if (wizardData.withMedia === true && previewsToSubmit.length === 0) return;
+        
+        // Block anonymous users from submitting reports
+        if (currentUser.is_anonymous) {
+            openAuthPrompt();
+            return;
+        }
         
         setIsSubmitting(true);
         

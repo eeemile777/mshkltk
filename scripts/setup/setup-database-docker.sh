@@ -40,6 +40,8 @@ CONTAINER_NAME="mshkltk-postgres"
 POSTGRES_PASSWORD="mshkltk123"
 POSTGRES_DB="mshkltk_db"
 POSTGRES_PORT="5432"
+# Allow overriding image/tag via env var if needed
+POSTGIS_IMAGE="${POSTGIS_IMAGE:-postgis/postgis:15-3.4}"
 
 # Check if container already exists
 if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
@@ -88,37 +90,86 @@ echo "   Port: ${POSTGRES_PORT}"
 echo ""
 
 # Pull and run PostgreSQL with PostGIS
-docker run --name ${CONTAINER_NAME} \
-  -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
-  -e POSTGRES_DB=${POSTGRES_DB} \
-  -p ${POSTGRES_PORT}:5432 \
-  -d postgis/postgis:15-3.4
+PLATFORM_FLAG=""
+ARCH=$(uname -m)
+if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
+    # Apple Silicon / ARM: use the arm64/v8 image to avoid qemu emulation warnings
+    PLATFORM_FLAG="--platform linux/arm64/v8"
+    # Ensure we have the correct platform image by force-pulling it (and removing any cached amd64 image)
+    echo "🧰 Ensuring PostGIS image for ARM64..."
+    docker image rm -f ${POSTGIS_IMAGE} >/dev/null 2>&1 || true
+    # Try a couple of candidate tags known to have arm64 builds
+    CANDIDATE_TAGS=("${POSTGIS_IMAGE}" "postgis/postgis:15-3.3" "postgis/postgis:14-3.3")
+    ARM_IMAGE_FOUND=""
+    for tag in "${CANDIDATE_TAGS[@]}"; do
+        if docker pull --platform linux/arm64/v8 "$tag"; then
+            ARM_IMAGE_FOUND="$tag"
+            break
+        fi
+    done
+    if [ -z "$ARM_IMAGE_FOUND" ]; then
+        echo "⚠️  Could not pull an ARM64 PostGIS image; will fallback to amd64 emulation."
+        PLATFORM_FLAG="--platform linux/amd64"
+        ARM_IMAGE_FOUND="${POSTGIS_IMAGE}"
+        docker pull --platform linux/amd64 "$ARM_IMAGE_FOUND" || true
+    fi
+    POSTGIS_IMAGE="$ARM_IMAGE_FOUND"
+fi
+
+echo "🚀 Starting container with image: ${POSTGIS_IMAGE} (${PLATFORM_FLAG:-native})"
+if ! docker run ${PLATFORM_FLAG} --name ${CONTAINER_NAME} \
+    -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
+    -e POSTGRES_DB=${POSTGRES_DB} \
+    -p ${POSTGRES_PORT}:5432 \
+    -d ${POSTGIS_IMAGE}; then
+    echo "❌ Failed to start with platform ${PLATFORM_FLAG}. Retrying without explicit platform..."
+    docker rm -f ${CONTAINER_NAME} >/dev/null 2>&1 || true
+    if ! docker run --name ${CONTAINER_NAME} \
+        -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
+        -e POSTGRES_DB=${POSTGRES_DB} \
+        -p ${POSTGRES_PORT}:5432 \
+        -d ${POSTGIS_IMAGE}; then
+        echo "❌ Unable to start PostGIS container. Please run 'docker run --help' and verify Docker Desktop supports the image on your architecture."
+        exit 125
+    fi
+fi
 
 echo "✅ Container created and started!"
 echo ""
 
-# Wait for PostgreSQL to be ready
 echo "⏳ Waiting for PostgreSQL to be ready..."
-sleep 5
-
-for i in {1..30}; do
+for i in {1..60}; do
     if docker exec ${CONTAINER_NAME} pg_isready -U postgres > /dev/null 2>&1; then
         echo "✅ PostgreSQL is ready!"
         break
     fi
-    if [ $i -eq 30 ]; then
+    if [ $i -eq 60 ]; then
         echo "❌ PostgreSQL failed to start. Check logs with: docker logs ${CONTAINER_NAME}"
         exit 1
     fi
     sleep 1
 done
 
+# Extra buffer to ensure Postgres accepts stdin imports inside container
+sleep 3
+
 echo ""
 
 # Enable PostGIS extension
 echo "🗺️  Enabling PostGIS extension..."
-docker exec ${CONTAINER_NAME} psql -U postgres -d ${POSTGRES_DB} -c "CREATE EXTENSION IF NOT EXISTS postgis;"
-echo "✅ PostGIS extension enabled!"
+# Retry enabling extension a few times to tolerate initial startup latency
+for i in {1..5}; do
+    if docker exec ${CONTAINER_NAME} psql -U postgres -d ${POSTGRES_DB} -c "CREATE EXTENSION IF NOT EXISTS postgis;"; then
+        echo "✅ PostGIS extension enabled!"
+        break
+    fi
+    if [ $i -eq 5 ]; then
+        echo "❌ Failed to enable PostGIS extension after multiple attempts. Check logs: docker logs ${CONTAINER_NAME}"
+        exit 2
+    fi
+    echo "⏳ PostGIS enable attempt $i failed; retrying in 2s..."
+    sleep 2
+done
 echo ""
 
 # Import schema
@@ -129,7 +180,9 @@ if [ ! -f "server/db/schema.sql" ]; then
     exit 1
 fi
 
-docker exec -i ${CONTAINER_NAME} psql -U postgres -d ${POSTGRES_DB} < server/db/schema.sql
+# Use docker cp + docker exec to avoid rare stdin issues
+docker cp server/db/schema.sql ${CONTAINER_NAME}:/tmp/schema.sql
+docker exec -i ${CONTAINER_NAME} psql -U postgres -d ${POSTGRES_DB} -f /tmp/schema.sql
 echo "✅ Schema imported successfully!"
 echo ""
 

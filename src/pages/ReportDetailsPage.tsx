@@ -147,23 +147,31 @@ const StatusTimeline: React.FC<{ report: Report }> = ({ report }) => {
                 <FaClockRotateLeft /> {t.statusTimeline}
             </h3>
             <div className="relative pl-6 border-l-2 border-border-light dark:border-border-dark">
-                {reportHistory.map((item, index) => {
-                    const message = item.status === ReportStatus.New
+                {reportHistory.map((item) => {
+                    const statusForLabel = (item.new_status ?? item.old_status ?? ReportStatus.New) as ReportStatus;
+                    const actorName = item.updated_by_name ?? item.changed_by_display_name ?? undefined;
+                    const message = statusForLabel === ReportStatus.New
                         ? t.reportCreated
-                        : item.updated_by_name
-                            ? t.statusChangedBy.replace('{newStatus}', `"${t[item.status]}"`).replace('{actorName}', item.updated_by_name)
-                            : `${t.statusChangedTo} "${t[item.status]}"`;
+                        : actorName
+                            ? t.statusChangedBy.replace('{newStatus}', `"${t[statusForLabel]}"`).replace('{actorName}', actorName)
+                            : `${t.statusChangedTo} "${t[statusForLabel]}"`;
+
+                    const dateStr = item.timestamp ?? item.updated_at ?? '';
+                    const dateObj = dateStr ? new Date(dateStr) : null;
+                    const formatted = dateObj && !isNaN(dateObj.getTime())
+                        ? dateObj.toLocaleString(language === 'ar' ? 'ar-LB' : 'en-US')
+                        : t.unknownDate ?? '';
 
                     return (
                         <div key={item.id} className="mb-6 last:mb-0">
                             <div className="absolute -left-[11px] w-5 h-5 bg-teal dark:bg-teal-dark rounded-full flex items-center justify-center text-white">
-                                {getStatusIcon(item.status)}
+                                {getStatusIcon(statusForLabel)}
                             </div>
                             <p className="font-bold text-navy dark:text-text-primary-dark">
                                 {message}
                             </p>
                             <p className="text-xs text-text-secondary dark:text-text-secondary-dark mt-1">
-                                {new Date(item.updated_at).toLocaleString(language === 'ar' ? 'ar-LB' : 'en-US')}
+                                {formatted}
                             </p>
                         </div>
                     );
@@ -174,26 +182,26 @@ const StatusTimeline: React.FC<{ report: Report }> = ({ report }) => {
 };
 
 const CommentsSection: React.FC<{ report: Report }> = ({ report }) => {
-    const { t, comments, currentUser, addComment } = React.useContext(AppContext);
+    const { t, comments, currentUser, addComment, openAuthPrompt } = React.useContext(AppContext);
     const [newComment, setNewComment] = React.useState('');
     const [isPosting, setIsPosting] = React.useState(false);
 
+    const canComment = !!currentUser && !currentUser.is_anonymous && !report.isPending;
+    const isAnonymous = !currentUser || !!currentUser.is_anonymous;
+
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newComment.trim() || !currentUser) return;
+        if (!canComment || !newComment.trim() || !currentUser) return;
         setIsPosting(true);
         try {
             await addComment(report.id, newComment);
             setNewComment('');
         } catch (error) {
-            console.error("Failed to post comment", error);
+            console.error('Failed to post comment', error);
         } finally {
             setIsPosting(false);
         }
-    }
-
-    const canComment = !report.isPending;
-    const isAnonymous = !currentUser || !!currentUser.is_anonymous;
+    };
 
     return (
         <div className="bg-muted dark:bg-bg-dark p-6 rounded-2xl h-full flex flex-col">
@@ -201,53 +209,61 @@ const CommentsSection: React.FC<{ report: Report }> = ({ report }) => {
                 <FaRegCommentDots /> {t.comments}
             </h3>
             <div className="flex-grow space-y-4 pr-2">
-                {comments.length > 0 ? comments.map(comment => {
-                    const isMunicipality = comment.user?.role === 'municipality';
-                    return (
-                        <div key={comment.id} className="flex items-start gap-3">
-                            <img src={comment.user?.avatarUrl} alt={comment.user?.display_name} className="w-10 h-10 rounded-full flex-shrink-0" />
-                            <div className={`p-3 rounded-xl w-full ${isMunicipality ? 'bg-sky/10 dark:bg-cyan-dark/10 border border-sky/50 dark:border-cyan-dark/50' : 'bg-card dark:bg-surface-dark'}`}>
-                                <div className="flex items-baseline justify-between">
-                                    <p className="font-bold text-sm text-navy dark:text-text-primary-dark">{comment.user?.display_name}</p>
-                                    {isMunicipality && <span className="text-xs font-bold text-sky dark:text-cyan-dark bg-sky/20 dark:bg-cyan-dark/20 px-2 py-0.5 rounded-full flex items-center gap-1"><FaLandmark size={10} /> Municipality</span>}
+                {comments.length > 0 ? (
+                    comments.map((comment) => {
+                        const isMunicipality = comment.user?.role === 'municipality';
+                        return (
+                            <div key={comment.id} className="flex items-start gap-3">
+                                <img src={comment.user?.avatarUrl} alt={comment.user?.display_name} className="w-10 h-10 rounded-full flex-shrink-0" />
+                                <div className={`p-3 rounded-xl w-full ${isMunicipality ? 'bg-sky/10 dark:bg-cyan-dark/10 border border-sky/50 dark:border-cyan-dark/50' : 'bg-card dark:bg-surface-dark'}`}>
+                                    <div className="flex items-baseline justify-between">
+                                        <p className="font-bold text-sm text-navy dark:text-text-primary-dark">{comment.user?.display_name}</p>
+                                        {isMunicipality && (
+                                            <span className="text-xs font-bold text-sky dark:text-cyan-dark bg-sky/20 dark:bg-cyan-dark/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                <FaLandmark size={10} /> Municipality
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-sm text-text-primary dark:text-text-primary-dark mt-1">{comment.text}</p>
+                                    <p className="text-xs text-text-secondary dark:text-text-secondary-dark mt-2 text-right">{new Date(comment.created_at).toLocaleDateString()}</p>
                                 </div>
-                                <p className="text-sm text-text-primary dark:text-text-primary-dark mt-1">{comment.text}</p>
-                                <p className="text-xs text-text-secondary dark:text-text-secondary-dark mt-2 text-right">{new Date(comment.created_at).toLocaleDateString()}</p>
                             </div>
-                        </div>
-                    );
-                }) : <p className="text-center text-text-secondary dark:text-text-secondary-dark py-8">{t.noCommentsYet}</p>}
+                        );
+                    })
+                ) : (
+                    <p className="text-center text-text-secondary dark:text-text-secondary-dark py-8">{t.noCommentsYet}</p>
+                )}
             </div>
-            {canComment && !isAnonymous && (
-                <form onSubmit={handleCommentSubmit} className="mt-4 flex items-center gap-2 pt-4 border-t border-border-light dark:border-border-dark">
-                    <img src={currentUser?.avatarUrl} alt="Your avatar" className="w-10 h-10 rounded-full" />
+
+            {isAnonymous ? (
+                <div className="mt-4 p-4 rounded-xl bg-amber/10 border border-amber/40 text-amber-900 dark:text-amber-200">
+                    <p className="text-sm mb-3">{t.loginRequiredToComment}</p>
+                    <div className="flex gap-2">
+                        <button onClick={openAuthPrompt} className="px-4 py-2 rounded-xl bg-teal dark:bg-teal-dark text-white">
+                            {t.loginOrSignup}
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <form onSubmit={handleCommentSubmit} className="mt-4 flex flex-col gap-3">
                     <textarea
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
-                        placeholder={t.addComment}
-                        rows={1}
-                        className="flex-grow p-2 bg-card dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-full resize-none focus:ring-2 focus:ring-teal dark:focus:ring-teal-dark"
+                        placeholder={t.addAComment}
+                        className="w-full p-3 rounded-xl bg-card dark:bg-surface-dark border border-border-light dark:border-border-dark"
+                        rows={3}
+                        disabled={!canComment || isPosting}
                     />
-                    <button type="submit" disabled={isPosting || !newComment.trim()} className="p-3 bg-teal text-white rounded-full disabled:bg-gray-400">
-                        {isPosting ? <FaSpinner {...({ className: "animate-spin" } as any)} /> : <FaPaperPlane />}
-                    </button>
-                </form>
-            )}
-            {canComment && isAnonymous && (
-                <div className="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
-                    <div className="flex flex-col items-center gap-3 p-4 bg-teal/10 dark:bg-teal-dark/10 rounded-xl border-2 border-dashed border-teal dark:border-teal-dark">
-                        <FaUserPen {...({ className: "text-3xl text-teal dark:text-teal-dark" } as any)} />
-                        <p className="text-center font-semibold text-navy dark:text-text-primary-dark">
-                            {t.signUpToComment || "Sign up to leave a comment"}
-                        </p>
-                        <Link
-                            to={PATHS.AUTH_LOGIN}
-                            className="px-6 py-2 bg-teal text-white font-bold rounded-full hover:bg-opacity-90 transition-all"
+                    <div className="flex justify-end gap-2">
+                        <button
+                            type="submit"
+                            disabled={!canComment || isPosting || !newComment.trim()}
+                            className={`px-4 py-2 rounded-xl ${!canComment || isPosting || !newComment.trim() ? 'bg-muted dark:bg-bg-dark text-text-secondary dark:text-text-secondary-dark' : 'bg-teal dark:bg-teal-dark text-white'}`}
                         >
-                            {t.signUp || "Sign Up"}
-                        </Link>
+                            {isPosting ? t.posting : t.postComment}
+                        </button>
                     </div>
-                </div>
+                </form>
             )}
         </div>
     );

@@ -5,7 +5,7 @@ import { PATHS } from '../constants';
 import { FaLocationDot, FaPlus, FaFire } from 'react-icons/fa6';
 
 const BottomNav: React.FC = () => {
-  const { t, startWizard } = React.useContext(AppContext);
+  const { t, startWizard, currentUser, openAuthPrompt } = React.useContext(AppContext);
   const navigate = useNavigate();
 
   const navItems = [
@@ -14,6 +14,14 @@ const BottomNav: React.FC = () => {
   ];
   
   const handleFabClick = () => {
+    console.log('FAB clicked! Current user:', currentUser);
+    console.log('Is anonymous?', currentUser?.is_anonymous);
+    if (!currentUser || currentUser.is_anonymous) {
+      console.log('Opening auth prompt...');
+      openAuthPrompt();
+      return;
+    }
+    console.log('Starting wizard...');
     startWizard();
     navigate(PATHS.REPORT_FORM);
   }

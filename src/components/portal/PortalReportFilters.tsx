@@ -36,7 +36,7 @@ const FilterDropdown: React.FC<{
     const isCategory = type === 'category';
     const label = isCategory ? t.filterByCategory : t.filterByStatus;
     const Icon = isCategory ? FaFilter : FaListCheck;
-    const options = isCategory ? (Object.keys(categories) as ReportCategory[]) : Object.values(ReportStatus);
+    const options = isCategory ? (Object.keys(categories || {}) as ReportCategory[]) : Object.values(ReportStatus);
 
     const buttonClasses = `flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-surface-dark focus:ring-teal dark:focus:ring-teal-dark ${
         activeSet.size > 0
@@ -53,9 +53,12 @@ const FilterDropdown: React.FC<{
                 <div className="absolute top-full mt-2 w-56 bg-card dark:bg-surface-dark rounded-xl shadow-lg p-2 z-20 border border-border-light dark:border-border-dark">
                     {options.map(opt => {
                         const checked = activeSet.has(opt);
-                        const categoryData = isCategory ? categories[opt as ReportCategory] : null;
+                                                const categoryData = isCategory ? (categories?.[opt as ReportCategory] ?? null) : null;
                         const ItemIcon = categoryData?.icon;
-                        const colorClass = !isCategory ? (STATUS_COLORS[opt as ReportStatus][theme === 'dark' ? 'dark' : 'light'].split(' ').find(c => c.startsWith('bg-'))) || '' : '';
+                                                const statusColors = STATUS_COLORS[opt as ReportStatus];
+                                                const colorClass = !isCategory && statusColors
+                                                    ? (statusColors[theme === 'dark' ? 'dark' : 'light'] || '').split(' ').find(c => c.startsWith('bg-')) || ''
+                                                    : '';
                         // FIX: Compare against `language` instead of `theme` for correct translation.
                         const name = isCategory && categoryData ? (language === 'ar' ? categoryData.name_ar : categoryData.name_en) : t[opt];
                         return (

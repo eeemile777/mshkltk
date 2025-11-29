@@ -45,7 +45,7 @@ if ((import.meta as any).env?.VITE_SW_KILL === '1') {
       }
     });
   }
-} else if ('serviceWorker' in navigator && !IN_IFRAME && !IS_PREVIEW) {
+} else if (import.meta.env.PROD && 'serviceWorker' in navigator && !IN_IFRAME && !IS_PREVIEW) {
   const registerServiceWorker = () => {
     // Construct a full, absolute URL to sw.js using the page's origin.
     // This is the most robust way to ensure the URL is correct and satisfies the same-origin policy.

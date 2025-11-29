@@ -141,8 +141,9 @@ const updateReport = async (reportId, updates, userId = null) => {
 
     const allowedFields = [
       'title_en', 'title_ar', 'photo_urls', 'note_en', 'note_ar',
-      'status', 'severity', 'category', 'sub_category', 'assigned_to',
-      'resolution_photo_url'
+      'status', 'severity', 'category', 'sub_category', 'assigned_to'
+      // NOTE: Do not include 'resolution_photo_url' here; some schemas don't have this column.
+      // We will store resolution proofs in report_history.proof_urls instead.
     ];
 
     const fields = [];
@@ -162,8 +163,10 @@ const updateReport = async (reportId, updates, userId = null) => {
       throw new Error('No valid fields to update');
     }
 
-    // Add updated_at timestamp
-    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+    // Add updated_at timestamp if column exists; otherwise skip to avoid errors
+    // Some environments use triggers to manage updated_at, so this column may not exist.
+    // We avoid referencing it directly to prevent 42703 errors.
+    // fields.push(`updated_at = CURRENT_TIMESTAMP`);
 
     values.push(reportId);
     const result = await client.query(
@@ -194,7 +197,10 @@ const updateReport = async (reportId, updates, userId = null) => {
 
       const statusMessages = {
         new: { en: 'New', ar: 'جديد' },
+        received: { en: 'Received', ar: 'تم الاستلام' },
+        under_review: { en: 'Under Review', ar: 'قيد المراجعة' },
         in_progress: { en: 'In Progress', ar: 'قيد المعالجة' },
+        rejected: { en: 'Rejected', ar: 'مرفوض' },
         resolved: { en: 'Resolved', ar: 'تم الحل' }
       };
 
@@ -205,11 +211,11 @@ const updateReport = async (reportId, updates, userId = null) => {
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [
               notifyUserId,
-              'report_update',
+              'status_change',
               'Report Status Updated',
               'تم تحديث حالة البلاغ',
-              `Your report status changed to ${statusMessages[updates.status].en}`,
-              `تم تغيير حالة بلاغك إلى ${statusMessages[updates.status].ar}`,
+              `Your report status changed to ${statusMessages[updates.status]?.en || updates.status}`,
+              `تم تغيير حالة بلاغك إلى ${statusMessages[updates.status]?.ar || updates.status}`,
               reportId
             ]
           );
@@ -219,6 +225,26 @@ const updateReport = async (reportId, updates, userId = null) => {
         }
       }
 
+
+    // If resolution proof photo URL provided, store as history attachment
+    if (updates.resolution_photo_url) {
+      try {
+        await client.query(
+          `INSERT INTO report_history (report_id, old_status, new_status, changed_by, notes, proof_urls)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [
+            reportId,
+            oldReport.status,
+            updates.status || oldReport.status,
+            userId,
+            'Resolution proof attached',
+            JSON.stringify([updates.resolution_photo_url])
+          ]
+        );
+      } catch (proofErr) {
+        console.error('Failed to record resolution proof in history:', proofErr);
+      }
+    }
       console.log(`📬 Sent ${uniqueUserIds.length} notifications for report ${reportId} status change`);
     }
 

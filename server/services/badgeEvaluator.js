@@ -63,6 +63,27 @@ const evaluateBadges = async (userId, client = null) => {
 
     const newlyAwardedBadges = [];
 
+    // Normalize requirement types to support both legacy and new names
+    const normalizeType = (t) => {
+      switch (t) {
+        case 'report_count':
+        case 'reports_count':
+          return 'reports_count';
+        case 'confirmation_count':
+        case 'reports_confirmed':
+          return 'reports_confirmed';
+        case 'category_reports':
+          return 'category_reports';
+        case 'unique_categories':
+          return 'unique_categories';
+        case 'point_threshold':
+        case 'points':
+          return 'points';
+        default:
+          return t;
+      }
+    };
+
     for (const badge of badgesResult.rows) {
       // Skip if user already has this badge
       if (currentBadges.includes(badge.id)) {
@@ -71,7 +92,8 @@ const evaluateBadges = async (userId, client = null) => {
 
       let isEarned = false;
 
-      switch (badge.requirement_type) {
+      const reqType = normalizeType(badge.requirement_type);
+      switch (reqType) {
         case 'reports_count':
           isEarned = user.reports_count >= parseInt(badge.requirement_value);
           break;

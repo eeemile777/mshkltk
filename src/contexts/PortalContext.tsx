@@ -87,12 +87,24 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const fetchData = async () => {
         setLoading(true);
         try {
-          const [reportsData, usersData, historyData, dynamicCategoriesData] = await Promise.all([
+          // Role-aware data fetching to avoid 403s on restricted endpoints
+          const fetches: Promise<any>[] = [
             api.fetchReports(),
-            api.listUsers(),
-            api.fetchAllReportHistory(),
             api.getDynamicCategories(),
-          ]);
+          ];
+
+          // Only roles with elevated privileges should request global users/history
+          const canViewUsers = currentUser.role === 'super_admin' || currentUser.role === 'union_of_municipalities' || currentUser.role === 'utility';
+          const canViewAllHistory = currentUser.role === 'super_admin' || currentUser.role === 'union_of_municipalities' || currentUser.role === 'utility';
+
+          if (canViewUsers) fetches.push(api.listUsers());
+          if (canViewAllHistory) fetches.push(api.fetchAllReportHistory());
+
+          const results = await Promise.all(fetches);
+          const reportsData = results[0];
+          const dynamicCategoriesData = results[1];
+          const usersData = canViewUsers ? results[2] : [];
+          const historyData = canViewAllHistory ? (canViewUsers ? results[3] : results[2]) : [];
           setAllReports(reportsData);
           setAllUsers(usersData);
           setAllReportHistory(historyData);
@@ -169,7 +181,13 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const filteredReports = React.useMemo(() => {
     if (!currentUser) return [];
     if (currentUser.role === 'municipality') {
-      return allReports.filter(report => report.municipality === currentUser.municipality_id);
+      // Support both slug string and numeric/UUID ids; prefer slug if present
+      const userMunicipalitySlug = (currentUser as any).municipality || currentUser.municipality_id;
+      const normalizedUserMunicipality = typeof userMunicipalitySlug === 'string' ? userMunicipalitySlug.toLowerCase() : String(userMunicipalitySlug).toLowerCase();
+      const primary = allReports.filter(report => (report.municipality || '').toLowerCase() === normalizedUserMunicipality);
+      if (primary.length > 0) return primary;
+      // Fallback: try to match by address text containing municipality name
+      return allReports.filter(report => (report.area || report.address || '').toLowerCase().includes(normalizedUserMunicipality));
     }
     if (currentUser.role === 'union_of_municipalities') {
         const { scoped_municipalities = [] } = currentUser;

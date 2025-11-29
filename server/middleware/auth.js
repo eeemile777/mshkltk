@@ -125,6 +125,14 @@ const requireWriteAccess = (req, res, next) => {
     return next(); // Super admins always have write access
   }
 
+  // Default write access for municipality accounts unless explicitly marked read-only
+  if (req.user.role === 'municipality') {
+    if (req.user.portal_access_level === 'read_only') {
+      return res.status(403).json({ error: 'Read-only access' });
+    }
+    return next();
+  }
+
   if (req.user.portal_access_level !== 'read_write') {
     return res.status(403).json({ error: 'Read-only access' });
   }

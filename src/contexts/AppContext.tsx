@@ -202,6 +202,7 @@ interface AppContextType {
 
   categories: any; // Using 'any' because it's a reconstructed object
   gamificationSettings: GamificationSettings | null;
+  dynamicBadges: DynamicBadge[];
 
   impersonationRedirectPath: string | null;
   clearImpersonationRedirect: () => void;
@@ -693,7 +694,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Refetch user data to get updated points and stats from backend
         if (!overrideUser && currentUser && currentUser.role === 'citizen') {
           try {
+            const previousUser = currentUser;
             const updatedUser = await api.getCurrentUser();
+
+            // Check for newly awarded badges from the backend
+            const previousBadges = new Set(previousUser.achievements);
+            updatedUser.achievements.forEach(badgeId => {
+              if (!previousBadges.has(badgeId)) {
+                const badge = dynamicBadges.find(b => b.id === badgeId);
+                if (badge) {
+                  console.log('✨ Server awarded badge detected:', badge.name_en);
+                  showNewBadge(badge);
+                }
+              }
+            });
+
             setCurrentUser(updatedUser);
             processBadgeAwards(updatedUser, [newReport, ...reports], dynamicBadges);
           } catch (error) {
@@ -725,14 +740,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Refetch user data to get updated points and stats from backend
     if (!overrideUser && currentUser && currentUser.role === 'citizen') {
       try {
+        const previousUser = currentUser;
         const updatedUser = await api.getCurrentUser();
+
+        // Check for newly awarded badges from the backend
+        const previousBadges = new Set(previousUser.achievements);
+        updatedUser.achievements.forEach(badgeId => {
+          if (!previousBadges.has(badgeId)) {
+            const badge = dynamicBadges.find(b => b.id === badgeId);
+            if (badge) {
+              console.log('✨ Server awarded badge detected:', badge.name_en);
+              showNewBadge(badge);
+            }
+          }
+        });
+
         setCurrentUser(updatedUser);
+        // We still run client-side check as a fallback, but it likely won't find anything if backend already did it
         processBadgeAwards(updatedUser, reports, dynamicBadges);
       } catch (error) {
         console.error('Failed to refetch user after confirm:', error);
       }
     }
-  }, [effectiveCurrentUser, overrideUser, currentUser, reports, updateReportInState, processBadgeAwards, dynamicBadges]);
+  }, [effectiveCurrentUser, overrideUser, currentUser, reports, updateReportInState, processBadgeAwards, dynamicBadges, showNewBadge]);
 
   const markNotificationsAsRead = useCallback(() => { setNotifications(prev => prev.map(n => ({ ...n, read: true }))); }, []);
   const fetchComments = useCallback(async (reportId: string) => { const data = await api.fetchCommentsByReportId(reportId); setComments(data); }, []);
@@ -833,7 +863,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clearCategories, activeStatuses, toggleStatus, setStatuses, clearStatuses, activeTimeFilter, setTimeFilter: setActiveTimeFilter,
     searchQuery, setSearchQuery,
     wizardData, wizardStep, isWizardActive, startWizard, resetWizard, setWizardStep, updateWizardData,
-    categories, gamificationSettings,
+    categories, gamificationSettings, dynamicBadges,
     impersonationRedirectPath, clearImpersonationRedirect,
     isAuthPromptOpen, openAuthPrompt, closeAuthPrompt,
   }), [
@@ -845,7 +875,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clearCategories, activeStatuses, toggleStatus, setStatuses, clearStatuses, activeTimeFilter, setActiveTimeFilter,
     searchQuery, setSearchQuery,
     wizardData, wizardStep, isWizardActive, startWizard, resetWizard, updateWizardData, setWizardStep,
-    categories, gamificationSettings,
+    categories, gamificationSettings, dynamicBadges,
     impersonationRedirectPath, clearImpersonationRedirect,
     isAuthPromptOpen, openAuthPrompt, closeAuthPrompt,
   ]);

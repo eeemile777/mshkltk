@@ -1,0 +1,5 @@
+git pull
+git fetch origin          # Download latest changes
+git status                # Check if your branch is behind
+git pull origin <branch>  # Pull the changes
+

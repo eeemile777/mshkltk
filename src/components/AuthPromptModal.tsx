@@ -7,7 +7,7 @@ const AuthPromptModal: React.FC = () => {
   const { isAuthPromptOpen, closeAuthPrompt, t } = React.useContext(AppContext);
   const navigate = useNavigate();
 
-  console.log('AuthPromptModal render - isAuthPromptOpen:', isAuthPromptOpen);
+
 
   if (!isAuthPromptOpen) return null;
 

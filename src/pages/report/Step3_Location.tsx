@@ -103,7 +103,7 @@ const Step3Location: React.FC<{
       if (!navigator.geolocation) {
         const fallbackLocation: L.LatLngTuple = [33.8938, 35.5018];
         if (isInitialFetch) updateReportData({ location: fallbackLocation });
-        flyToLocation(fallbackLocation, 15);
+        flyToLocation(fallbackLocation, 18);
         setGeoState({ loading: false, error: 'Geolocation is not supported.' });
         return;
       }
@@ -115,14 +115,14 @@ const Step3Location: React.FC<{
           }
           const newLocation: [number, number] = [position.coords.latitude, position.coords.longitude];
           updateReportData({ location: newLocation, address: '', municipality: '' });
-          flyToLocation(newLocation, 15);
+          flyToLocation(newLocation, 18);
           setGeoState({ loading: false, error: null });
         },
         (error) => {
           console.error('Geolocation error:', error);
           const fallbackLocation: L.LatLngTuple = [33.8938, 35.5018];
           if (isInitialFetch) updateReportData({ location: fallbackLocation });
-          flyToLocation(fallbackLocation, 15);
+          flyToLocation(fallbackLocation, 18);
           setGeoState({ loading: false, error: t.geolocationPermissionDenied });
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -256,7 +256,7 @@ const Step3Location: React.FC<{
       const newLocation: L.LatLngTuple = [parseFloat(suggestion.lat), parseFloat(suggestion.lon)];
       updateReportData({ location: newLocation, address: suggestion.display_name, municipality: '' });
       setShowSuggestions(false);
-      flyToLocation(newLocation, 15);
+      flyToLocation(newLocation, 18);
     };
 
     React.useEffect(() => {
@@ -308,7 +308,7 @@ const Step3Location: React.FC<{
                   updateReportData({ location: position, municipality: '' });
                 }}
                 initialCenter={reportData.location || undefined}
-                initialZoom={15}
+                initialZoom={18}
                 hideUserLocationMarker={true}
               />
             </div>

@@ -13,18 +13,13 @@ echo "║                                                           ║"
 echo "╚═══════════════════════════════════════════════════════════╝"
 echo ""
 
-# Step 1: Check if PostgreSQL is running
-echo "📊 Step 1/3: Checking PostgreSQL database..."
-if docker ps | grep -q mshkltk-postgres; then
-    echo "   ✅ Database is running"
-else
-    echo "   ⚠️  Database not running. Starting..."
-    docker start mshkltk-postgres 2>/dev/null || {
-        echo "   ❌ Database container not found. Please run setup-database.sh first"
-        exit 1
-    }
-    echo "   ✅ Database started"
-    sleep 2
+# Step 1: Ensure PostgreSQL database is ready
+echo "📊 Step 1/3: Ensuring database is ready..."
+echo ""
+./setup-database-docker.sh
+if [ $? -ne 0 ]; then
+    echo "   ❌ Failed to setup database"
+    exit 1
 fi
 echo ""
 

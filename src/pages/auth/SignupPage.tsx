@@ -10,17 +10,17 @@ const SignupPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isUpgrading = location.state?.upgrading === true;
-  
+
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [avatarPreview, setAvatarPreview] = React.useState(DEFAULT_AVATAR_URL);
-  
+
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-  
+
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,17 +55,24 @@ const SignupPage: React.FC = () => {
 
     setLoading(true);
     try {
-      await signup({ 
-          first_name: firstName, 
-          last_name: lastName, 
-          username, 
-          password,
-          avatarUrl: avatarPreview 
+      await signup({
+        first_name: firstName,
+        last_name: lastName,
+        username,
+        password,
+        avatarUrl: avatarPreview
       }, { upgradingFromGuest: isUpgrading });
       navigate(PATHS.HOME);
     } catch (err) {
-      if (err instanceof Error && err.message.includes('exists')) {
-        setError(t.usernameTaken);
+      if (err instanceof Error) {
+        if (err.message.includes('exists')) {
+          setError(t.usernameTaken);
+        } else if ((err as any).details && Array.isArray((err as any).details)) {
+          const messages = (err as any).details.map((d: any) => d.msg).join('. ');
+          setError(messages);
+        } else {
+          setError(err.message);
+        }
       } else {
         setError('An unexpected error occurred.');
       }
@@ -81,39 +88,39 @@ const SignupPage: React.FC = () => {
       </button>
 
       <h2 className="text-3xl font-bold text-center mb-6 text-navy dark:text-text-primary-dark">{t.signupTitle}</h2>
-      
+
       <div className="flex justify-center mb-6">
-          <input type="file" ref={avatarInputRef} onChange={handleAvatarChange} className="hidden" accept="image/*" />
-          <button type="button" onClick={() => avatarInputRef.current?.click()} className="relative w-32 h-32 rounded-full group ring-4 ring-teal/50">
-            <img src={avatarPreview} alt="Avatar Preview" className="w-full h-full rounded-full object-cover" />
-            <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-              <FaCamera size={32} />
-            </div>
-          </button>
+        <input type="file" ref={avatarInputRef} onChange={handleAvatarChange} className="hidden" accept="image/*" />
+        <button type="button" onClick={() => avatarInputRef.current?.click()} className="relative w-32 h-32 rounded-full group ring-4 ring-teal/50">
+          <img src={avatarPreview} alt="Avatar Preview" className="w-full h-full rounded-full object-cover" />
+          <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+            <FaCamera size={32} />
+          </div>
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-bold text-text-secondary dark:text-text-secondary-dark mb-2">{t.firstName}</label>
-              <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="w-full p-3 bg-muted dark:bg-bg-dark border-border-light dark:border-border-dark rounded-xl focus:ring-teal"/>
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-text-secondary dark:text-text-secondary-dark mb-2">{t.lastName}</label>
-              <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="w-full p-3 bg-muted dark:bg-bg-dark border-border-light dark:border-border-dark rounded-xl focus:ring-teal"/>
-            </div>
+          <div>
+            <label className="block text-sm font-bold text-text-secondary dark:text-text-secondary-dark mb-2">{t.firstName}</label>
+            <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="w-full p-3 bg-muted dark:bg-bg-dark border-border-light dark:border-border-dark rounded-xl focus:ring-teal" />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-text-secondary dark:text-text-secondary-dark mb-2">{t.lastName}</label>
+            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="w-full p-3 bg-muted dark:bg-bg-dark border-border-light dark:border-border-dark rounded-xl focus:ring-teal" />
+          </div>
         </div>
         <div>
           <label className="block text-sm font-bold text-text-secondary dark:text-text-secondary-dark mb-2">{t.username}</label>
-          <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className="w-full p-3 bg-muted dark:bg-bg-dark border-border-light dark:border-border-dark rounded-xl focus:ring-teal"/>
+          <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className="w-full p-3 bg-muted dark:bg-bg-dark border-border-light dark:border-border-dark rounded-xl focus:ring-teal" />
         </div>
         <div>
           <label className="block text-sm font-bold text-text-secondary dark:text-text-secondary-dark mb-2">{t.password}</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full p-3 bg-muted dark:bg-bg-dark border-border-light dark:border-border-dark rounded-xl focus:ring-teal"/>
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full p-3 bg-muted dark:bg-bg-dark border-border-light dark:border-border-dark rounded-xl focus:ring-teal" />
         </div>
         <div>
           <label className="block text-sm font-bold text-text-secondary dark:text-text-secondary-dark mb-2">{t.confirmPassword}</label>
-          <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full p-3 bg-muted dark:bg-bg-dark border-border-light dark:border-border-dark rounded-xl focus:ring-teal"/>
+          <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full p-3 bg-muted dark:bg-bg-dark border-border-light dark:border-border-dark rounded-xl focus:ring-teal" />
         </div>
 
         {error && <p className="text-coral dark:text-coral-dark text-sm text-center py-2">{error}</p>}

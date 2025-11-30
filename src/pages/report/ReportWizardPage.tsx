@@ -27,13 +27,13 @@ const fileToDataURL = (file: File): Promise<string> => {
 };
 
 interface ReportWizardPageProps {
-  onSuccessRedirectPath?: string;
+    onSuccessRedirectPath?: string;
 }
 
 const ReportWizardPage: React.FC<ReportWizardPageProps> = ({ onSuccessRedirectPath }) => {
     const { t, language, currentUser, submitReport, flyToLocation, wizardData, isWizardActive, wizardStep, setWizardStep, updateWizardData, resetWizard, categories, openAuthPrompt } = React.useContext(AppContext);
     const navigate = useNavigate();
-    
+
     // Redirect if wizard hasn't been started properly or user is anonymous
     React.useEffect(() => {
         if (!currentUser || currentUser.is_anonymous) {
@@ -53,7 +53,7 @@ const ReportWizardPage: React.FC<ReportWizardPageProps> = ({ onSuccessRedirectPa
 
     const [isAiLoading, setIsAiLoading] = React.useState(false);
     const [aiVerification, setAiVerification] = React.useState<{ status: AiVerificationStatus, message: string }>({ status: 'idle', message: '' });
-    
+
     const [isRecording, setIsRecording] = React.useState(false);
     const [isTranscribing, setIsTranscribing] = React.useState(false);
     const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
@@ -63,19 +63,19 @@ const ReportWizardPage: React.FC<ReportWizardPageProps> = ({ onSuccessRedirectPa
 
     const nextStep = () => setWizardStep(s => s + 1);
     const prevStep = () => setWizardStep(s => s - 1);
-    
+
     const fileToGenerativePart = async (file: File) => {
-      const base64EncodedDataPromise = new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = (error) => reject(error);
-        reader.readAsDataURL(file);
-      });
-      // Sanitize the MIME type to remove codec information, which can cause API errors.
-      const mimeType = file.type.split(';')[0];
-      return {
-        inlineData: { data: await base64EncodedDataPromise, mimeType: mimeType },
-      };
+        const base64EncodedDataPromise = new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+        // Sanitize the MIME type to remove codec information, which can cause API errors.
+        const mimeType = file.type.split(';')[0];
+        return {
+            inlineData: { data: await base64EncodedDataPromise, mimeType: mimeType },
+        };
     };
 
     const runAiMediaAnalysis = React.useCallback(async () => {
@@ -83,7 +83,7 @@ const ReportWizardPage: React.FC<ReportWizardPageProps> = ({ onSuccessRedirectPa
             setAiVerification({ status: 'idle', message: '' });
             return;
         }
-        
+
         setIsAiLoading(true);
         setAiVerification({ status: 'pending', message: t.aiAnalyzing });
 
@@ -91,7 +91,7 @@ const ReportWizardPage: React.FC<ReportWizardPageProps> = ({ onSuccessRedirectPa
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const mediaParts = await Promise.all(wizardData.previews.map(p => fileToGenerativePart(p.file)));
             const langName = language === 'ar' ? 'Arabic' : 'English';
-            
+
             const categoryList = JSON.stringify(Object.keys(categories).reduce((acc: Record<string, string[]>, catKey) => {
                 const cat = categories[catKey as ReportCategory];
                 if (cat && cat.subCategories) {
@@ -115,48 +115,48 @@ Follow these steps with ZERO DEVIATION:
 3.  **Holistic Content Analysis:** Analyze ALL media parts together, even those flagged for removal, to understand the user's intent. The content might be a clear problem (pothole), a potential issue (a leaning tree), or informational (an empty lot).
 
 4.  **Content Generation (Mandatory):** Based on your holistic analysis, you MUST generate the following details. ALWAYS provide a value for each field.
-    -   **Categorization:** Select the MOST LIKELY parent \`category\` and child \`sub_category\` from this list: ${categoryList}. If no clear issue is present, use 'other_unknown' or an appropriate category (e.g., 'public_spaces' for a park).
+    -   **Categorization:** Select the MOST LIKELY parent \`category\` and child \`sub_category\` from the provided JSON list. You MUST use the EXACT keys as they appear in the JSON (e.g., "infrastructure", "unpaved_roads"). Do NOT use the English names or translate them. If no clear issue is present, use 'other_unknown' or an appropriate category (e.g., 'public_spaces' for a park).
     -   **Severity Assessment:** Assess the severity. The value for \`severity\` MUST be one of these exact lowercase strings: 'high', 'medium', 'low'.
     -   Generate a concise, descriptive \`title\` (max 10 words, in ${langName}).
     -   Generate a clear \`description\` (20-40 words, in ${langName}), written from the citizen's first-person perspective (e.g., "I noticed that...").
 
 Your JSON output must strictly adhere to the schema. Your primary job is the policy check, but the content generation is equally critical for assisting the user.`;
-            
+
             const parts = [{ text: prompt }, ...mediaParts];
-            
+
             const response = await ai.models.generateContent({
-              model: 'gemini-2.5-flash',
-              contents: { parts: parts },
-              config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: Type.OBJECT,
-                  properties: {
-                    title: { type: Type.STRING },
-                    description: { type: Type.STRING },
-                    category: { type: Type.STRING },
-                    sub_category: { type: Type.STRING },
-                    severity: { type: Type.STRING },
-                    media_to_flag: {
-                      type: Type.ARRAY,
-                      items: {
+                model: 'gemini-2.5-flash',
+                contents: { parts: parts },
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
                         type: Type.OBJECT,
                         properties: {
-                          index: { type: Type.INTEGER },
-                          reason: { type: Type.STRING }
+                            title: { type: Type.STRING },
+                            description: { type: Type.STRING },
+                            category: { type: Type.STRING },
+                            sub_category: { type: Type.STRING },
+                            severity: { type: Type.STRING },
+                            media_to_flag: {
+                                type: Type.ARRAY,
+                                items: {
+                                    type: Type.OBJECT,
+                                    properties: {
+                                        index: { type: Type.INTEGER },
+                                        reason: { type: Type.STRING }
+                                    },
+                                    required: ["index", "reason"]
+                                }
+                            }
                         },
-                        required: ["index", "reason"]
-                      }
+                        required: ["title", "description", "category", "sub_category", "severity", "media_to_flag"]
                     }
-                  },
-                  required: ["title", "description", "category", "sub_category", "severity", "media_to_flag"]
                 }
-              }
             });
 
             const result = JSON.parse(response.text);
             const indicesToFlag = new Set(result.media_to_flag?.map((item: any) => item.index) || []);
-            
+
             const newPreviews = wizardData.previews.map((preview, index) => {
                 if (indicesToFlag.has(index)) {
                     const reasonItem = result.media_to_flag.find((item: any) => item.index === index);
@@ -164,19 +164,55 @@ Your JSON output must strictly adhere to the schema. Your primary job is the pol
                 }
                 return { ...preview, status: 'valid' as const };
             });
-            
+
+            const findCategoryKey = (input: string | undefined): ReportCategory | undefined => {
+                if (!input) return undefined;
+                const normalized = input.toLowerCase().trim();
+
+                // 1. Check direct key match
+                if (categories[normalized as ReportCategory]) return normalized as ReportCategory;
+
+                // 2. Check English and Arabic names
+                for (const [key, data] of Object.entries(categories)) {
+                    const catData = data as any;
+                    if (catData.name_en.toLowerCase() === normalized || catData.name_ar === normalized) {
+                        return key as ReportCategory;
+                    }
+                }
+                return undefined;
+            };
+
+            const findSubCategoryKey = (catKey: ReportCategory, input: string | undefined): string | undefined => {
+                if (!input || !catKey || !categories[catKey]) return undefined;
+                const normalized = input.toLowerCase().trim();
+                const subCats = categories[catKey].subCategories;
+
+                if (subCats[normalized]) return normalized;
+
+                for (const [key, data] of Object.entries(subCats)) {
+                    const subCatData = data as any;
+                    if (subCatData.name_en.toLowerCase() === normalized || subCatData.name_ar === normalized) {
+                        return key;
+                    }
+                }
+                return undefined;
+            };
+
+            const matchedCategory = findCategoryKey(result.category);
+            const matchedSubCategory = matchedCategory ? findSubCategoryKey(matchedCategory, result.sub_category) : undefined;
+
             // ALWAYS update with the new AI-generated content, overwriting previous values.
             updateWizardData({
                 previews: newPreviews,
                 title: result.title,
                 description: result.description,
-                category: result.category,
-                sub_category: result.sub_category,
+                category: matchedCategory,
+                sub_category: matchedSubCategory,
                 severity: result.severity,
             });
 
             if (indicesToFlag.size > 0) {
-                 setAiVerification({ status: 'images_removed', message: t.aiMediaRemoved.replace('{count}', String(indicesToFlag.size)) });
+                setAiVerification({ status: 'images_removed', message: t.aiMediaRemoved.replace('{count}', String(indicesToFlag.size)) });
             } else {
                 setAiVerification({ status: 'pass', message: t.aiVerified });
             }
@@ -194,12 +230,12 @@ Your JSON output must strictly adhere to the schema. Your primary job is the pol
     React.useEffect(() => {
         if (!wizardData) return;
         // Trigger analysis if the number of previews changes or if the file references are different.
-        if (prevPreviewsRef.current?.length !== wizardData.previews.length || 
+        if (prevPreviewsRef.current?.length !== wizardData.previews.length ||
             wizardData.previews.some((p, i) => p.file !== prevPreviewsRef.current?.[i]?.file)) {
-            
+
             runAiMediaAnalysis();
         }
-        
+
         prevPreviewsRef.current = wizardData.previews;
     }, [wizardData?.previews, runAiMediaAnalysis]);
 
@@ -220,10 +256,10 @@ Your JSON output must strictly adhere to the schema. Your primary job is the pol
 3.  CRITICAL: The tone must be a first-person narrative, as if you are the citizen reporting the issue. Use "I saw...", "There is a...", etc. Do NOT say "The user reported..." or describe it from a third-person perspective.
 4.  The final output must be in ${langName}.
 Your response MUST be a single, valid JSON object with "title" and "description" keys.`;
-            
+
             const audioPart = { inlineData: { data: audioBase64, mimeType } };
             const textPart = { text: prompt };
-            
+
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: { parts: [textPart, audioPart] },
@@ -259,7 +295,7 @@ Your response MUST be a single, valid JSON object with "title" and "description"
         if (isRecording) return;
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
+
             const mimeTypes = [
                 'audio/webm;codecs=opus',
                 'audio/ogg;codecs=opus',
@@ -285,7 +321,7 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                 const finalMimeType = supportedMimeType?.split(';')[0] || 'audio/webm';
                 const audioBlob = new Blob(audioChunksRef.current, { type: finalMimeType });
                 stream.getTracks().forEach(track => track.stop()); // Stop microphone access
-                
+
                 if (audioBlob.size === 0) {
                     console.warn("Audio recording resulted in an empty file. Discarding.");
                     setIsTranscribing(false);
@@ -299,7 +335,7 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                         const base64Audio = (reader.result as string).split(',')[1];
                         runAiTranscription(base64Audio, audioBlob.type);
                     } else {
-                         setIsTranscribing(false);
+                        setIsTranscribing(false);
                     }
                 };
             };
@@ -326,19 +362,19 @@ Your response MUST be a single, valid JSON object with "title" and "description"
         const previewsToSubmit = wizardData.previews.filter(p => p.status !== 'rejected');
         if (wizardData.withMedia === null || !currentUser || !wizardData.category || !wizardData.severity) return;
         if (wizardData.withMedia === true && previewsToSubmit.length === 0) return;
-        
+
         // Block anonymous users from submitting reports
         if (currentUser.is_anonymous) {
             openAuthPrompt();
             return;
         }
-        
+
         setIsSubmitting(true);
-        
+
         try {
             let photoUrls: string[];
             if (wizardData.withMedia && previewsToSubmit.length > 0) {
-                 photoUrls = await Promise.all(
+                photoUrls = await Promise.all(
                     previewsToSubmit.map(preview => fileToDataURL(preview.file))
                 );
             } else {
@@ -364,12 +400,12 @@ Your response MUST be a single, valid JSON object with "title" and "description"
             flyToLocation(wizardData.location!, 16);
             resetWizard();
             navigate(onSuccessRedirectPath || PATHS.HOME, { replace: true, state: { newReport } });
-        } catch(e) {
+        } catch (e) {
             console.error("Failed to submit report:", e);
             setIsSubmitting(false);
         }
     };
-    
+
     if (!wizardData) {
         return <Spinner />;
     }
@@ -382,7 +418,7 @@ Your response MUST be a single, valid JSON object with "title" and "description"
         if (wizardStep === 1) {
             return <Step1Type onSelect={(choice) => {
                 const isWithMedia = choice === 'with';
-                updateWizardData({ 
+                updateWizardData({
                     withMedia: isWithMedia,
                     previews: isWithMedia ? wizardData.previews : []
                 });
@@ -407,7 +443,7 @@ Your response MUST be a single, valid JSON object with "title" and "description"
                     return null;
             }
         } else { // Reporting WITHOUT media
-             switch (wizardStep) {
+            switch (wizardStep) {
                 case 2:
                     // FIX: Pass missing `setWizardStep` prop to match component interface.
                     return <Step3Location reportData={wizardData} updateReportData={updateWizardData} nextStep={nextStep} prevStep={prevStep} setWizardStep={setWizardStep} />;
@@ -419,17 +455,17 @@ Your response MUST be a single, valid JSON object with "title" and "description"
             }
         }
     };
-    
+
     const isPhotoStep = wizardData?.withMedia === true && wizardStep === 2;
 
     return (
         <div className="h-full flex flex-col relative">
-             <button
+            <button
                 onClick={() => { resetWizard(); navigate(onSuccessRedirectPath || PATHS.HOME); }}
                 className="absolute top-4 right-4 z-50 p-2 bg-black/20 text-white rounded-full backdrop-blur-sm hover:bg-black/40 transition-colors"
                 aria-label="Close report form"
             >
-                <FaXmark size={20}/>
+                <FaXmark size={20} />
             </button>
 
             {wizardStep > 1 && wizardData.withMedia !== null && (

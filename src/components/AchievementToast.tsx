@@ -3,8 +3,8 @@
 import React from 'react';
 import confetti from 'canvas-confetti';
 import { AppContext } from '../contexts/AppContext';
-import { Badge } from '../types';
-import { BADGES } from '../constants';
+import { Badge, DynamicBadge } from '../types';
+import { BADGES, ICON_MAP } from '../constants';
 import { FaXmark } from 'react-icons/fa6';
 
 interface AchievementToastProps {
@@ -13,11 +13,14 @@ interface AchievementToastProps {
 }
 
 const AchievementToast: React.FC<AchievementToastProps> = ({ badgeId, onClose }) => {
-  const { t, language } = React.useContext(AppContext);
+  const { t, language, dynamicBadges } = React.useContext(AppContext);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const toastRef = React.useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = React.useState(false);
-  const badge = BADGES[badgeId];
+
+  // Try to get badge from static BADGES first, then from dynamic badges
+  const staticBadge = BADGES[badgeId];
+  const dynamicBadge = dynamicBadges.find(b => b.id === badgeId);
 
   // Animation and auto-close
   React.useEffect(() => {
@@ -30,15 +33,15 @@ const AchievementToast: React.FC<AchievementToastProps> = ({ badgeId, onClose })
     }, 6000);
 
     return () => {
-        clearTimeout(inTimer);
-        clearTimeout(outTimer);
+      clearTimeout(inTimer);
+      clearTimeout(outTimer);
     };
   }, []);
 
   // Confetti effect, tied to visibility
   React.useEffect(() => {
     const canvasElement = canvasRef.current;
-    
+
     if (!isVisible || !canvasElement) {
       return;
     }
@@ -97,14 +100,27 @@ const AchievementToast: React.FC<AchievementToastProps> = ({ badgeId, onClose })
     setTimeout(onClose, 300);
   };
 
-  if (!badge) return null;
+  // Use static badge if available, otherwise use dynamic badge
+  const badge = staticBadge || dynamicBadge;
+
+  if (!badge) {
+    console.warn('AchievementToast: Badge not found for ID:', badgeId);
+    return null;
+  }
+
+  // Get icon for dynamic badges
+  const badgeIcon = staticBadge
+    ? staticBadge.icon
+    : (dynamicBadge && ICON_MAP[dynamicBadge.icon])
+      ? React.createElement(ICON_MAP[dynamicBadge.icon])
+      : null;
 
   const positionClasses = language === 'ar' ? 'left-4' : 'right-4';
   const transformClasses = isVisible
     ? 'translate-x-0 opacity-100'
     : language === 'ar'
-    ? '-translate-x-full opacity-0'
-    : 'translate-x-full opacity-0';
+      ? '-translate-x-full opacity-0'
+      : 'translate-x-full opacity-0';
 
   return (
     <div
@@ -113,7 +129,7 @@ const AchievementToast: React.FC<AchievementToastProps> = ({ badgeId, onClose })
       role="alert"
     >
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-0" />
-      <div className="text-5xl flex-shrink-0 z-10">{badge.icon}</div>
+      <div className="text-5xl flex-shrink-0 z-10">{badgeIcon}</div>
       <div className="flex-grow z-10">
         <h3 className="font-bold text-lg text-mango dark:text-mango-dark">{t.achievements}</h3>
         <p className="font-semibold text-navy dark:text-text-primary-dark">

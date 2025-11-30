@@ -15,6 +15,13 @@ const {
 const reportsController = {
     create: async (req, res) => {
         try {
+            // Block anonymous users from creating reports
+            if (req.user && req.user.is_anonymous) {
+                return res.status(403).json({
+                    error: 'Anonymous users cannot submit reports. Please sign up to submit reports.'
+                });
+            }
+
             console.log('📝 Creating report with data:', JSON.stringify(req.body, null, 2).substring(0, 500));
             const reportData = {
                 ...req.body,
